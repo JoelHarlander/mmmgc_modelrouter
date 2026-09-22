@@ -93,7 +93,7 @@ export type Classify = (prompt: string) => Promise<Classified>;
  * narrows when the question is removed, the gap is caused by *asking* it alongside the
  * tier question rather than by anything the router does with the answer.
  */
-export type QuestionSet = "shipped" | "tier-only" | "proposed";
+export type QuestionSet = "shipped" | "tier-only" | "proposed" | "proposed-v2";
 
 /**
  * A candidate rewrite of the tier criteria, for section 0b.
@@ -107,7 +107,7 @@ export type QuestionSet = "shipped" | "tier-only" | "proposed";
  * It lives here rather than in `src/state.ts` because this task does not edit `src/`.
  * Its purpose is to let the owning task see a measured effect before adopting wording.
  */
-export function proposedRoutingQuestions(): Record<string, JevQuestion> {
+export function proposedRoutingQuestions(variant: "v1" | "v2" = "v1"): Record<string, JevQuestion> {
 	const base = routingQuestions();
 	const tier = base[TIER_QUESTION_KEY] as { type: "choice"; instructions: Record<string, string>; criteria: Record<string, string> };
 	return {
@@ -125,7 +125,15 @@ export function proposedRoutingQuestions(): Record<string, JevQuestion> {
 					"A small, well-specified step whose answer is already known or can be read off directly: rename or move " +
 					"something, write a one-line command, read or list files, recall a documented fact, look something up, " +
 					"greetings or acknowledgements. A fast, cheap model will do this correctly.",
-				standard: tier.criteria.standard!,
+				// v1 left `standard` alone, and at 30 pairs that showed: only `heavy` claimed the
+				// question form, so question-shaped work that was merely ordinary drifted up past
+				// standard into heavy. v2 gives `standard` the same clause, so the two bands claim
+				// questions symmetrically and the boundary between them is about difficulty again.
+				standard:
+					variant === "v1"
+						? tier.criteria.standard!
+						: `${tier.criteria.standard!} This applies equally when the user asks *about* such work rather than ` +
+							"asking for a change: explaining a bug that has a clear reproduction is ordinary work, not hard work.",
 				heavy:
 					"Hard or high-stakes work: design or architecture decisions, multi-file or cross-cutting refactors, " +
 					"debugging with unclear cause, security or concurrency reasoning, reviewing large diffs, ambiguous " +
@@ -141,7 +149,12 @@ export function proposedRoutingQuestions(): Record<string, JevQuestion> {
 export function jevClassifier(jev: JevLike, questionSet: QuestionSet = "shipped"): Classify {
 	return async (prompt: string) => {
 		const state = { request: prompt, recent: [], session: { turn: 1, context_tokens: 0, current_model: "none", recent_tools: [] } };
-		const all = questionSet === "proposed" ? proposedRoutingQuestions() : routingQuestions();
+		const all =
+			questionSet === "proposed"
+				? proposedRoutingQuestions("v1")
+				: questionSet === "proposed-v2"
+					? proposedRoutingQuestions("v2")
+					: routingQuestions();
 		const questions = questionSet === "tier-only" ? { [TIER_QUESTION_KEY]: all[TIER_QUESTION_KEY]! } : all;
 		const res = await jev.ask(state, questions);
 		const tier = res.answers[TIER_QUESTION_KEY] as JevChoiceAnswer | undefined;

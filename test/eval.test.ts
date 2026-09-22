@@ -19,7 +19,7 @@ import { auditAssumptions } from "../eval/assumptions.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
 import { bootstrapDifference, tasksNeededFor } from "../eval/bootstrap.ts";
 import { computeCalibration } from "../eval/calibration.ts";
-import { type Classify, loadPhrasingPack, proposedRoutingQuestions, renderPhrasing, runPhrasingProbe } from "../eval/phrasing.ts";
+import { type Classify, loadPhrasingPack, type PhrasingPack, proposedRoutingQuestions, renderPhrasing, runPhrasingProbe } from "../eval/phrasing.ts";
 import { routingQuestions } from "../src/state.ts";
 import { runCoverage } from "../eval/coverage.ts";
 import { explainTask } from "../eval/explain.ts";
@@ -2036,4 +2036,62 @@ test("prediction B: the proposed criteria change the tier question and nothing e
 	// And the specific addition: heavy work stays heavy when asked about.
 	assert.match(tier(proposed).criteria.heavy!, /asks \*about\* such work|explaining why a race condition/);
 	assert.match(tier(proposed).instructions.note!, /text or as an edit/);
+});
+
+test("the phrasing pack carries light controls, which are what make the finding an argument", () => {
+	// Round 39. Without a band of genuinely trivial work in the pack, "questions are rated
+	// lighter" cannot be distinguished from "this model treats questions as chatter". The
+	// controls are load-bearing, so their presence and their shape are pinned here.
+	const pack = loadPhrasingPack(PHRASING_PACK);
+	assert.ok(pack.pairs.length >= 30, `${pack.pairs.length} pairs; the round-39 reading needs at least 30`);
+	const byTier = (t: string) => pack.pairs.filter((p) => p.difficulty === t);
+	assert.ok(byTier("light").length >= 8, "too few light controls to read a null from");
+	assert.ok(byTier("heavy").length >= 10 && byTier("standard").length >= 10, "the hard bands must outnumber a single control run");
+
+	// A control is only a control if it is genuinely light: a well-known one-line defect,
+	// not a disguised investigation. Nothing here may smuggle in the heavy vocabulary.
+	const heavyWords = /concurren|deadlock|race|architect|security|migrat|thundering|reconcil/i;
+	for (const p of byTier("light")) {
+		assert.doesNotMatch(p.question, heavyWords, `${p.id}: light control reads as heavy work`);
+		assert.doesNotMatch(p.instruction, heavyWords, `${p.id}: light control reads as heavy work`);
+	}
+});
+
+test("a phrasing-blind classifier shows no gap on any band, controls included", async () => {
+	// The probe must report a null when there is nothing to find, or its non-null readings
+	// mean nothing. Same work, both wordings, a classifier that grades difficulty honestly.
+	const pack = loadPhrasingPack(PHRASING_PACK);
+	// Blind by construction rather than by keyword: look the prompt up in the pack and
+	// answer with its declared difficulty, whichever of the two wordings it arrived as.
+	const declared = new Map<string, PhrasingPack["pairs"][number]["difficulty"]>();
+	for (const p of pack.pairs) {
+		declared.set(p.question, p.difficulty);
+		declared.set(p.instruction, p.difficulty);
+	}
+	const blind: Classify = async (prompt) => {
+		const tier = declared.get(prompt);
+		assert.ok(tier, `the probe sent a prompt that is not in the pack: ${prompt}`);
+		return { tier, confidence: 0.9, costUsd: 0 };
+	};
+	const out = await runPhrasingProbe(blind, pack);
+	assert.equal(out.meanTierGap, 0, "a phrasing-blind classifier must produce no gap at all");
+	assert.equal(out.instructionHeavier, 0);
+	assert.equal(out.questionHeavier, 0);
+	assert.equal(out.questionAccuracy, out.instructionAccuracy, "and must score both wordings identically");
+});
+
+test("proposed-v2 differs from v1 only by giving `standard` the clause `heavy` already had", () => {
+	const v1 = proposedRoutingQuestions("v1");
+	const v2 = proposedRoutingQuestions("v2");
+	const tier = (qs: typeof v1) => qs.tier as unknown as { criteria: Record<string, string> };
+	for (const band of ["light", "heavy"]) {
+		assert.equal(tier(v2).criteria[band], tier(v1).criteria[band], `v2 changed ${band}; it should only change standard`);
+	}
+	assert.notEqual(tier(v2).criteria.standard, tier(v1).criteria.standard);
+	assert.ok(tier(v2).criteria.standard!.startsWith(tier(v1).criteria.standard!), "v2 should extend the shipped standard text, not replace it");
+	// The asymmetry v2 exists to remove: every non-light band claims the question form.
+	for (const band of ["standard", "heavy"]) {
+		assert.match(tier(v2).criteria[band]!, /asks \*about\* such work/, `${band} must claim the question form in v2`);
+	}
+	assert.doesNotMatch(tier(v1).criteria.standard!, /asks \*about\* such work/, "v1's standard is the gap v2 closes");
 });

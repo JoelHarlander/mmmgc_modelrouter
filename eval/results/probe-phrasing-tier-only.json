@@ -1,17 +1,17 @@
 {
 	"pack": "phrasing-probe-v1",
-	"at": "2026-09-22T15:59:47.240Z",
-	"git": "8216ffa",
-	"pairs": 12,
-	"calls": 24,
-	"agreement": 0.4167,
-	"instructionHeavier": 7,
-	"questionHeavier": 0,
-	"meanTierGap": 1,
+	"at": "2026-09-22T16:43:56.959Z",
+	"git": "bf21cc1",
+	"pairs": 30,
+	"calls": 60,
+	"agreement": 0.4,
+	"instructionHeavier": 16,
+	"questionHeavier": 2,
+	"meanTierGap": 0.7667,
 	"meanToolsQuestion": 0,
 	"meanToolsInstruction": 0,
-	"questionAccuracy": 0.3333,
-	"instructionAccuracy": 0.6667,
+	"questionAccuracy": 0.3667,
+	"instructionAccuracy": 0.7667,
 	"costUsd": 0,
 	"results": [
 		{
@@ -19,12 +19,12 @@
 			"difficulty": "heavy",
 			"question": {
 				"tier": "heavy",
-				"confidence": 0.79,
+				"confidence": 0.78,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.41,
+				"confidence": 0.46,
 				"costUsd": 0
 			},
 			"tierGap": 0,
@@ -40,7 +40,7 @@
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.62,
+				"confidence": 0.59,
 				"costUsd": 0
 			},
 			"tierGap": 2,
@@ -51,7 +51,7 @@
 			"difficulty": "heavy",
 			"question": {
 				"tier": "heavy",
-				"confidence": 0.68,
+				"confidence": 0.69,
 				"costUsd": 0
 			},
 			"instruction": {
@@ -67,12 +67,12 @@
 			"difficulty": "heavy",
 			"question": {
 				"tier": "light",
-				"confidence": 0.73,
+				"confidence": 0.71,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.94,
+				"confidence": 0.96,
 				"costUsd": 0
 			},
 			"tierGap": 2,
@@ -88,7 +88,7 @@
 			},
 			"instruction": {
 				"tier": "standard",
-				"confidence": 0.67,
+				"confidence": 0.71,
 				"costUsd": 0
 			},
 			"tierGap": 1,
@@ -99,7 +99,7 @@
 			"difficulty": "heavy",
 			"question": {
 				"tier": "light",
-				"confidence": 0.99,
+				"confidence": 0.98,
 				"costUsd": 0
 			},
 			"instruction": {
@@ -115,12 +115,12 @@
 			"difficulty": "standard",
 			"question": {
 				"tier": "light",
-				"confidence": 0.2,
+				"confidence": 0.18,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.5,
+				"confidence": 0.37,
 				"costUsd": 0
 			},
 			"tierGap": 2,
@@ -136,7 +136,7 @@
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.59,
+				"confidence": 0.54,
 				"costUsd": 0
 			},
 			"tierGap": 0,
@@ -147,7 +147,7 @@
 			"difficulty": "standard",
 			"question": {
 				"tier": "light",
-				"confidence": 0.19,
+				"confidence": 0.29,
 				"costUsd": 0
 			},
 			"instruction": {
@@ -163,12 +163,12 @@
 			"difficulty": "standard",
 			"question": {
 				"tier": "light",
-				"confidence": 0.5,
+				"confidence": 0.53,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "standard",
-				"confidence": 0.66,
+				"confidence": 0.64,
 				"costUsd": 0
 			},
 			"tierGap": 1,
@@ -184,7 +184,7 @@
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.74,
+				"confidence": 0.72,
 				"costUsd": 0
 			},
 			"tierGap": 0,
@@ -200,7 +200,295 @@
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.82,
+				"confidence": 0.76,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0
+		},
+		{
+			"id": "gil-deadlock",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.89,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.99,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0
+		},
+		{
+			"id": "cache-stampede",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.77,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.89,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0
+		},
+		{
+			"id": "float-accumulation",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.67,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.45,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0
+		},
+		{
+			"id": "tz-dst-window",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.97,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.27,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0
+		},
+		{
+			"id": "index-lock",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.72,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.34,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0
+		},
+		{
+			"id": "retry-idempotency",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.27,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.96,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0
+		},
+		{
+			"id": "flaky-order",
+			"difficulty": "standard",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.83,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.26,
+				"costUsd": 0
+			},
+			"tierGap": -1,
+			"toolsGap": 0
+		},
+		{
+			"id": "env-precedence",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.85,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.4,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0
+		},
+		{
+			"id": "json-roundtrip",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.39,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.34,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0
+		},
+		{
+			"id": "import-cycle",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.24,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.75,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0
+		},
+		{
+			"id": "regex-catastrophic",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.48,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.59,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0
+		},
+		{
+			"id": "logging-duplicate",
+			"difficulty": "standard",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.2,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.31,
+				"costUsd": 0
+			},
+			"tierGap": -1,
+			"toolsGap": 0
+		},
+		{
+			"id": "assign-in-if",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.96,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0
+		},
+		{
+			"id": "str-int-concat",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.96,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0
+		},
+		{
+			"id": "sort-returns-none",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.96,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0
+		},
+		{
+			"id": "unclosed-handle",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.93,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0
+		},
+		{
+			"id": "range-off-by-one",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.98,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0
+		},
+		{
+			"id": "int-parse-error",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.59,
 				"costUsd": 0
 			},
 			"tierGap": 0,

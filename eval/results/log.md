@@ -43,7 +43,9 @@ Jump to the round that established each claim, and what it rests on.
 | ~~The cause is `needs_tools`~~ | 35, 36 | **REFUTED in r37.** Removing it from the request changes nothing. The cause is the `light` criterion's own words: *"answer a factual question, explain a snippet"*. |
 | **The router cannot fix it**: the stakes override reaches **0 of 15** under-routed light turns, because Jev rates their stakes low too | **37** | live, 5 override variants |
 | **Jev's judging noise is ≤5** (42/42 on non-tie probe items), so the candidate-set floor is insurance against a risk that is not present → **use `tier-top`** | **37** | live probe + 4 policies × 4 noise levels |
-| A candidate rewrite of the `light` criterion **closes 30% of the phrasing gap** and lifts question accuracy 33.3% → 50.0%; a partial fix, not a fix | **38** | live, deterministic on 12 pairs |
+| ~~A candidate rewrite closes 30% of the gap, question accuracy 33.3% → 50.0%~~ | 38 | **SUPERSEDED in r39.** At 30 pairs the same wording closes **65%** and the 12-pair reading could not see that it costs 30pp of `standard` instruction accuracy. |
+| **The phrasing effect scales with difficulty and is absent on light controls** (gap +0.00, 8/8 both wordings) — so it is difficulty mis-sorting, not a question-vs-instruction artefact | **39** | live, 30 pairs |
+| **Under-routing is the expensive error, and under-routing `standard` (−63.1pp solved) is worse than `heavy` (−50.5pp)** — which reverses which candidate wording to prefer | **39** | long pack, 175 turns |
 | The §0 fix, simulated: **32 of 396 broken configurations → 0**, byte-identical where nothing is blocked | **38** | exact |
 | Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
@@ -2422,3 +2424,109 @@ which round 37 refuted. It now names the criteria text.
 
 **Spend.** 72 live calls (proposed wording twice, plus the determinism re-run). **$0.00**;
 gateway credits unchanged at $5.00 across every live run in this session.
+
+---
+
+## Round 39 — 2026-09-23 — replicate the phrasing finding at 2.5× the pack, with controls
+
+**Why this and not something else.** Firstmate's own list of what would be worth another
+round led with "a load-bearing figure in the brief that rests on a single unreplicated
+run". §9B was exactly that: a candidate criteria rewrite, measured once, on twelve pairs,
+with the limitation written into the brief by me the round before. Cheapest way to find
+out whether I had published something fragile.
+
+I had.
+
+### The pack, and the control band it was missing
+
+12 pairs → **30**, balanced 12 heavy / 10 standard / **8 light controls**. The controls
+are the point: genuinely trivial one-line defects (`names = names.sort()` leaving `names`
+as None) asked both ways. Without them, "questions get rated lighter" cannot be told
+apart from "this model treats questions as chatter".
+
+My first draft of the controls paired a lookup with an unrelated edit — *"Is `.env` in
+the gitignore?"* against *"Add `.env` to the gitignore"*, which are two different jobs.
+**The pack's own guard test caught it** ("each phrasing pair really is two wordings of one
+job"). Rewrote them onto the same shape as the rest.
+
+### The finding replicates, and gets stronger
+
+| | 12 pairs | **30 pairs** |
+| --- | ---: | ---: |
+| mean tier gap | +0.83 | **+0.77** |
+| instruction heavier | 6–0 | **16–2** |
+| question / instruction accuracy | 33.3% / 66.7% | **36.7% / 76.7%** |
+
+A **40-point accuracy gap between two wordings of the same job**. And the controls do
+what controls are for:
+
+| band | n | gap | question | instruction |
+| --- | ---: | ---: | ---: | ---: |
+| light (controls) | 8 | **+0.00** | **100%** | **100%** |
+| standard | 10 | +0.80 | **0%** | 60% |
+| heavy | 12 | **+1.25** | 25% | 75% |
+
+Nothing on easy work, most on hard work. That dose-response is what mis-sorting by
+difficulty looks like; a generic question bias would have hit the controls too.
+
+**Round 37's refutation also got sharper.** At 12 pairs, `tier-only` differed slightly
+from `shipped` (1.00 against 0.83). At 30 pairs the two are **identical on every single
+figure**. Dropping `needs_tools` changes nothing at all.
+
+### What 12 pairs could not see
+
+The candidate wording is better than I reported — gap 0.77 → **0.27**, a **65%** close,
+not 30%. But at 12 pairs I could not see its cost: it drags `standard` *instructions*
+down from 60% to **30%** by pushing ordinary work up into heavy. My published acceptance
+bar ("instruction accuracy not below 66.7%") would have passed a wording that does that.
+
+So I wrote **v2**, giving `standard` the same "applies equally when asked *about* such
+work" clause that v1 gave only to `heavy` — the asymmetry looked like the cause:
+
+| band | shipped | v1 | **v2** |
+| --- | ---: | ---: | ---: |
+| standard, question | 0% | 10% | **50%** |
+| heavy, question | 25% | **67%** | 42% |
+| mean tier gap | 0.77 | **0.27** | 0.40 |
+| both wordings correct | 56.7% | 63.3% | **65.0%** |
+
+v2 fixes standard questions and gives back heavy ones. Neither dominates.
+
+### Which to prefer — where I was wrong, and the arithmetic that showed it
+
+I was about to recommend v1 on the reasoning that heavy work is what you cannot afford to
+under-route. Measured it instead, by splitting the long pack's routed turns on whether
+they landed above or below gold:
+
+| | n | solved | vs exact |
+| --- | ---: | ---: | ---: |
+| gold `standard`, **under**-routed | 12 | **8.3%** | **−63.1pp** |
+| gold `heavy`, **under**-routed | 9 | 22.2% | −50.5pp |
+| gold `standard`, over-routed | 8 | 50.0% | −21.4pp |
+| gold `light`, over-routed | 7 | 85.7% | −1.1pp |
+
+Under-routing is the expensive error — but **under-routing `standard` is worse than
+under-routing `heavy`**, because heavy work dropped one tier still sometimes lands while
+standard work dropped to `light` almost never does. Weighting each variant by these
+penalties and the long pack's 69/31 standard:heavy mix: **shipped 55.3, v1 44.4, v2
+30.8**. v1 only overtakes v2 when heavy exceeds **66.7%** of question-phrased non-light
+work; here it is **31%**.
+
+**Prefer v2.** The intuition was wrong; the crossover is the thing to check against a real
+workload.
+
+### What is pinned, and what is still not true
+
+Three tests: the controls exist and are genuinely light (no heavy vocabulary smuggled
+in), a phrasing-blind classifier scores an exact zero gap on the pack, and v2 differs
+from v1 only in `standard`. The blind-classifier test failed on its first draft because a
+keyword oracle is not actually blind — rewrote it to answer from the pack's declared
+difficulty, which is blind by construction.
+
+**Neither variant is ready to ship, and §9B says so.** v2 still leaves a 0.40 gap, still
+gets `standard` instructions wrong 70% of the time, and its edge over v1 rests on a
+workload mix from an authored pack. What is now established: the defect is real, large,
+**difficulty-scaled**, and **movable by criteria text alone**.
+
+**Spend.** 240 live calls (four question sets × 30 pairs × 2 wordings). **$0.00**;
+gateway credits unchanged at $5.00.

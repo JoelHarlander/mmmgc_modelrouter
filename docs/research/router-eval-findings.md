@@ -75,18 +75,35 @@ rate-limited.*
 
 ## 0b. The tier criteria call hard questions "light", and the router cannot fix it
 
-**What happens.** `--probe-phrasing`: twelve pairs describing the **same work twice**,
+**What happens.** `--probe-phrasing`: **thirty pairs** describing the **same work twice**,
 once as a question answerable in text, once as an instruction that edits files.
 
 | | result |
 | --- | ---: |
-| instruction rated **heavier** than its question | **6 of 12** |
-| question rated heavier than its instruction | **0 of 12** |
-| mean tier gap | **+0.83 tiers** |
-| reached the correct tier: question / instruction | **33.3% / 66.7%** |
+| instruction rated **heavier** than its question | **16 of 30** |
+| question rated heavier than its instruction | **2 of 30** |
+| mean tier gap | **+0.77 tiers** |
+| reached the correct tier: question / instruction | **36.7% / 76.7%** |
 
-On heavy work asked as a question, Jev says *light* **4 times in 6, at mean confidence
-0.87** - two tiers wrong at up to 98% confidence.
+**A 40-point accuracy gap between two wordings of the same job.** On heavy work asked as
+a question, Jev reaches the right tier **3 times in 12**; the identical work as an
+instruction, **9 times in 12**.
+
+**It is not a general question-vs-instruction artefact**, and the pack is built to prove
+that. Eight of the thirty pairs are **light controls** - genuinely trivial defects
+(`names = names.sort()` leaving `names` as None) where the question form *should* be
+light. On those the gap is **exactly 0.00** and both wordings are classified correctly
+**8 of 8**. The effect appears only where difficulty does, and **scales with it**:
+
+| gold band | n | mean tier gap | question correct | instruction correct |
+| --- | ---: | ---: | ---: | ---: |
+| light (controls) | 8 | **+0.00** | **100%** | **100%** |
+| standard | 10 | +0.80 | **0%** | 60% |
+| heavy | 12 | **+1.25** | 25% | 75% |
+
+A dose-response of that shape - nothing on easy work, most on hard work - is what you
+would expect if the criteria text were mis-sorting by difficulty, and not what you would
+expect from a model that simply treats questions as chatter.
 
 **Why.** Not a defect in the model. The shipped `light` criterion in `src/state.ts` reads:
 
@@ -102,9 +119,9 @@ difficulty, and Jev is following it correctly.**
 
 - *Not `needs_tools`.* The router never uses it - it is recorded and displayed and
   nothing else. And re-running the probe with **only** the tier question, dropping
-  `needs_tools` and `stakes` from the request entirely, leaves the gap **unchanged**
-  (mean gap 1.00 against 0.83, identical 33.3%/66.7% accuracy). Asking it is not the
-  cause.
+  `needs_tools` and `stakes` from the request entirely, leaves the gap **unchanged**.
+  At thirty pairs the two runs are not merely close but **identical on every figure** -
+  same 0.77 gap, same 16-2 split, same 36.7%/76.7% accuracy. Asking it is not the cause.
 - *Not fixable by the stakes override.* That is the one place the router already
   overrules the classifier, and the only lever available without touching
   `src/state.ts`. It **cannot reach these turns**: of the 15 under-routed `light` turns
@@ -525,40 +542,76 @@ number; it is a correctness fix.
 **The change.** Take output shape out of the `light` criterion and say in `heavy` that
 explaining can be as hard as doing.
 
-**A candidate wording is already written and measured** — `proposedRoutingQuestions()` in
-`eval/phrasing.ts`, deliberately outside `src/`. Against live Jev:
+**Two candidate wordings are written and measured**, in `proposedRoutingQuestions()` in
+`eval/phrasing.ts` — deliberately outside `src/`, so a wording can be priced before it is
+adopted. Both remove the output-shape framing from `light` and say in `heavy` that
+explaining can be as hard as doing. **v2** additionally gives `standard` the same clause,
+because v1 left it as the only band that did not claim the question form.
 
-| | shipped | proposed | change |
+Against live Jev, thirty pairs, by band (`question` / `instruction` correct):
+
+| band | n | shipped | v1 | **v2** |
+| --- | ---: | ---: | ---: | ---: |
+| light (controls) | 8 | 100% / 100% | 100% / 100% | 100% / 100% |
+| standard | 10 | **0%** / 60% | 10% / 30% | **50%** / 30% |
+| heavy | 12 | 25% / 75% | **67%** / 83% | 42% / 83% |
+| mean tier gap | | 0.77 | **0.27** | 0.40 |
+| both wordings correct | 30 | 56.7% | 63.3% | **65.0%** |
+
+**Neither is a clean win, and the trade is the interesting part.** v1 is much better on
+heavy questions (67% against 42%); v2 is much better on standard questions (50% against
+10%). Both buy it partly by **pushing `standard` instructions up into `heavy`** — that
+row drops 60% → 30% in *both*, and it is the real cost of the change.
+
+**Which to prefer depends on the cost of the two errors, so I measured that too.** On the
+long pack, splitting routed turns by whether they landed above or below their gold tier:
+
+| | n | solved | against exact |
 | --- | ---: | ---: | ---: |
-| mean tier gap (instruction − question) | 0.83 | **0.58** | **−30%** |
-| pairs classified the same both ways | 50.0% | **58.3%** | +8.3pp |
-| pairs where the instruction is rated heavier | 6 of 12 | **5 of 12** | −1 |
-| **question reaches the correct tier** | 33.3% | **50.0%** | **+16.7pp** |
-| instruction reaches the correct tier | 66.7% | 66.7% | unchanged |
+| gold `standard`, **under**-routed | 12 | **8.3%** | **−63.1pp** |
+| gold `heavy`, **under**-routed | 9 | **22.2%** | **−50.5pp** |
+| gold `standard`, over-routed | 8 | 50.0% | −21.4pp |
+| gold `light`, over-routed | 7 | 85.7% | −1.1pp |
 
-Individually it fixes `column-rename` (light → heavy) and `offset-pagination`
-(light → heavy), and makes `race-condition` far more confident (heavy 0.75 → 0.98). It
-does **not** fix `token-storage`, `rewrite-hook` or `swap-dims-alias`.
+Under-routing is by far the expensive error, and — against my own first instinct —
+under-routing **`standard` is worse than under-routing `heavy`** here, because a heavy
+task dropped one tier still sometimes lands, while a standard task dropped to `light`
+almost never does.
+
+Weighting each variant's per-band question accuracy by these penalties and by the long
+pack's mix of non-light work (69% standard, 31% heavy) gives an expected under-routing
+loss of **shipped 55.3, v1 44.4, v2 30.8** — so:
+
+> **Prefer v2.** It only loses to v1 if more than **66.7%** of question-phrased non-light
+> work is heavy. On the long pack that figure is **31%**.
+
+I recommended v1 before doing this arithmetic, on the intuition that heavy work matters
+most. The intuition was wrong and the crossover is the number to check against a real
+workload, not the intuition.
 
 **Check it with:**
 
 ```bash
-ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --probe-phrasing   # 24 calls, $0.00
+ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --probe-phrasing                          # shipped, 60 calls, $0.00
+ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --probe-phrasing --phrasing-questions proposed-v2
 ```
 
-**Acceptance:** mean tier gap **at or below 0.58**, question accuracy **at or above
-50.0%**, and instruction accuracy **not below 66.7%** — the last one guards against
-"fixing" it by over-routing everything.
+**Acceptance for v2:** mean tier gap **at or below 0.40**, question accuracy **at or
+above 60.0%**, the **light controls still 8/8 with gap 0.00** (if they move, the wording
+has started over-routing trivia), and instruction accuracy **not below 70.0%**.
 
-**How exact these numbers are.** Jev is deterministic on this pack: two identical runs of
-the proposed wording returned identical figures to every decimal. So the comparison is
-exact *on these twelve pairs*. What is **not** established is that twelve pairs
-generalise — the movement is three pairs' worth, and nothing here bounds the effect on
-prompts outside the pack.
+**How exact these numbers are.** Jev is deterministic on this pack — two identical runs
+of v1 returned figures identical to every decimal, and `shipped` and `tier-only` returned
+*identical* figures to each other across all thirty pairs. So these comparisons carry no
+sampling error. What is **not** established is generalisation beyond the pack: thirty
+authored pairs, and nothing here bounds the effect on real traffic.
 
-**This is a partial fix, and the brief says so.** A gap of 0.58 is still a gap. If the
-owning task wants better, the probe is the loop to iterate against: 24 calls, free, and
-it reproduces exactly.
+**Neither variant is ready to ship, and the brief says so.** v2 still leaves a 0.40 gap,
+still gets standard instructions wrong 70% of the time, and its advantage over v1 rests
+on a workload mix taken from an authored pack. What this round establishes is that the
+defect is **real, large, difficulty-scaled, and movable by criteria text alone** — and
+that the probe is now a good enough instrument to iterate against: 60 calls, $0.00,
+reproduces exactly.
 
 ---
 

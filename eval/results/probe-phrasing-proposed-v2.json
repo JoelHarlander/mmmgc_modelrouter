@@ -1,17 +1,17 @@
 {
 	"pack": "phrasing-probe-v1",
-	"at": "2026-09-22T16:40:12.016Z",
+	"at": "2026-09-22T16:51:11.728Z",
 	"git": "bf21cc1",
 	"pairs": 30,
 	"calls": 60,
-	"agreement": 0.4,
-	"instructionHeavier": 16,
-	"questionHeavier": 2,
-	"meanTierGap": 0.7667,
+	"agreement": 0.7333,
+	"instructionHeavier": 8,
+	"questionHeavier": 0,
+	"meanTierGap": 0.4,
 	"meanToolsQuestion": 0.1227,
-	"meanToolsInstruction": 0.548,
-	"questionAccuracy": 0.3667,
-	"instructionAccuracy": 0.7667,
+	"meanToolsInstruction": 0.5403,
+	"questionAccuracy": 0.6,
+	"instructionAccuracy": 0.7,
 	"costUsd": 0,
 	"results": [
 		{
@@ -19,16 +19,16 @@
 			"difficulty": "heavy",
 			"question": {
 				"tier": "heavy",
-				"confidence": 0.78,
+				"confidence": 0.91,
 				"needsTools": 0.1,
-				"stakes": 1.13,
+				"stakes": 1.08,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.46,
+				"confidence": 0.51,
 				"needsTools": 0.78,
-				"stakes": 1.42,
+				"stakes": 1.43,
 				"costUsd": 0
 			},
 			"tierGap": 0,
@@ -39,76 +39,76 @@
 			"difficulty": "heavy",
 			"question": {
 				"tier": "light",
-				"confidence": 0.78,
-				"needsTools": 0.06,
-				"stakes": 1.26,
+				"confidence": 0.13,
+				"needsTools": 0.07,
+				"stakes": 1.25,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.62,
+				"confidence": 0.63,
 				"needsTools": 0.91,
-				"stakes": 1.72,
+				"stakes": 1.69,
 				"costUsd": 0
 			},
 			"tierGap": 2,
-			"toolsGap": 0.8500000000000001
+			"toolsGap": 0.8400000000000001
 		},
 		{
 			"id": "smuggling",
 			"difficulty": "heavy",
 			"question": {
 				"tier": "heavy",
-				"confidence": 0.73,
-				"needsTools": 0.05,
-				"stakes": 1.88,
+				"confidence": 0.94,
+				"needsTools": 0.04,
+				"stakes": 1.85,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.97,
-				"needsTools": 0.6,
-				"stakes": 1.97,
+				"confidence": 0.94,
+				"needsTools": 0.61,
+				"stakes": 1.96,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.5499999999999999
+			"toolsGap": 0.57
 		},
 		{
 			"id": "column-rename",
 			"difficulty": "heavy",
 			"question": {
-				"tier": "light",
-				"confidence": 0.71,
+				"tier": "standard",
+				"confidence": 0.21,
 				"needsTools": 0.04,
 				"stakes": 1.8,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.94,
-				"needsTools": 0.33,
-				"stakes": 1.98,
+				"confidence": 0.92,
+				"needsTools": 0.32,
+				"stakes": 1.97,
 				"costUsd": 0
 			},
-			"tierGap": 2,
-			"toolsGap": 0.29000000000000004
+			"tierGap": 1,
+			"toolsGap": 0.28
 		},
 		{
 			"id": "swap-dims-alias",
 			"difficulty": "heavy",
 			"question": {
 				"tier": "light",
-				"confidence": 0.99,
-				"needsTools": 0.05,
-				"stakes": 0.84,
+				"confidence": 0.91,
+				"needsTools": 0.04,
+				"stakes": 0.86,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "standard",
-				"confidence": 0.67,
-				"needsTools": 0.68,
-				"stakes": 1.14,
+				"confidence": 0.63,
+				"needsTools": 0.67,
+				"stakes": 1.16,
 				"costUsd": 0
 			},
 			"tierGap": 1,
@@ -119,199 +119,199 @@
 			"difficulty": "heavy",
 			"question": {
 				"tier": "light",
-				"confidence": 0.98,
+				"confidence": 0.86,
 				"needsTools": 0.02,
-				"stakes": 1.68,
+				"stakes": 1.67,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.97,
-				"needsTools": 0.76,
-				"stakes": 1.97,
+				"confidence": 0.92,
+				"needsTools": 0.72,
+				"stakes": 1.98,
 				"costUsd": 0
 			},
 			"tierGap": 2,
-			"toolsGap": 0.74
+			"toolsGap": 0.7
 		},
 		{
 			"id": "callers-of-check-scalar",
 			"difficulty": "standard",
 			"question": {
-				"tier": "light",
-				"confidence": 0.18,
-				"needsTools": 0.42,
-				"stakes": 0.7,
+				"tier": "standard",
+				"confidence": 0.29,
+				"needsTools": 0.38,
+				"stakes": 0.69,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.45,
+				"confidence": 0.54,
 				"needsTools": 0.8,
-				"stakes": 1.66,
+				"stakes": 1.64,
 				"costUsd": 0
 			},
-			"tierGap": 2,
-			"toolsGap": 0.38000000000000006
+			"tierGap": 1,
+			"toolsGap": 0.42000000000000004
 		},
 		{
 			"id": "deprecation-shim",
 			"difficulty": "standard",
 			"question": {
 				"tier": "light",
-				"confidence": 0.95,
-				"needsTools": 0.63,
-				"stakes": 0.57,
+				"confidence": 0.85,
+				"needsTools": 0.65,
+				"stakes": 0.58,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.56,
+				"confidence": 0.17,
 				"needsTools": 0.87,
-				"stakes": 1.43,
+				"stakes": 1.4,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.24
+			"toolsGap": 0.21999999999999997
 		},
 		{
 			"id": "offset-pagination",
 			"difficulty": "standard",
 			"question": {
-				"tier": "light",
-				"confidence": 0.24,
-				"needsTools": 0.18,
-				"stakes": 0.88,
+				"tier": "heavy",
+				"confidence": 0.34,
+				"needsTools": 0.17,
+				"stakes": 0.9,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.62,
-				"needsTools": 0.66,
-				"stakes": 1.11,
+				"confidence": 0.76,
+				"needsTools": 0.67,
+				"stakes": 1.14,
 				"costUsd": 0
 			},
-			"tierGap": 2,
-			"toolsGap": 0.48000000000000004
+			"tierGap": 0,
+			"toolsGap": 0.5
 		},
 		{
 			"id": "n-plus-one",
 			"difficulty": "standard",
 			"question": {
-				"tier": "light",
-				"confidence": 0.55,
-				"needsTools": 0.13,
-				"stakes": 1,
+				"tier": "standard",
+				"confidence": 0.32,
+				"needsTools": 0.14,
+				"stakes": 1.01,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "standard",
-				"confidence": 0.59,
-				"needsTools": 0.63,
-				"stakes": 1.24,
+				"confidence": 0.42,
+				"needsTools": 0.59,
+				"stakes": 1.19,
 				"costUsd": 0
 			},
-			"tierGap": 1,
-			"toolsGap": 0.5
+			"tierGap": 0,
+			"toolsGap": 0.44999999999999996
 		},
 		{
 			"id": "mutable-default",
 			"difficulty": "light",
 			"question": {
 				"tier": "light",
-				"confidence": 0.99,
+				"confidence": 0.4,
 				"needsTools": 0.03,
 				"stakes": 0.65,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.7,
-				"needsTools": 0.32,
-				"stakes": 0.81,
+				"confidence": 0.62,
+				"needsTools": 0.28,
+				"stakes": 0.82,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.29000000000000004
+			"toolsGap": 0.25
 		},
 		{
 			"id": "float-equality",
 			"difficulty": "light",
 			"question": {
 				"tier": "light",
-				"confidence": 1,
-				"needsTools": 0.04,
-				"stakes": 0.46,
+				"confidence": 0.76,
+				"needsTools": 0.05,
+				"stakes": 0.49,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.82,
+				"confidence": 0.69,
 				"needsTools": 0.1,
-				"stakes": 0.57,
+				"stakes": 0.54,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.060000000000000005
+			"toolsGap": 0.05
 		},
 		{
 			"id": "gil-deadlock",
 			"difficulty": "heavy",
 			"question": {
 				"tier": "heavy",
-				"confidence": 0.87,
-				"needsTools": 0.08,
-				"stakes": 1.18,
+				"confidence": 0.93,
+				"needsTools": 0.09,
+				"stakes": 1.2,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.99,
+				"confidence": 0.98,
 				"needsTools": 0.6,
-				"stakes": 1.62,
+				"stakes": 1.64,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.52
+			"toolsGap": 0.51
 		},
 		{
 			"id": "cache-stampede",
 			"difficulty": "heavy",
 			"question": {
-				"tier": "light",
-				"confidence": 0.75,
+				"tier": "heavy",
+				"confidence": 0.3,
 				"needsTools": 0.04,
-				"stakes": 0.78,
+				"stakes": 0.9,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.89,
-				"needsTools": 0.69,
-				"stakes": 1.79,
+				"confidence": 0.92,
+				"needsTools": 0.68,
+				"stakes": 1.8,
 				"costUsd": 0
 			},
-			"tierGap": 2,
-			"toolsGap": 0.6499999999999999
+			"tierGap": 0,
+			"toolsGap": 0.64
 		},
 		{
 			"id": "float-accumulation",
 			"difficulty": "heavy",
 			"question": {
-				"tier": "light",
-				"confidence": 0.74,
-				"needsTools": 0.1,
-				"stakes": 1.42,
+				"tier": "standard",
+				"confidence": 0.14,
+				"needsTools": 0.09,
+				"stakes": 1.46,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "standard",
-				"confidence": 0.38,
-				"needsTools": 0.36,
+				"confidence": 0.28,
+				"needsTools": 0.35,
 				"stakes": 1.53,
 				"costUsd": 0
 			},
-			"tierGap": 1,
+			"tierGap": 0,
 			"toolsGap": 0.26
 		},
 		{
@@ -319,276 +319,276 @@
 			"difficulty": "heavy",
 			"question": {
 				"tier": "light",
-				"confidence": 0.95,
+				"confidence": 0.52,
 				"needsTools": 0.06,
-				"stakes": 0.82,
+				"stakes": 0.8,
 				"costUsd": 0
 			},
 			"instruction": {
-				"tier": "standard",
-				"confidence": 0.23,
-				"needsTools": 0.72,
-				"stakes": 1.37,
+				"tier": "heavy",
+				"confidence": 0.27,
+				"needsTools": 0.71,
+				"stakes": 1.35,
 				"costUsd": 0
 			},
-			"tierGap": 1,
-			"toolsGap": 0.6599999999999999
+			"tierGap": 2,
+			"toolsGap": 0.6499999999999999
 		},
 		{
 			"id": "index-lock",
 			"difficulty": "heavy",
 			"question": {
 				"tier": "light",
-				"confidence": 0.68,
+				"confidence": 0.09,
 				"needsTools": 0.06,
-				"stakes": 1.54,
+				"stakes": 1.51,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "heavy",
-				"confidence": 0.33,
-				"needsTools": 0.59,
-				"stakes": 1.79,
-				"costUsd": 0
-			},
-			"tierGap": 2,
-			"toolsGap": 0.53
-		},
-		{
-			"id": "retry-idempotency",
-			"difficulty": "heavy",
-			"question": {
-				"tier": "light",
-				"confidence": 0.32,
-				"needsTools": 0.05,
-				"stakes": 1.89,
-				"costUsd": 0
-			},
-			"instruction": {
-				"tier": "heavy",
-				"confidence": 0.97,
-				"needsTools": 0.55,
-				"stakes": 1.99,
-				"costUsd": 0
-			},
-			"tierGap": 2,
-			"toolsGap": 0.5
-		},
-		{
-			"id": "flaky-order",
-			"difficulty": "standard",
-			"question": {
-				"tier": "heavy",
-				"confidence": 0.86,
-				"needsTools": 0.52,
-				"stakes": 0.99,
-				"costUsd": 0
-			},
-			"instruction": {
-				"tier": "standard",
-				"confidence": 0.31,
-				"needsTools": 0.84,
-				"stakes": 1.09,
-				"costUsd": 0
-			},
-			"tierGap": -1,
-			"toolsGap": 0.31999999999999995
-		},
-		{
-			"id": "env-precedence",
-			"difficulty": "standard",
-			"question": {
-				"tier": "light",
-				"confidence": 0.85,
-				"needsTools": 0.11,
-				"stakes": 1.05,
-				"costUsd": 0
-			},
-			"instruction": {
-				"tier": "standard",
-				"confidence": 0.41,
-				"needsTools": 0.62,
-				"stakes": 1.33,
-				"costUsd": 0
-			},
-			"tierGap": 1,
-			"toolsGap": 0.51
-		},
-		{
-			"id": "json-roundtrip",
-			"difficulty": "standard",
-			"question": {
-				"tier": "light",
-				"confidence": 0.43,
-				"needsTools": 0.16,
-				"stakes": 1.2,
-				"costUsd": 0
-			},
-			"instruction": {
-				"tier": "standard",
-				"confidence": 0.44,
-				"needsTools": 0.56,
-				"stakes": 1.6,
-				"costUsd": 0
-			},
-			"tierGap": 1,
-			"toolsGap": 0.4
-		},
-		{
-			"id": "import-cycle",
-			"difficulty": "standard",
-			"question": {
-				"tier": "light",
-				"confidence": 0.23,
-				"needsTools": 0.22,
-				"stakes": 0.97,
-				"costUsd": 0
-			},
-			"instruction": {
-				"tier": "heavy",
-				"confidence": 0.74,
-				"needsTools": 0.79,
-				"stakes": 1.49,
+				"confidence": 0.3,
+				"needsTools": 0.63,
+				"stakes": 1.78,
 				"costUsd": 0
 			},
 			"tierGap": 2,
 			"toolsGap": 0.5700000000000001
 		},
 		{
-			"id": "regex-catastrophic",
+			"id": "retry-idempotency",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.8,
+				"needsTools": 0.05,
+				"stakes": 1.88,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.96,
+				"needsTools": 0.56,
+				"stakes": 1.99,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.51
+		},
+		{
+			"id": "flaky-order",
 			"difficulty": "standard",
 			"question": {
-				"tier": "light",
-				"confidence": 0.53,
-				"needsTools": 0.09,
-				"stakes": 1.05,
+				"tier": "heavy",
+				"confidence": 0.85,
+				"needsTools": 0.53,
+				"stakes": 1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.33,
+				"needsTools": 0.85,
+				"stakes": 1.04,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.31999999999999995
+		},
+		{
+			"id": "env-precedence",
+			"difficulty": "standard",
+			"question": {
+				"tier": "standard",
+				"confidence": 0.11,
+				"needsTools": 0.11,
+				"stakes": 1.04,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "standard",
-				"confidence": 0.58,
-				"needsTools": 0.08,
-				"stakes": 1.48,
+				"confidence": 0.39,
+				"needsTools": 0.63,
+				"stakes": 1.31,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.52
+		},
+		{
+			"id": "json-roundtrip",
+			"difficulty": "standard",
+			"question": {
+				"tier": "standard",
+				"confidence": 0.23,
+				"needsTools": 0.16,
+				"stakes": 1.2,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.3,
+				"needsTools": 0.55,
+				"stakes": 1.55,
 				"costUsd": 0
 			},
 			"tierGap": 1,
-			"toolsGap": -0.009999999999999995
+			"toolsGap": 0.39
+		},
+		{
+			"id": "import-cycle",
+			"difficulty": "standard",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.34,
+				"needsTools": 0.23,
+				"stakes": 0.99,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.81,
+				"needsTools": 0.8,
+				"stakes": 1.49,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.5700000000000001
+		},
+		{
+			"id": "regex-catastrophic",
+			"difficulty": "standard",
+			"question": {
+				"tier": "standard",
+				"confidence": 0.36,
+				"needsTools": 0.09,
+				"stakes": 1.1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.59,
+				"needsTools": 0.07,
+				"stakes": 1.48,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": -0.01999999999999999
 		},
 		{
 			"id": "logging-duplicate",
 			"difficulty": "standard",
 			"question": {
 				"tier": "heavy",
-				"confidence": 0.13,
-				"needsTools": 0.25,
-				"stakes": 0.9,
+				"confidence": 0.23,
+				"needsTools": 0.27,
+				"stakes": 0.91,
 				"costUsd": 0
 			},
 			"instruction": {
-				"tier": "standard",
-				"confidence": 0.38,
-				"needsTools": 0.67,
-				"stakes": 0.93,
+				"tier": "heavy",
+				"confidence": 0.36,
+				"needsTools": 0.68,
+				"stakes": 0.96,
 				"costUsd": 0
 			},
-			"tierGap": -1,
-			"toolsGap": 0.42000000000000004
+			"tierGap": 0,
+			"toolsGap": 0.41000000000000003
 		},
 		{
 			"id": "assign-in-if",
 			"difficulty": "light",
 			"question": {
 				"tier": "light",
-				"confidence": 1,
+				"confidence": 0.92,
 				"needsTools": 0.03,
-				"stakes": 0.28,
+				"stakes": 0.31,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.94,
-				"needsTools": 0.3,
-				"stakes": 0.46,
+				"confidence": 0.91,
+				"needsTools": 0.29,
+				"stakes": 0.47,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.27
+			"toolsGap": 0.26
 		},
 		{
 			"id": "str-int-concat",
 			"difficulty": "light",
 			"question": {
 				"tier": "light",
-				"confidence": 1,
+				"confidence": 0.87,
 				"needsTools": 0.03,
-				"stakes": 0.35,
+				"stakes": 0.32,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.96,
-				"needsTools": 0.37,
-				"stakes": 0.45,
+				"confidence": 0.88,
+				"needsTools": 0.34,
+				"stakes": 0.43,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.33999999999999997
+			"toolsGap": 0.31000000000000005
 		},
 		{
 			"id": "sort-returns-none",
 			"difficulty": "light",
 			"question": {
 				"tier": "light",
-				"confidence": 1,
-				"needsTools": 0.04,
-				"stakes": 0.69,
+				"confidence": 0.83,
+				"needsTools": 0.03,
+				"stakes": 0.73,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.96,
-				"needsTools": 0.46,
-				"stakes": 0.79,
+				"confidence": 0.93,
+				"needsTools": 0.41,
+				"stakes": 0.72,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.42000000000000004
+			"toolsGap": 0.38
 		},
 		{
 			"id": "unclosed-handle",
 			"difficulty": "light",
 			"question": {
 				"tier": "light",
-				"confidence": 1,
+				"confidence": 0.78,
 				"needsTools": 0.04,
-				"stakes": 0.74,
+				"stakes": 0.71,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.93,
-				"needsTools": 0.53,
-				"stakes": 0.97,
+				"confidence": 0.87,
+				"needsTools": 0.45,
+				"stakes": 0.92,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.49000000000000005
+			"toolsGap": 0.41000000000000003
 		},
 		{
 			"id": "range-off-by-one",
 			"difficulty": "light",
 			"question": {
 				"tier": "light",
-				"confidence": 1,
+				"confidence": 0.99,
 				"needsTools": 0.02,
-				"stakes": 0.28,
+				"stakes": 0.27,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.98,
+				"confidence": 0.97,
 				"needsTools": 0.12,
-				"stakes": 0.43,
+				"stakes": 0.4,
 				"costUsd": 0
 			},
 			"tierGap": 0,
@@ -599,20 +599,20 @@
 			"difficulty": "light",
 			"question": {
 				"tier": "light",
-				"confidence": 1,
-				"needsTools": 0.03,
-				"stakes": 0.11,
+				"confidence": 0.97,
+				"needsTools": 0.02,
+				"stakes": 0.13,
 				"costUsd": 0
 			},
 			"instruction": {
 				"tier": "light",
-				"confidence": 0.58,
-				"needsTools": 0.15,
-				"stakes": 0.87,
+				"confidence": 0.38,
+				"needsTools": 0.17,
+				"stakes": 0.9,
 				"costUsd": 0
 			},
 			"tierGap": 0,
-			"toolsGap": 0.12
+			"toolsGap": 0.15000000000000002
 		}
 	]
 }

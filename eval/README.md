@@ -386,11 +386,17 @@ four times in six, at mean confidence **0.87**. See §0b of the findings brief.
 is how round 37 ruled out the mechanism round 36 proposed: the gap is unchanged without
 them. The cause is the `light` criterion's own wording in `src/state.ts`.
 
-`--phrasing-questions proposed` runs a **candidate rewrite** of that criterion
-(`proposedRoutingQuestions()`, kept in `eval/` because this harness does not edit `src/`)
-so a wording can be measured before it is adopted. It closes 30% of the gap and lifts
-question accuracy from 33.3% to 50.0% — a partial fix, measured rather than argued. See
-§9B of the findings brief for the acceptance numbers.
+`--phrasing-questions proposed` and `proposed-v2` run **candidate rewrites** of that
+criterion (`proposedRoutingQuestions()`, kept in `eval/` because this harness does not
+edit `src/`) so a wording can be priced before it is adopted. v1 closes 65% of the gap
+but costs 30pp of `standard` instruction accuracy; v2 trades some of that back. §9B of
+the findings brief has the per-band table and recommends **v2**, with the crossover at
+which that flips.
+
+The pack carries **eight light controls** — genuinely trivial defects where the question
+form *should* be light. They read gap 0.00 and 8/8 both ways, which is what separates
+"the criteria mis-sort by difficulty" from "this model treats questions as chatter". A
+test pins them, and another requires a phrasing-blind classifier to score an exact zero.
 
 Offline it takes any `Classify` function, which is how the probe itself is tested: a
 phrasing-blind classifier must report no gap, and a tools-keyed one must report the full

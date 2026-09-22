@@ -131,7 +131,7 @@ interface Args {
 	probe: boolean;
 	probePhrasing: boolean;
 	phrasingPack: string;
-	phrasingQuestions: "shipped" | "tier-only" | "proposed";
+	phrasingQuestions: "shipped" | "tier-only" | "proposed" | "proposed-v2";
 	probePack: string;
 	liveJudge: boolean;
 	judgeBias: number;
@@ -425,7 +425,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --probe-phrasing       does wording the same work as a question change its tier?
                          (needs --classifier live; 2 calls per pair, no model inference)
   --phrasing-pack <file> phrasing pack (default eval/tasks/phrasing-probe-v1.json)
-  --phrasing-questions <s>  shipped | tier-only | proposed; tier-only drops needs_tools/stakes,
+  --phrasing-questions <s>  shipped | tier-only | proposed | proposed-v2; tier-only drops
                          from the request, to test whether asking them moves the tier
   --seed <s>             deterministic seed for the offline judge
   --start-model <key>    model each task session starts on
