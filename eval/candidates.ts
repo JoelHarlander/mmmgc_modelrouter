@@ -202,6 +202,52 @@ function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * The same retry and pacing policy as `RetryingJudge`, applied to a `JevClient` so the
+ * live *classifier* gets it too. A 175-turn pack is 175 calls against a 30-per-15-second
+ * budget; without pacing it fails on call 31.
+ *
+ * Exposes only what `eval/classifier.ts` uses, so it cannot drift into being a partial
+ * reimplementation of the client.
+ */
+export interface JevLike {
+	available(): boolean;
+	describe(): string;
+	ask(...args: Parameters<JevClient["ask"]>): ReturnType<JevClient["ask"]>;
+}
+
+export function retryingJev(inner: JevClient, options: RetryOptions = {}): JevLike {
+	const attempts = options.attempts ?? 6;
+	const base = options.baseDelayMs ?? 1000;
+	const max = options.maxDelayMs ?? 30_000;
+	const pace = options.paceMs ?? 0;
+	let lastCallAt = 0;
+
+	return {
+		available: () => inner.available(),
+		describe: () => inner.describe(),
+		async ask(...args) {
+			let lastError: unknown;
+			for (let attempt = 1; attempt <= attempts; attempt++) {
+				const since = Date.now() - lastCallAt;
+				if (pace > 0 && since < pace) await sleep(pace - since);
+				lastCallAt = Date.now();
+				try {
+					return await inner.ask(...args);
+				} catch (err) {
+					lastError = err;
+					if (attempt === attempts || !isRetryable(err)) throw err;
+					const backoff = Math.min(max, base * 2 ** (attempt - 1)) * (0.5 + Math.random() / 2);
+					const delay = isRateLimit(err) ? Math.max(backoff, options.rateLimitDelayMs ?? 16_000) : backoff;
+					options.onRetry?.(attempt, Math.round(delay), err);
+					await sleep(delay);
+				}
+			}
+			throw lastError;
+		},
+	};
+}
+
 /** The real thing: Jev judging real response texts, using src/parallel.ts's question verbatim. */
 export class JevJudge implements Judge {
 	readonly name = "jev";

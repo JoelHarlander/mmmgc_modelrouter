@@ -1,0 +1,189 @@
+{
+	"title": "start sweep — pack swe-router-long-v1, every fleet model as the session's starting point",
+	"at": "2026-09-22T15:42:07.519Z",
+	"git": "2a310c6",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"startModel": "faux-or/glm-5.3-flash",
+			"classifier": "scripted",
+			"sessionSuccessRate": 0.6057,
+			"tierAccuracy": 0.6857,
+			"switches": 67,
+			"listEquivalentUsd": 57.921,
+			"coldPremiumUsd": 27.5259,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-or/glm-5.3-flash",
+			"classifier": "heuristic",
+			"sessionSuccessRate": 0.3143,
+			"tierAccuracy": 0.3771,
+			"switches": 1,
+			"listEquivalentUsd": 7.2519,
+			"coldPremiumUsd": 0.6604,
+			"compactions": 8
+		},
+		{
+			"startModel": "faux-or/glm-5.3-flash",
+			"classifier": "oracle",
+			"sessionSuccessRate": 0.7486,
+			"tierAccuracy": 0.9429,
+			"switches": 89,
+			"listEquivalentUsd": 79.5774,
+			"coldPremiumUsd": 37.7433,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-gw/deepseek-v4.1-flash",
+			"classifier": "scripted",
+			"sessionSuccessRate": 0.6171,
+			"tierAccuracy": 0.6857,
+			"switches": 67,
+			"listEquivalentUsd": 50.3216,
+			"coldPremiumUsd": 23.5358,
+			"compactions": 9
+		},
+		{
+			"startModel": "faux-gw/deepseek-v4.1-flash",
+			"classifier": "heuristic",
+			"sessionSuccessRate": 0.32,
+			"tierAccuracy": 0.3771,
+			"switches": 5,
+			"listEquivalentUsd": 5.215,
+			"coldPremiumUsd": 1.1024,
+			"compactions": 21
+		},
+		{
+			"startModel": "faux-gw/deepseek-v4.1-flash",
+			"classifier": "oracle",
+			"sessionSuccessRate": 0.7657,
+			"tierAccuracy": 0.9429,
+			"switches": 89,
+			"listEquivalentUsd": 74.7647,
+			"coldPremiumUsd": 34.6856,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-or/glm-5.3",
+			"classifier": "scripted",
+			"sessionSuccessRate": 0.6343,
+			"tierAccuracy": 0.6971,
+			"switches": 68,
+			"listEquivalentUsd": 59.2149,
+			"coldPremiumUsd": 28.0724,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-or/glm-5.3",
+			"classifier": "heuristic",
+			"sessionSuccessRate": 0.56,
+			"tierAccuracy": 0.4571,
+			"switches": 4,
+			"listEquivalentUsd": 21.9389,
+			"coldPremiumUsd": 3.7709,
+			"compactions": 8
+		},
+		{
+			"startModel": "faux-or/glm-5.3",
+			"classifier": "oracle",
+			"sessionSuccessRate": 0.7486,
+			"tierAccuracy": 0.9429,
+			"switches": 89,
+			"listEquivalentUsd": 79.5774,
+			"coldPremiumUsd": 37.7433,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-plan-codex/gpt-6-astra",
+			"classifier": "scripted",
+			"sessionSuccessRate": 0.6457,
+			"tierAccuracy": 0.6971,
+			"switches": 70,
+			"listEquivalentUsd": 77.5556,
+			"coldPremiumUsd": 39.1797,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-plan-codex/gpt-6-astra",
+			"classifier": "heuristic",
+			"sessionSuccessRate": 0.72,
+			"tierAccuracy": 0.4571,
+			"switches": 5,
+			"listEquivalentUsd": 191.1522,
+			"coldPremiumUsd": 65.4061,
+			"compactions": 5
+		},
+		{
+			"startModel": "faux-plan-codex/gpt-6-astra",
+			"classifier": "oracle",
+			"sessionSuccessRate": 0.7486,
+			"tierAccuracy": 0.9429,
+			"switches": 89,
+			"listEquivalentUsd": 79.5774,
+			"coldPremiumUsd": 37.7433,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-plan-anthropic/claude-opus-5",
+			"classifier": "scripted",
+			"sessionSuccessRate": 0.6457,
+			"tierAccuracy": 0.6571,
+			"switches": 68,
+			"listEquivalentUsd": 67.5291,
+			"coldPremiumUsd": 33.3076,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-plan-anthropic/claude-opus-5",
+			"classifier": "heuristic",
+			"sessionSuccessRate": 0.8571,
+			"tierAccuracy": 0.2229,
+			"switches": 5,
+			"listEquivalentUsd": 96.4657,
+			"coldPremiumUsd": 32.7825,
+			"compactions": 5
+		},
+		{
+			"startModel": "faux-plan-anthropic/claude-opus-5",
+			"classifier": "oracle",
+			"sessionSuccessRate": 0.7486,
+			"tierAccuracy": 0.9429,
+			"switches": 89,
+			"listEquivalentUsd": 79.5774,
+			"coldPremiumUsd": 37.7433,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-gw/claude-fable-5-1",
+			"classifier": "scripted",
+			"sessionSuccessRate": 0.6457,
+			"tierAccuracy": 0.6571,
+			"switches": 70,
+			"listEquivalentUsd": 73.7523,
+			"coldPremiumUsd": 39.9514,
+			"compactions": 7
+		},
+		{
+			"startModel": "faux-gw/claude-fable-5-1",
+			"classifier": "heuristic",
+			"sessionSuccessRate": 0.8686,
+			"tierAccuracy": 0.2229,
+			"switches": 5,
+			"listEquivalentUsd": 122.165,
+			"coldPremiumUsd": 69.6879,
+			"compactions": 5
+		},
+		{
+			"startModel": "faux-gw/claude-fable-5-1",
+			"classifier": "oracle",
+			"sessionSuccessRate": 0.7486,
+			"tierAccuracy": 0.9429,
+			"switches": 89,
+			"listEquivalentUsd": 79.5774,
+			"coldPremiumUsd": 37.7433,
+			"compactions": 7
+		}
+	]
+}

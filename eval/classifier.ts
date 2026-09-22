@@ -11,7 +11,8 @@
  */
 import type { Tier } from "../src/config.ts";
 import { TIERS } from "../src/config.ts";
-import type { JevChoiceAnswer, JevClient, JevNoulAnswer, JevScoreAnswer } from "../src/jev.ts";
+import type { JevChoiceAnswer, JevNoulAnswer, JevScoreAnswer } from "../src/jev.ts";
+import type { JevLike } from "./candidates.ts";
 import { heuristicTier } from "../src/router.ts";
 import { type RoutingState, routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "../src/state.ts";
 import type { ClassifierMode, ScriptedJev, TaskTurn } from "./types.ts";
@@ -34,7 +35,7 @@ export interface ClassifyArgs {
 	turn: TaskTurn & { goldTier: Tier };
 	prompt: string;
 	state: RoutingState;
-	jev?: JevClient;
+	jev?: JevLike;
 	signal?: AbortSignal;
 }
 

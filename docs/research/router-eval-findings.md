@@ -124,8 +124,8 @@ should not silently downgrade the work.
 
 `npm run eval -- --pack eval/tasks/swe-router-long-v1.json`
 
-- **$39.17 of cold-start premium on a 175-turn run — 49% of routed-turn spend**, across
-  90 switches. Money that bought nothing but re-reading context the model already had.
+- **$33.31 of cold-start premium on a 175-turn run — 50% of routed-turn spend**, across
+  68 switches. Money that bought nothing but re-reading context the model already had.
   **This share is the load-bearing number**: it has survived fleet-skill jitter, the
   traffic constants, compaction, operator pins, billing mode, the starting model, a
   tripled pack and a plan 429, always landing between 40% and 60%.
@@ -155,20 +155,32 @@ entirely, which is 100% of the default configuration's traffic.
 
 `--sweep confidence`, `--sweep pin`
 
-**`switching.minConfidence: 0.5` is nearly inert and the next notch is free.** One turn
-in 175 falls below the shipped bar. At **0.60** landing accuracy rises (88.0% → 88.6%),
-six switches disappear and **$7.40** with them, at no cost to outcome. Do not go higher:
-the bar is a *stickiness* mechanism, not a safety one — at 0.80 the session freezes on
-whatever model it last picked and turn success collapses.
+**`switching.minConfidence: 0.5` should be *lowered*, not raised.** This reverses what
+this section said before round 35, and the reason is that the earlier recommendation was
+built on hand-written confidences rather than Jev's own.
+
+Against Jev's real confidences the bar suppresses **48 of 160 routed turns — 30% — and
+27 of those were classified correctly.** Lowering it to 0 raises landed tier accuracy
+from **65.7% to 74.3%** and turn success from 64.6% to 68.0%, for $4.79.
+
+The cause is visible in `--calibration`: Jev is **systematically under-confident by
+13.1pp**. Every confidence bucket's observed accuracy exceeds its stated confidence, most
+starkly at the bottom — in the 0.00–0.50 band it states 32.3% and is right **56.3%** of
+the time. A bar that treats Jev's stated confidence as honest therefore discards good
+routes. Discrimination is healthy (+31.4pp), so the signal is real; it is the *level*
+that is mis-set. The bar remains a stickiness mechanism rather than a safety one: raising
+it to 0.80 drops landed accuracy to 46.3%.
 
 **`switching.manualPinTurns: 3` is not a free convenience.** It holds 15 of 175 turns and
 **9 of those run in the wrong tier** — served by a model the operator chose for a
-different question. It costs 4.0pp of tier accuracy and 3.4pp of session success to save
-$9.17. Worse, a pin to a small-context model **forces pi to compact**: three of the
+different question. It costs **3.4pp of landed tier accuracy and 5.1pp of session
+success** against a one-turn pin. Worse, a pin to a small-context model **forces pi to compact**: three of the
 pack's compactions are pin-induced, discarding a 200k conversation down to 22k to answer
 "show me the diff".
 
-**Recommendation.** `minConfidence: 0.6`. `manualPinTurns: 1` — respect the operator's
+**Recommendation.** `minConfidence: 0` — or better, recalibrate: Jev's stated confidence
+maps to roughly 13 points more true accuracy than it claims, so a bar set on the raw
+number sits about 13 points too high. `manualPinTurns: 1` — respect the operator's
 choice for the turn they made it on. If a pin must persist, exempt turns whose context
 would not fit the pinned model's window.
 

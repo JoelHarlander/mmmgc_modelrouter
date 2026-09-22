@@ -96,10 +96,10 @@ than measured, and both live in fixtures so you can argue with them:
 | --- | --- | --- |
 | Which model can do which work | `tasks/fleet.json` → `skill`, `skillByCategory` | A turn is solved when the chosen model's category-adjusted skill reaches the turn's `requiredSkill`. |
 | What forgetting costs | `COMPACTION_SKILL_PENALTY`, a task's `contextSensitivity` | After pi compacts, a turn that leaned on the discarded detail needs more skill, decaying as the context is rebuilt. Swept by `--compaction-penalty`; the conclusion is flat between 6 and 40 points. |
-| What the classifier says | `tasks/*.json` → `turns[].jev` | The tier, confidence, `needs_tools` and `stakes` a calibrated classifier is expected to return, written against the criteria in `src/state.ts`. |
+| ~~What the classifier says~~ | `tasks/*.json` → `turns[].jev` | **No longer declared.** Since round 35 these are Jev's own recorded answers (`--classifier live --record`), so `scripted` replays a real classifier. |
 
 So an offline number is a statement about **routing policy under a stated model of
-competence**, not about Claude or GPT. `--classifier live` replaces the second
+competence**, applied to a **real classifier's real answers**, not about Claude or GPT. `--classifier live` replaces the second
 declaration with a real Jev call; nothing replaces the first — so `--sweep oracle`
 jitters every model's skill by up to ±N points (which also moves the derived `goldTier`
 labels) and reports which findings survive. Use it before quoting any quality number:
@@ -110,7 +110,7 @@ not.
 
 | `--classifier` | Source of the tier | Network |
 | --- | --- | --- |
-| `scripted` (default) | the fixture's `turns[].jev`; `fail: true` models an outage and falls through to the heuristic, exactly as `src/index.ts` does | none |
+| `scripted` (default) | the fixture's `turns[].jev` — **Jev's own recorded answers** since round 35; `fail: true` models an outage and falls through to the heuristic, exactly as `src/index.ts` does | none |
 | `heuristic` | `src/router.ts#heuristicTier`, the real zero-cost fallback | none |
 | `oracle` | always the fixture's `goldTier` at confidence 1 — the ceiling a perfect classifier reaches | none |
 | `live` | a real Jev call through `src/jev.ts` | **yes, and it is billed** |

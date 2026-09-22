@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { JevClient } from "../src/jev.ts";
 import type { RouterConfig } from "../src/config.ts";
-import { type Judge, JevJudge, NoisyJudge, RetryingJudge } from "./candidates.ts";
+import { type JevLike, type Judge, JevJudge, NoisyJudge, RetryingJudge, retryingJev } from "./candidates.ts";
 import { auditAssumptions, renderAssumptions } from "./assumptions.ts";
 import { renderCoverage, runCoverage } from "./coverage.ts";
 import { auditConfig, renderAudit } from "./audit.ts";
@@ -465,14 +465,22 @@ async function main(): Promise<number> {
 		return 2;
 	}
 
-	let jev: JevClient | undefined;
+	let jev: JevLike | undefined;
 	if (live) {
-		jev = liveJevClient(loaded.config.jev);
-		if (!jev.available()) {
-			process.stderr.write(`live mode needs a Jev credential: ${jev.describe()}\n`);
+		const client = liveJevClient(loaded.config.jev);
+		// Same policy as the probe: a 175-turn pack is 175 calls against a 30-per-15s budget.
+		jev = retryingJev(client, {
+			paceMs: 800,
+			attempts: 6,
+			rateLimitDelayMs: 16_000,
+			onRetry: (attempt, delayMs, err) =>
+				process.stderr.write(`  retry ${attempt} in ${delayMs}ms: ${err instanceof Error ? err.message : String(err)}\n`),
+		});
+		if (!client.available()) {
+			process.stderr.write(`live mode needs a Jev credential: ${client.describe()}\n`);
 			return 2;
 		}
-		process.stderr.write(`LIVE: ${pack.tasks.reduce((n, t) => n + t.turns.length, 0)} classifier calls via ${jev.describe()}\n`);
+		process.stderr.write(`LIVE: up to ${pack.tasks.reduce((n, t) => n + t.turns.length, 0)} classifier calls via ${client.describe()}\n`);
 	}
 
 	if (args.sweep) {

@@ -36,7 +36,9 @@ Jump to the round that established each claim, and what it rests on.
 | The shipped **confidence gate does not defend against bias** — a biased judge is confidently wrong | 8 | 5 seeds × 3 bias levels |
 | *(under-powered)* The **shipped candidate set is the worst of five**: `tier-top` gets +21.7pp for 40% of the spend and is bias-immune | 9 | 5 seeds; bias-immunity is model-dependent |
 | The fan-out's fragility to bias is the **tier price inversion** (r2) propagating into `pickParallelModels` | 9 | fleet prices |
-| The shipped routing confidence bar (0.50) is **nearly inert** — 1 turn in 60 falls below it | **12** | both packs |
+| ~~The shipped routing confidence bar (0.50) is nearly inert~~ | 12 | **REFUTED in r35.** That was my handwriting. Against Jev's own confidences it suppresses **30% of routed turns, 56% of them correct**. |
+| **Jev is systematically under-confident by 13.1pp**, so a bar set on its raw confidence sits ~13 points too high — `minConfidence` should be **lowered**, not raised | **35** | live, 160 routed turns |
+| **Jev under-routes "why / who else / walk me through" questions** that sit on hard work — it reads *needs no tools* as *is easy* | **35** | live, long pack |
 | Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
 | *(cost: resolved; quality: under-powered)* **Fan-out as *exploration* is ~20× more cost-effective than fanning out every turn**: +21.3pp for $0.81/solve vs $16.03 | **13** | 5 seeds |
@@ -2070,3 +2072,92 @@ operation. It is now §0 and §7 of the findings brief.
 **Next.** `--classifier live --record` would remove the standing asterisk on every
 `scripted` number — ~206 calls, about three minutes at the gateway's limit, still free.
 That was outside this authorisation.
+
+---
+
+## Round 35 — 2026-09-23 — replace my handwriting with Jev's
+
+**Measured.** The standing asterisk on every `scripted` number: those classifier answers
+were what I *guessed* Jev would say. `--record` replaces them with what it does say.
+
+**Authorisation.** Firstmate authorised the judge probe and drew one boundary: *no live
+model inference of any kind*. `--record` makes none — it is Jev classification only, the
+same call class as the probe — and round 34 had just measured that class at **$0.00**.
+Given the explicit grant of judgement on what to measure next, and a boundary about model
+inference that this does not cross, I ran it. **206 calls, $0.00** (credits $5.00 →
+$5.00, `total_used` 0 → 0, unchanged across the whole session).
+
+**Changed.** Both packs now carry Jev's own answers. The live *classifier* path also
+needed the round-34 retry and pacing — 175 calls against a 30-per-15-second budget fails
+on call 31 without it — so `retryingJev` applies the same policy to `JevClient`.
+
+**What the numbers did.** The gate fired on exactly the four `scripted` profiles and left
+`heuristic` and `oracle` byte-identical, which is the correct blast radius:
+
+| profile | turn success | landed tier acc | in-tier misses |
+| --- | ---: | ---: | ---: |
+| short / scripted | 80.7% → **90.3%** | 77.4% → **67.7%** | 2 → 2 |
+| long / scripted | 80.0% → **64.6%** | 88.0% → **65.7%** | 12 → **26** |
+
+**Real Jev is not my model of it, in opposite directions on the two packs.** On the short
+pack it **over-routes** (29.0% over, 3.2% under) and *out-scores the oracle* — 90.3%
+against 87.1% — because escalating is free under the tier price inversion, so landing in
+the "right" tier is not the same as landing in the best one. On the long pack it
+**under-routes** (18.9% under) and loses 15pp.
+
+**The under-routes have a shape, and it is the most useful thing this round found.**
+All 21 land on turns 2–9 of a session, and they are overwhelmingly *questions* sitting on
+hard work:
+
+```
+gold=standard jev=light  "Why does it assume the first expression is a string?"
+gold=heavy    jev=light  "Walk me through the consequences for plugins that install…"
+gold=standard jev=light  "Who else calls the private name across the codebase?"
+gold=standard jev=light  "Why does the permutation set depend on that order?"
+```
+
+`src/state.ts` asks Jev `needs_tools` — *"will fulfilling this require editing files or
+running commands, rather than only answering in text?"* — and these all answer *no*.
+**Jev appears to read "needs no tools" as "is easy".** A question about a race condition
+needs the same understanding as fixing it; only the output differs.
+
+### And it refutes round 12
+
+Round 12 measured the shipped `minConfidence: 0.5` as "nearly inert — 1 turn in 60 falls
+below it" and recommended raising it to 0.6. That was an artefact of my hand-written
+confidences, which sat almost entirely above the bar. Against Jev's own:
+
+| bar | landed tier acc | turn success | suppressed (of which correct) |
+| ---: | ---: | ---: | ---: |
+| **0.00** | **74.3%** | **68.0%** | 0 |
+| 0.50 (shipped) | 65.7% | 64.6% | **48 (27)** |
+| 0.60 | 64.0% | 64.6% | 63 (37) |
+| 0.80 | 46.3% | 67.4% | 105 (73) |
+
+The bar suppresses **30% of routed turns, and 56% of what it suppresses was correct.**
+`--calibration` says why: Jev is **systematically under-confident by 13.1pp** — every
+bucket's observed accuracy exceeds its stated confidence, and in the 0.00–0.50 band it
+states 32.3% and is right **56.3%** of the time. Discrimination is healthy (+31.4pp), so
+the signal is real; the *level* is mis-set. **The recommendation reverses: lower the bar,
+or recalibrate against the 13-point gap.** §4 of the brief now says so.
+
+The round-26 bug also gets worse: real confidences are lower, so the low-confidence
+branch is taken more often and the rate-limited-route case now reaches **two** turns
+instead of one — the second from a genuine Jev confidence of 0.28, not a heuristic
+fallback.
+
+**Five tests changed with the fixture**, each to a mechanism: Jev over-routes the short
+pack rather than beating the oracle by luck; fan-out cost scales with context (the
+$/extra-solve figure depends on headroom and is no longer asserted); the confidence bar
+is blunt rather than idle, measured on landed accuracy because outcome is confounded by
+the starting model; and which router-side assumption leads depends on the pack, so only
+the fan-out contrast is asserted.
+
+**What is no longer an asterisk.** Every `scripted` number in this log from here on is
+Jev's actual behaviour on these prompts. Rounds 1–34's `scripted` figures were my
+expectations, and where they differ the difference is now visible rather than assumed.
+
+**Next.** The one thing round 35 raises and cannot settle: whether Jev's `needs_tools`
+question is *causing* the under-routing of questions. `src/state.ts` is out of bounds for
+this task, but a probe pack of question-shaped prompts with known difficulty would
+measure it for $0.00.

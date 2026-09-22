@@ -4,48 +4,56 @@
 		{
 			"lower": 0,
 			"upper": 0.5,
-			"turns": 2,
-			"meanConfidence": 0.395,
-			"accuracy": 1,
+			"turns": 8,
+			"meanConfidence": 0.3575,
+			"accuracy": 0.5,
 			"belowBar": true
 		},
 		{
 			"lower": 0.5,
 			"upper": 0.6,
-			"turns": 4,
-			"meanConfidence": 0.56,
-			"accuracy": 0.25,
+			"turns": 2,
+			"meanConfidence": 0.54,
+			"accuracy": 0.5,
 			"belowBar": false
 		},
 		{
 			"lower": 0.6,
 			"upper": 0.7,
-			"turns": 7,
-			"meanConfidence": 0.6543,
-			"accuracy": 0.7143,
+			"turns": 3,
+			"meanConfidence": 0.6333,
+			"accuracy": 0.6667,
 			"belowBar": false
 		},
 		{
 			"lower": 0.7,
 			"upper": 0.8,
-			"turns": 12,
-			"meanConfidence": 0.7417,
-			"accuracy": 1,
+			"turns": 2,
+			"meanConfidence": 0.76,
+			"accuracy": 0.5,
 			"belowBar": false
 		},
 		{
 			"lower": 0.8,
 			"upper": 0.9,
-			"turns": 4,
-			"meanConfidence": 0.83,
+			"turns": 7,
+			"meanConfidence": 0.8486,
+			"accuracy": 0.8571,
+			"belowBar": false
+		},
+		{
+			"lower": 0.9,
+			"upper": 1,
+			"turns": 7,
+			"meanConfidence": 0.9671,
 			"accuracy": 1,
 			"belowBar": false
 		}
 	],
-	"ece": 0.2293,
-	"bias": -0.1438,
-	"discrimination": 0.3846,
+	"ece": 0.0734,
+	"bias": -0.0321,
+	"discrimination": 0.3365,
 	"minConfidence": 0.5,
-	"suppressed": 2,
-	"suppressedCorrect": 2
+	"suppressed": 8,
+	"suppressedCorrect": 4
 }

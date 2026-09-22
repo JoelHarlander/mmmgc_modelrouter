@@ -16,12 +16,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { modelKey, type RouterConfig, type ThinkingLevel, TIERS } from "../src/config.ts";
-import type { JevClient } from "../src/jev.ts";
+
 import { Ledger } from "../src/ledger.ts";
 import { chooseModel, type Decision } from "../src/router.ts";
 import { buildRoutingState } from "../src/state.ts";
 import { applyStakesOverride, classify } from "./classifier.ts";
-import { CANDIDATE_POLICIES, type CandidatePolicy, type Judge, type JudgeCandidate, NoisyJudge, syntheticResponse } from "./candidates.ts";
+import {
+	CANDIDATE_POLICIES,
+	type CandidatePolicy,
+	type Judge,
+	type JudgeCandidate,
+	type JevLike,
+	NoisyJudge,
+	syntheticResponse,
+} from "./candidates.ts";
 import type { LoadedFleet } from "./fleet.ts";
 import { FakeSession } from "./session.ts";
 import {
@@ -62,7 +70,7 @@ export interface RunOptions {
 	 */
 	exploreTurns?: number;
 	seed?: string;
-	jev?: JevClient;
+	jev?: JevLike;
 	ledgerFile?: string;
 	/** Overrides the measured calls/growth/output profile the cost model rests on. */
 	traffic?: TrafficProfile;

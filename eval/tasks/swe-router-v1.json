@@ -18,9 +18,9 @@
 					"goldTier": "light",
 					"jev": {
 						"tier": "light",
-						"confidence": 0.86,
-						"needsTools": 0.25,
-						"stakes": 0.4
+						"confidence": 0.31,
+						"needsTools": 0.29,
+						"stakes": 0.78
 					}
 				}
 			]
@@ -38,10 +38,10 @@
 					"prompt": "rxg regex with \\p{Han} in the rcfile raises 'bad escape \\p'. Swap the re module for regex in the config parsing so unicode property escapes work.",
 					"goldTier": "light",
 					"jev": {
-						"tier": "light",
-						"confidence": 0.71,
-						"needsTools": 0.95,
-						"stakes": 1.0
+						"tier": "standard",
+						"confidence": 0.68,
+						"needsTools": 0.73,
+						"stakes": 1.06
 					}
 				}
 			]
@@ -60,9 +60,9 @@
 					"goldTier": "light",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.58,
-						"needsTools": 0.96,
-						"stakes": 1.2
+						"confidence": 0.27,
+						"needsTools": 0.76,
+						"stakes": 1.36
 					}
 				},
 				{
@@ -70,10 +70,10 @@
 					"goldTier": "light",
 					"requiredSkill": 44,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.74,
-						"needsTools": 0.94,
-						"stakes": 0.8
+						"tier": "standard",
+						"confidence": 0.81,
+						"needsTools": 0.95,
+						"stakes": 0.98
 					}
 				}
 			]
@@ -91,9 +91,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.79,
-						"needsTools": 0.93,
-						"stakes": 1.4
+						"confidence": 0.86,
+						"needsTools": 0.68,
+						"stakes": 1.72
 					}
 				},
 				{
@@ -102,9 +102,9 @@
 					"requiredSkill": 52,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.68,
+						"confidence": 0.98,
 						"needsTools": 0.95,
-						"stakes": 1.1
+						"stakes": 1.25
 					}
 				}
 			]
@@ -122,9 +122,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.64,
-						"needsTools": 0.9,
-						"stakes": 1.7
+						"confidence": 0.78,
+						"needsTools": 0.77,
+						"stakes": 1.46
 					}
 				},
 				{
@@ -132,10 +132,10 @@
 					"goldTier": "light",
 					"requiredSkill": 45,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.7,
-						"needsTools": 0.95,
-						"stakes": 0.9
+						"tier": "standard",
+						"confidence": 0.51,
+						"needsTools": 0.92,
+						"stakes": 0.94
 					}
 				}
 			]
@@ -153,9 +153,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.81,
-						"needsTools": 0.94,
-						"stakes": 1.5
+						"confidence": 0.95,
+						"needsTools": 0.63,
+						"stakes": 1.28
 					}
 				},
 				{
@@ -163,10 +163,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 58,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.55,
-						"needsTools": 0.6,
-						"stakes": 1.2
+						"tier": "light",
+						"confidence": 0.49,
+						"needsTools": 0.37,
+						"stakes": 0.93
 					}
 				}
 			]
@@ -184,9 +184,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.76,
-						"needsTools": 0.93,
-						"stakes": 1.1
+						"confidence": 0.88,
+						"needsTools": 0.7,
+						"stakes": 0.83
 					}
 				},
 				{
@@ -195,9 +195,9 @@
 					"requiredSkill": 42,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.83,
-						"needsTools": 0.9,
-						"stakes": 0.5
+						"confidence": 0.85,
+						"needsTools": 0.91,
+						"stakes": 0.44
 					}
 				}
 			]
@@ -214,10 +214,10 @@
 					"prompt": "viewcode creates module pages for epub even when viewcode_enable_epub is False. Make the builder check honour that setting.",
 					"goldTier": "standard",
 					"jev": {
-						"tier": "light",
-						"confidence": 0.52,
-						"needsTools": 0.92,
-						"stakes": 1.3
+						"tier": "standard",
+						"confidence": 0.89,
+						"needsTools": 0.81,
+						"stakes": 0.97
 					}
 				},
 				{
@@ -225,9 +225,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.72,
+						"confidence": 0.98,
 						"needsTools": 0.94,
-						"stakes": 1.4
+						"stakes": 1.19
 					},
 					"requiredSkill": 66
 				}
@@ -246,9 +246,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.69,
-						"needsTools": 0.95,
-						"stakes": 1.2
+						"confidence": 0.94,
+						"needsTools": 0.8,
+						"stakes": 0.97
 					}
 				},
 				{
@@ -256,9 +256,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.74,
-						"needsTools": 0.95,
-						"stakes": 1.3
+						"confidence": 0.93,
+						"needsTools": 0.93,
+						"stakes": 1.16
 					},
 					"requiredSkill": 60
 				}
@@ -277,9 +277,9 @@
 					"goldTier": "heavy",
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.77,
-						"needsTools": 0.85,
-						"stakes": 1.9
+						"confidence": 1,
+						"needsTools": 0.67,
+						"stakes": 1.94
 					}
 				},
 				{
@@ -287,10 +287,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 60,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.66,
-						"needsTools": 0.95,
-						"stakes": 1.6
+						"tier": "heavy",
+						"confidence": 0.39,
+						"needsTools": 0.88,
+						"stakes": 1.78
 					}
 				}
 			]
@@ -308,10 +308,10 @@
 					"prompt": "FileBasedCache.has_key is racy: it checks os.path.exists then opens the file, so a concurrent cull between the two raises FileNotFoundError. Work out every caller that shares the assumption and fix the race properly.",
 					"goldTier": "heavy",
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.61,
-						"needsTools": 0.9,
-						"stakes": 1.8
+						"tier": "heavy",
+						"confidence": 0.99,
+						"needsTools": 0.72,
+						"stakes": 1.75
 					}
 				},
 				{
@@ -319,9 +319,9 @@
 					"goldTier": "heavy",
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.73,
-						"needsTools": 0.55,
-						"stakes": 1.9
+						"confidence": 0.61,
+						"needsTools": 0.33,
+						"stakes": 1.6
 					},
 					"requiredSkill": 84
 				},
@@ -330,10 +330,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 80,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.59,
-						"needsTools": 0.96,
-						"stakes": 1.9
+						"tier": "heavy",
+						"confidence": 0.8,
+						"needsTools": 0.83,
+						"stakes": 1.37
 					}
 				}
 			]
@@ -352,19 +352,19 @@
 					"goldTier": "heavy",
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.82,
-						"needsTools": 0.88,
-						"stakes": 2.0
+						"confidence": 0.61,
+						"needsTools": 0.73,
+						"stakes": 1.75
 					}
 				},
 				{
 					"prompt": "Walk me through the consequences for plugins that install their own rewrite hooks.",
 					"goldTier": "heavy",
 					"jev": {
-						"tier": "heavy",
+						"tier": "light",
 						"confidence": 0.45,
-						"needsTools": 0.3,
-						"stakes": 2.0
+						"needsTools": 0.21,
+						"stakes": 1.39
 					},
 					"requiredSkill": 80
 				},
@@ -373,9 +373,9 @@
 					"goldTier": "heavy",
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.78,
-						"needsTools": 0.96,
-						"stakes": 1.9
+						"confidence": 0.33,
+						"needsTools": 0.92,
+						"stakes": 1.71
 					},
 					"requiredSkill": 86
 				}
@@ -395,9 +395,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.75,
-						"needsTools": 0.94,
-						"stakes": 1.4
+						"confidence": 0.74,
+						"needsTools": 0.67,
+						"stakes": 1.43
 					},
 					"providerEvent": {
 						"provider": "faux-plan-codex",
@@ -412,9 +412,9 @@
 					"goldTier": "standard",
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.71,
-						"needsTools": 0.95,
-						"stakes": 1.5
+						"confidence": 0.57,
+						"needsTools": 0.93,
+						"stakes": 1.46
 					},
 					"requiredSkill": 68
 				}
@@ -434,9 +434,9 @@
 					"goldTier": "heavy",
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.68,
-						"needsTools": 0.9,
-						"stakes": 1.9
+						"confidence": 0.85,
+						"needsTools": 0.67,
+						"stakes": 1.41
 					}
 				},
 				{
@@ -458,7 +458,7 @@
 						"tier": "heavy",
 						"confidence": 0.74,
 						"needsTools": 0.95,
-						"stakes": 2.0
+						"stakes": 2
 					},
 					"requiredSkill": 78
 				}
@@ -477,10 +477,10 @@
 					"prompt": "PolyFit is not robust to missing data: np.polyfit raises LinAlgError when x or y contains NaN. Drop the missing pairs before fitting.",
 					"goldTier": "standard",
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.73,
-						"needsTools": 0.94,
-						"stakes": 1.2,
+						"tier": "light",
+						"confidence": 0.41,
+						"needsTools": 0.34,
+						"stakes": 1.32,
 						"fail": true
 					}
 				},
@@ -490,9 +490,9 @@
 					"requiredSkill": 58,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.62,
-						"needsTools": 0.8,
-						"stakes": 1.3
+						"confidence": 0.28,
+						"needsTools": 0.47,
+						"stakes": 1.06
 					}
 				}
 			]

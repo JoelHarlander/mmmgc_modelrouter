@@ -18,9 +18,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.84,
-						"needsTools": 0.7,
-						"stakes": 0.3
+						"confidence": 0.99,
+						"needsTools": 0.13,
+						"stakes": 0.61
 					}
 				},
 				{
@@ -29,9 +29,9 @@
 					"requiredSkill": 34,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.76,
-						"needsTools": 0.5,
-						"stakes": 0.4
+						"confidence": 0.82,
+						"needsTools": 0.13,
+						"stakes": 0.91
 					}
 				},
 				{
@@ -40,9 +40,9 @@
 					"requiredSkill": 80,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.71,
-						"needsTools": 0.4,
-						"stakes": 1.8
+						"confidence": 0.65,
+						"needsTools": 0.13,
+						"stakes": 1.37
 					}
 				},
 				{
@@ -50,10 +50,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 76,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.63,
-						"needsTools": 0.6,
-						"stakes": 1.6
+						"tier": "heavy",
+						"confidence": 0.27,
+						"needsTools": 0.34,
+						"stakes": 1.33
 					}
 				},
 				{
@@ -62,9 +62,9 @@
 					"requiredSkill": 88,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.79,
-						"needsTools": 0.95,
-						"stakes": 1.9
+						"confidence": 0.98,
+						"needsTools": 0.91,
+						"stakes": 1.85
 					}
 				},
 				{
@@ -107,9 +107,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.57,
+						"needsTools": 0.91,
+						"stakes": 1.24
 					}
 				},
 				{
@@ -117,10 +117,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 82,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.58,
-						"needsTools": 0.96,
-						"stakes": 1.7
+						"tier": "heavy",
+						"confidence": 0.96,
+						"needsTools": 0.86,
+						"stakes": 1.28
 					}
 				},
 				{
@@ -129,9 +129,9 @@
 					"requiredSkill": 85,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.69,
-						"needsTools": 0.6,
-						"stakes": 1.7
+						"confidence": 0.83,
+						"needsTools": 0.46,
+						"stakes": 1.08
 					}
 				},
 				{
@@ -140,9 +140,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.92,
-						"needsTools": 0.3,
-						"stakes": 0.2
+						"confidence": 0.75,
+						"needsTools": 0.14,
+						"stakes": 0.6
 					}
 				}
 			]
@@ -162,9 +162,9 @@
 					"requiredSkill": 60,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.7,
-						"needsTools": 0.9,
-						"stakes": 1.4
+						"confidence": 0.45,
+						"needsTools": 0.6,
+						"stakes": 0.6
 					}
 				},
 				{
@@ -173,9 +173,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.82,
-						"needsTools": 0.6,
-						"stakes": 0.3
+						"confidence": 0.93,
+						"needsTools": 0.22,
+						"stakes": 0.64
 					}
 				},
 				{
@@ -183,10 +183,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 66,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.64,
-						"needsTools": 0.4,
-						"stakes": 1.3
+						"tier": "light",
+						"confidence": 0.41,
+						"needsTools": 0.28,
+						"stakes": 0.93
 					}
 				},
 				{
@@ -195,9 +195,9 @@
 					"requiredSkill": 90,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.83,
-						"needsTools": 0.9,
-						"stakes": 2.0
+						"confidence": 0.62,
+						"needsTools": 0.89,
+						"stakes": 1.45
 					}
 				},
 				{
@@ -205,10 +205,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 82,
 					"jev": {
-						"tier": "heavy",
-						"confidence": 0.47,
-						"needsTools": 0.3,
-						"stakes": 1.8
+						"tier": "light",
+						"confidence": 0.22,
+						"needsTools": 0.22,
+						"stakes": 1.43
 					}
 				},
 				{
@@ -217,9 +217,9 @@
 					"requiredSkill": 88,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.78,
-						"needsTools": 0.96,
-						"stakes": 1.9
+						"confidence": 0.76,
+						"needsTools": 0.87,
+						"stakes": 1.82
 					}
 				},
 				{
@@ -262,9 +262,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.83,
+						"needsTools": 0.76,
+						"stakes": 0.33
 					}
 				}
 			]
@@ -283,9 +283,9 @@
 					"requiredSkill": 52,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.73,
-						"needsTools": 0.9,
-						"stakes": 1.3
+						"confidence": 0.32,
+						"needsTools": 0.69,
+						"stakes": 0.89
 					}
 				},
 				{
@@ -294,9 +294,9 @@
 					"requiredSkill": 40,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.85,
-						"needsTools": 0.9,
-						"stakes": 0.4
+						"confidence": 0.28,
+						"needsTools": 0.66,
+						"stakes": 0.82
 					}
 				},
 				{
@@ -305,9 +305,9 @@
 					"requiredSkill": 70,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.59,
-						"needsTools": 0.4,
-						"stakes": 1.6
+						"confidence": 0.62,
+						"needsTools": 0.47,
+						"stakes": 1.1
 					}
 				},
 				{
@@ -316,9 +316,9 @@
 					"requiredSkill": 68,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.76,
-						"needsTools": 0.95,
-						"stakes": 1.5
+						"confidence": 0.36,
+						"needsTools": 0.9,
+						"stakes": 1.64
 					}
 				},
 				{
@@ -326,10 +326,10 @@
 					"goldTier": "light",
 					"requiredSkill": 45,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.95,
-						"stakes": 0.6
+						"tier": "standard",
+						"confidence": 0.47,
+						"needsTools": 0.84,
+						"stakes": 1.51
 					}
 				},
 				{
@@ -337,10 +337,10 @@
 					"goldTier": "light",
 					"requiredSkill": 46,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.78,
-						"needsTools": 0.95,
-						"stakes": 0.7
+						"tier": "standard",
+						"confidence": 0.88,
+						"needsTools": 0.93,
+						"stakes": 1.06
 					}
 				},
 				{
@@ -348,10 +348,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 78,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.6,
-						"needsTools": 0.7,
-						"stakes": 1.7
+						"tier": "heavy",
+						"confidence": 0.99,
+						"needsTools": 0.87,
+						"stakes": 1.5
 					}
 				},
 				{
@@ -360,9 +360,9 @@
 					"requiredSkill": 80,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.7,
-						"needsTools": 0.95,
-						"stakes": 1.8
+						"confidence": 0.98,
+						"needsTools": 0.91,
+						"stakes": 1.66
 					}
 				},
 				{
@@ -371,9 +371,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.69,
+						"needsTools": 0.68,
+						"stakes": 0.58
 					}
 				}
 			]
@@ -392,9 +392,9 @@
 					"requiredSkill": 50,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.72,
-						"needsTools": 0.9,
-						"stakes": 1.2
+						"confidence": 0.68,
+						"needsTools": 0.6,
+						"stakes": 0.63
 					}
 				},
 				{
@@ -404,8 +404,8 @@
 					"jev": {
 						"tier": "light",
 						"confidence": 0.84,
-						"needsTools": 0.8,
-						"stakes": 0.3
+						"needsTools": 0.28,
+						"stakes": 0.85
 					}
 				},
 				{
@@ -414,9 +414,9 @@
 					"requiredSkill": 60,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.79,
-						"needsTools": 0.95,
-						"stakes": 1.3
+						"confidence": 0.5,
+						"needsTools": 0.85,
+						"stakes": 1.26
 					}
 				},
 				{
@@ -425,9 +425,9 @@
 					"requiredSkill": 66,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.58,
-						"needsTools": 0.6,
-						"stakes": 1.4
+						"confidence": 0.16,
+						"needsTools": 0.44,
+						"stakes": 1.36
 					}
 				},
 				{
@@ -436,9 +436,9 @@
 					"requiredSkill": 62,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.74,
-						"needsTools": 0.95,
-						"stakes": 1.3
+						"confidence": 0.89,
+						"needsTools": 0.91,
+						"stakes": 1.46
 					}
 				},
 				{
@@ -447,9 +447,9 @@
 					"requiredSkill": 55,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.68,
-						"needsTools": 0.95,
-						"stakes": 1.1
+						"confidence": 0.98,
+						"needsTools": 0.94,
+						"stakes": 1.19
 					}
 				},
 				{
@@ -457,10 +457,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 76,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.57,
-						"needsTools": 0.6,
-						"stakes": 1.6
+						"tier": "heavy",
+						"confidence": 0.97,
+						"needsTools": 0.7,
+						"stakes": 1.45
 					}
 				},
 				{
@@ -468,10 +468,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 72,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.71,
+						"tier": "heavy",
+						"confidence": 0.53,
 						"needsTools": 0.95,
-						"stakes": 1.5
+						"stakes": 1.47
 					}
 				}
 			]
@@ -490,9 +490,9 @@
 					"requiredSkill": 36,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.83,
-						"needsTools": 0.7,
-						"stakes": 0.4
+						"confidence": 0.81,
+						"needsTools": 0.16,
+						"stakes": 0.58
 					}
 				},
 				{
@@ -500,9 +500,9 @@
 					"goldTier": "standard",
 					"requiredSkill": 62,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.51,
-						"needsTools": 0.94,
+						"tier": "standard",
+						"confidence": 0.82,
+						"needsTools": 0.87,
 						"stakes": 1.3
 					}
 				},
@@ -545,10 +545,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 70,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.62,
-						"needsTools": 0.8,
-						"stakes": 1.4
+						"tier": "heavy",
+						"confidence": 0.42,
+						"needsTools": 0.66,
+						"stakes": 1.18
 					}
 				},
 				{
@@ -557,9 +557,9 @@
 					"requiredSkill": 68,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.75,
-						"needsTools": 0.95,
-						"stakes": 1.4
+						"confidence": 0.28,
+						"needsTools": 0.9,
+						"stakes": 1.52
 					}
 				},
 				{
@@ -567,10 +567,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 80,
 					"jev": {
-						"tier": "heavy",
-						"confidence": 0.68,
-						"needsTools": 0.5,
-						"stakes": 1.7
+						"tier": "standard",
+						"confidence": 0.15,
+						"needsTools": 0.38,
+						"stakes": 1.03
 					}
 				},
 				{
@@ -579,9 +579,9 @@
 					"requiredSkill": 78,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.59,
-						"needsTools": 0.95,
-						"stakes": 1.6
+						"confidence": 0.35,
+						"needsTools": 0.82,
+						"stakes": 1.47
 					}
 				},
 				{
@@ -589,10 +589,10 @@
 					"goldTier": "light",
 					"requiredSkill": 32,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.88,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"tier": "standard",
+						"confidence": 0.13,
+						"needsTools": 0.9,
+						"stakes": 1.12
 					}
 				},
 				{
@@ -601,9 +601,9 @@
 					"requiredSkill": 44,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.9,
-						"stakes": 0.5
+						"confidence": 0.35,
+						"needsTools": 0.77,
+						"stakes": 0.63
 					}
 				}
 			]
@@ -622,9 +622,9 @@
 					"requiredSkill": 34,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.86,
-						"needsTools": 0.7,
-						"stakes": 0.4
+						"confidence": 1,
+						"needsTools": 0.03,
+						"stakes": 0.38
 					}
 				},
 				{
@@ -632,10 +632,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 55,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.64,
-						"needsTools": 0.4,
-						"stakes": 1.2
+						"tier": "light",
+						"confidence": 0.98,
+						"needsTools": 0.12,
+						"stakes": 0.65
 					}
 				},
 				{
@@ -644,9 +644,9 @@
 					"requiredSkill": 86,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.8,
-						"needsTools": 0.3,
-						"stakes": 2.0
+						"confidence": 0.84,
+						"needsTools": 0.26,
+						"stakes": 1.79
 					}
 				},
 				{
@@ -655,9 +655,9 @@
 					"requiredSkill": 84,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.72,
-						"needsTools": 0.3,
-						"stakes": 1.9
+						"confidence": 0.78,
+						"needsTools": 0.29,
+						"stakes": 1.7
 					}
 				},
 				{
@@ -666,9 +666,9 @@
 					"requiredSkill": 82,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.77,
-						"needsTools": 0.95,
-						"stakes": 1.9
+						"confidence": 0.99,
+						"needsTools": 0.8,
+						"stakes": 1.97
 					}
 				},
 				{
@@ -710,10 +710,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 80,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.58,
-						"needsTools": 0.5,
-						"stakes": 1.8
+						"tier": "heavy",
+						"confidence": 0.48,
+						"needsTools": 0.44,
+						"stakes": 1.75
 					}
 				},
 				{
@@ -721,10 +721,10 @@
 					"goldTier": "light",
 					"requiredSkill": 46,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.82,
-						"needsTools": 0.8,
-						"stakes": 0.6
+						"tier": "standard",
+						"confidence": 0.08,
+						"needsTools": 0.77,
+						"stakes": 1.22
 					}
 				}
 			]
@@ -744,8 +744,8 @@
 					"jev": {
 						"tier": "standard",
 						"confidence": 0.74,
-						"needsTools": 0.9,
-						"stakes": 1.3
+						"needsTools": 0.59,
+						"stakes": 0.74
 					}
 				},
 				{
@@ -754,9 +754,9 @@
 					"requiredSkill": 36,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.83,
-						"needsTools": 0.7,
-						"stakes": 0.3
+						"confidence": 0.91,
+						"needsTools": 0.21,
+						"stakes": 0.65
 					}
 				},
 				{
@@ -764,10 +764,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 70,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.62,
+						"tier": "light",
+						"confidence": 0.09,
 						"needsTools": 0.4,
-						"stakes": 1.5
+						"stakes": 0.83
 					}
 				},
 				{
@@ -776,9 +776,9 @@
 					"requiredSkill": 68,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.77,
-						"needsTools": 0.95,
-						"stakes": 1.5
+						"confidence": 0.42,
+						"needsTools": 0.88,
+						"stakes": 1.41
 					}
 				},
 				{
@@ -787,9 +787,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.32,
+						"needsTools": 0.89,
+						"stakes": 1.12
 					}
 				},
 				{
@@ -797,10 +797,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 78,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.58,
-						"needsTools": 0.8,
-						"stakes": 1.7
+						"tier": "heavy",
+						"confidence": 0.69,
+						"needsTools": 0.87,
+						"stakes": 1.29
 					}
 				},
 				{
@@ -809,9 +809,9 @@
 					"requiredSkill": 80,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.72,
-						"needsTools": 0.95,
-						"stakes": 1.8
+						"confidence": 0.81,
+						"needsTools": 0.93,
+						"stakes": 1.51
 					}
 				},
 				{
@@ -820,9 +820,9 @@
 					"requiredSkill": 50,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.68,
+						"confidence": 0.88,
 						"needsTools": 0.95,
-						"stakes": 1.0
+						"stakes": 1.1
 					}
 				},
 				{
@@ -831,9 +831,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.84,
+						"needsTools": 0.74,
+						"stakes": 0.34
 					}
 				}
 			]
@@ -852,9 +852,9 @@
 					"requiredSkill": 50,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.73,
-						"needsTools": 0.9,
-						"stakes": 1.2
+						"confidence": 0.88,
+						"needsTools": 0.75,
+						"stakes": 0.86
 					}
 				},
 				{
@@ -863,9 +863,9 @@
 					"requiredSkill": 38,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.85,
-						"needsTools": 0.8,
-						"stakes": 0.3
+						"confidence": 0.91,
+						"needsTools": 0.24,
+						"stakes": 0.77
 					},
 					"providerEvent": {
 						"provider": "faux-plan-codex",
@@ -880,10 +880,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 76,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.6,
-						"needsTools": 0.4,
-						"stakes": 1.7
+						"tier": "heavy",
+						"confidence": 0.25,
+						"needsTools": 0.45,
+						"stakes": 1.23
 					}
 				},
 				{
@@ -892,9 +892,9 @@
 					"requiredSkill": 66,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.76,
-						"needsTools": 0.95,
-						"stakes": 1.4
+						"confidence": 0.86,
+						"needsTools": 0.91,
+						"stakes": 1.36
 					}
 				},
 				{
@@ -902,10 +902,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 62,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.59,
-						"needsTools": 0.6,
-						"stakes": 1.3
+						"tier": "light",
+						"confidence": 0.57,
+						"needsTools": 0.45,
+						"stakes": 1.03
 					}
 				},
 				{
@@ -914,9 +914,9 @@
 					"requiredSkill": 68,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.71,
-						"needsTools": 0.95,
-						"stakes": 1.4
+						"confidence": 0.54,
+						"needsTools": 0.86,
+						"stakes": 1.45
 					}
 				},
 				{
@@ -925,9 +925,9 @@
 					"requiredSkill": 54,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.69,
-						"needsTools": 0.95,
-						"stakes": 1.1
+						"confidence": 0.97,
+						"needsTools": 0.94,
+						"stakes": 1.02
 					}
 				},
 				{
@@ -936,9 +936,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.89,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.79,
+						"needsTools": 0.9,
+						"stakes": 0.86
 					}
 				}
 			],
@@ -958,9 +958,9 @@
 					"requiredSkill": 40,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.82,
-						"needsTools": 0.7,
-						"stakes": 0.5
+						"confidence": 0.17,
+						"needsTools": 0.15,
+						"stakes": 0.69
 					}
 				},
 				{
@@ -969,9 +969,9 @@
 					"requiredSkill": 62,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.75,
-						"needsTools": 0.94,
-						"stakes": 1.3
+						"confidence": 0.89,
+						"needsTools": 0.88,
+						"stakes": 1.06
 					}
 				},
 				{
@@ -980,9 +980,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.77,
+						"needsTools": 0.3,
+						"stakes": 0.78
 					}
 				},
 				{
@@ -990,10 +990,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 66,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.63,
-						"needsTools": 0.6,
-						"stakes": 1.4
+						"tier": "heavy",
+						"confidence": 0.14,
+						"needsTools": 0.45,
+						"stakes": 1.59
 					}
 				},
 				{
@@ -1002,9 +1002,9 @@
 					"requiredSkill": 58,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.7,
-						"needsTools": 0.95,
-						"stakes": 1.2
+						"confidence": 0.99,
+						"needsTools": 0.92,
+						"stakes": 1.09
 					}
 				},
 				{
@@ -1013,9 +1013,9 @@
 					"requiredSkill": 70,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.61,
-						"needsTools": 0.8,
-						"stakes": 1.4
+						"confidence": 0.52,
+						"needsTools": 0.73,
+						"stakes": 1.19
 					}
 				},
 				{
@@ -1024,9 +1024,9 @@
 					"requiredSkill": 64,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.74,
-						"needsTools": 0.95,
-						"stakes": 1.3
+						"confidence": 0.41,
+						"needsTools": 0.92,
+						"stakes": 1.36
 					}
 				},
 				{
@@ -1035,9 +1035,9 @@
 					"requiredSkill": 44,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.9,
-						"stakes": 0.5
+						"confidence": 0.48,
+						"needsTools": 0.82,
+						"stakes": 0.62
 					}
 				}
 			]
@@ -1056,9 +1056,9 @@
 					"requiredSkill": 44,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.7,
-						"stakes": 0.6
+						"confidence": 0.59,
+						"needsTools": 0.14,
+						"stakes": 0.82
 					}
 				},
 				{
@@ -1067,9 +1067,9 @@
 					"requiredSkill": 62,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.74,
-						"needsTools": 0.94,
-						"stakes": 1.3
+						"confidence": 0.67,
+						"needsTools": 0.87,
+						"stakes": 1.22
 					}
 				},
 				{
@@ -1077,10 +1077,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 68,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.71,
-						"needsTools": 0.95,
-						"stakes": 1.5
+						"tier": "light",
+						"confidence": 0.84,
+						"needsTools": 0.94,
+						"stakes": 1.03
 					}
 				},
 				{
@@ -1089,9 +1089,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.88,
+						"needsTools": 0.33,
+						"stakes": 0.68
 					}
 				},
 				{
@@ -1100,9 +1100,9 @@
 					"requiredSkill": 56,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.55,
-						"needsTools": 0.6,
-						"stakes": 1.1
+						"confidence": 0.68,
+						"needsTools": 0.55,
+						"stakes": 1.09
 					}
 				},
 				{
@@ -1111,9 +1111,9 @@
 					"requiredSkill": 64,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.73,
-						"needsTools": 0.95,
-						"stakes": 1.4
+						"confidence": 0.38,
+						"needsTools": 0.92,
+						"stakes": 1.73
 					}
 				},
 				{
@@ -1122,9 +1122,9 @@
 					"requiredSkill": 82,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.69,
-						"needsTools": 0.5,
-						"stakes": 1.8
+						"confidence": 0.89,
+						"needsTools": 0.84,
+						"stakes": 1.76
 					}
 				},
 				{
@@ -1132,10 +1132,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 76,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.6,
-						"needsTools": 0.95,
-						"stakes": 1.6
+						"tier": "heavy",
+						"confidence": 0.36,
+						"needsTools": 0.96,
+						"stakes": 1.75
 					}
 				},
 				{
@@ -1144,9 +1144,9 @@
 					"requiredSkill": 34,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.88,
-						"needsTools": 0.8,
-						"stakes": 0.3
+						"confidence": 0.83,
+						"needsTools": 0.35,
+						"stakes": 0.54
 					}
 				}
 			]
@@ -1164,10 +1164,10 @@
 					"goldTier": "light",
 					"requiredSkill": 40,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.83,
-						"needsTools": 0.7,
-						"stakes": 0.5
+						"tier": "heavy",
+						"confidence": 0.08,
+						"needsTools": 0.22,
+						"stakes": 1.15
 					}
 				},
 				{
@@ -1176,9 +1176,9 @@
 					"requiredSkill": 54,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.72,
-						"needsTools": 0.94,
-						"stakes": 1.2
+						"confidence": 0.45,
+						"needsTools": 0.88,
+						"stakes": 1.25
 					}
 				},
 				{
@@ -1187,9 +1187,9 @@
 					"requiredSkill": 58,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.7,
-						"needsTools": 0.95,
-						"stakes": 1.3
+						"confidence": 0.78,
+						"needsTools": 0.86,
+						"stakes": 1.33
 					}
 				},
 				{
@@ -1199,8 +1199,8 @@
 					"jev": {
 						"tier": "light",
 						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"needsTools": 0.21,
+						"stakes": 0.73
 					}
 				},
 				{
@@ -1208,10 +1208,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 66,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.62,
-						"needsTools": 0.4,
-						"stakes": 1.6
+						"tier": "light",
+						"confidence": 0.59,
+						"needsTools": 0.29,
+						"stakes": 1.78
 					}
 				},
 				{
@@ -1220,9 +1220,9 @@
 					"requiredSkill": 50,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.68,
-						"needsTools": 0.95,
-						"stakes": 1.0
+						"confidence": 0.99,
+						"needsTools": 0.91,
+						"stakes": 1.11
 					}
 				},
 				{
@@ -1231,9 +1231,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.89,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.64,
+						"needsTools": 0.9,
+						"stakes": 1.1
 					}
 				},
 				{
@@ -1242,9 +1242,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.66,
+						"needsTools": 0.72,
+						"stakes": 0.4
 					}
 				}
 			]
@@ -1263,9 +1263,9 @@
 					"requiredSkill": 56,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.73,
-						"needsTools": 0.9,
-						"stakes": 1.3
+						"confidence": 0.7,
+						"needsTools": 0.52,
+						"stakes": 0.7
 					}
 				},
 				{
@@ -1274,9 +1274,9 @@
 					"requiredSkill": 38,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.84,
-						"needsTools": 0.8,
-						"stakes": 0.3
+						"confidence": 0.77,
+						"needsTools": 0.39,
+						"stakes": 0.75
 					}
 				},
 				{
@@ -1284,10 +1284,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 74,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.6,
-						"needsTools": 0.4,
-						"stakes": 1.6
+						"tier": "heavy",
+						"confidence": 0.12,
+						"needsTools": 0.46,
+						"stakes": 0.95
 					}
 				},
 				{
@@ -1295,10 +1295,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 78,
 					"jev": {
-						"tier": "heavy",
-						"confidence": 0.7,
-						"needsTools": 0.95,
-						"stakes": 1.7
+						"tier": "standard",
+						"confidence": 0.48,
+						"needsTools": 0.87,
+						"stakes": 1.35
 					}
 				},
 				{
@@ -1307,9 +1307,9 @@
 					"requiredSkill": 64,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.66,
-						"needsTools": 0.8,
-						"stakes": 1.4
+						"confidence": 0.58,
+						"needsTools": 0.76,
+						"stakes": 1.19
 					}
 				},
 				{
@@ -1318,9 +1318,9 @@
 					"requiredSkill": 52,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.69,
-						"needsTools": 0.95,
-						"stakes": 1.1
+						"confidence": 0.32,
+						"needsTools": 0.9,
+						"stakes": 0.8
 					}
 				},
 				{
@@ -1329,9 +1329,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.89,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.75,
+						"needsTools": 0.91,
+						"stakes": 0.9
 					}
 				},
 				{
@@ -1340,9 +1340,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.85,
+						"needsTools": 0.71,
+						"stakes": 0.33
 					}
 				}
 			]
@@ -1361,9 +1361,9 @@
 					"requiredSkill": 42,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.81,
-						"needsTools": 0.7,
-						"stakes": 0.5
+						"confidence": 0.74,
+						"needsTools": 0.15,
+						"stakes": 0.76
 					}
 				},
 				{
@@ -1372,9 +1372,9 @@
 					"requiredSkill": 58,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.74,
-						"needsTools": 0.94,
-						"stakes": 1.2
+						"confidence": 0.94,
+						"needsTools": 0.91,
+						"stakes": 1.12
 					}
 				},
 				{
@@ -1383,9 +1383,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.8,
+						"needsTools": 0.3,
+						"stakes": 0.75
 					}
 				},
 				{
@@ -1393,10 +1393,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 54,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.64,
-						"needsTools": 0.6,
-						"stakes": 1.2
+						"tier": "light",
+						"confidence": 0.73,
+						"needsTools": 0.31,
+						"stakes": 0.88
 					}
 				},
 				{
@@ -1405,9 +1405,9 @@
 					"requiredSkill": 62,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.72,
-						"needsTools": 0.95,
-						"stakes": 1.3
+						"confidence": 0.39,
+						"needsTools": 0.77,
+						"stakes": 1.26
 					}
 				},
 				{
@@ -1416,9 +1416,9 @@
 					"requiredSkill": 50,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.68,
-						"needsTools": 0.95,
-						"stakes": 1.0
+						"confidence": 0.98,
+						"needsTools": 0.92,
+						"stakes": 0.92
 					}
 				},
 				{
@@ -1427,9 +1427,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.89,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.78,
+						"needsTools": 0.9,
+						"stakes": 0.96
 					}
 				},
 				{
@@ -1438,9 +1438,9 @@
 					"requiredSkill": 44,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.9,
-						"stakes": 0.5
+						"confidence": 0.69,
+						"needsTools": 0.78,
+						"stakes": 0.44
 					}
 				}
 			]
@@ -1459,9 +1459,9 @@
 					"requiredSkill": 60,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.72,
-						"needsTools": 0.9,
-						"stakes": 1.4
+						"confidence": 0.43,
+						"needsTools": 0.83,
+						"stakes": 0.97
 					}
 				},
 				{
@@ -1470,9 +1470,9 @@
 					"requiredSkill": 42,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.7,
-						"stakes": 0.5
+						"confidence": 0.35,
+						"needsTools": 0.39,
+						"stakes": 0.91
 					}
 				},
 				{
@@ -1480,10 +1480,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 72,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.61,
-						"needsTools": 0.4,
-						"stakes": 1.6
+						"tier": "light",
+						"confidence": 0.21,
+						"needsTools": 0.41,
+						"stakes": 0.91
 					}
 				},
 				{
@@ -1492,9 +1492,9 @@
 					"requiredSkill": 84,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.7,
-						"needsTools": 0.4,
-						"stakes": 1.9
+						"confidence": 0.87,
+						"needsTools": 0.5,
+						"stakes": 1.29
 					}
 				},
 				{
@@ -1502,10 +1502,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 80,
 					"jev": {
-						"tier": "heavy",
-						"confidence": 0.73,
-						"needsTools": 0.95,
-						"stakes": 1.8
+						"tier": "standard",
+						"confidence": 0.42,
+						"needsTools": 0.92,
+						"stakes": 1.55
 					}
 				},
 				{
@@ -1548,9 +1548,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.69,
+						"needsTools": 0.79,
+						"stakes": 0.43
 					}
 				}
 			]
@@ -1569,9 +1569,9 @@
 					"requiredSkill": 50,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.74,
-						"needsTools": 0.9,
-						"stakes": 1.3
+						"confidence": 0.79,
+						"needsTools": 0.58,
+						"stakes": 1.15
 					}
 				},
 				{
@@ -1580,9 +1580,9 @@
 					"requiredSkill": 38,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.84,
-						"needsTools": 0.8,
-						"stakes": 0.3
+						"confidence": 0.47,
+						"needsTools": 0.36,
+						"stakes": 0.95
 					}
 				},
 				{
@@ -1590,10 +1590,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 64,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.63,
-						"needsTools": 0.4,
-						"stakes": 1.4
+						"tier": "light",
+						"confidence": 0.51,
+						"needsTools": 0.35,
+						"stakes": 1.16
 					}
 				},
 				{
@@ -1602,9 +1602,9 @@
 					"requiredSkill": 60,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.76,
-						"needsTools": 0.95,
-						"stakes": 1.4
+						"confidence": 0.79,
+						"needsTools": 0.9,
+						"stakes": 1.57
 					}
 				},
 				{
@@ -1612,10 +1612,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 66,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.6,
-						"needsTools": 0.6,
-						"stakes": 1.5
+						"tier": "light",
+						"confidence": 0.34,
+						"needsTools": 0.49,
+						"stakes": 1.6
 					}
 				},
 				{
@@ -1624,9 +1624,9 @@
 					"requiredSkill": 52,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.69,
-						"needsTools": 0.95,
-						"stakes": 1.1
+						"confidence": 0.94,
+						"needsTools": 0.93,
+						"stakes": 1.05
 					}
 				},
 				{
@@ -1635,9 +1635,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.89,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.6,
+						"needsTools": 0.9,
+						"stakes": 1.09
 					}
 				},
 				{
@@ -1646,9 +1646,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.78,
+						"needsTools": 0.66,
+						"stakes": 0.47
 					}
 				}
 			]
@@ -1667,9 +1667,9 @@
 					"requiredSkill": 56,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.73,
-						"needsTools": 0.9,
-						"stakes": 1.4
+						"confidence": 0.48,
+						"needsTools": 0.56,
+						"stakes": 0.68
 					}
 				},
 				{
@@ -1678,9 +1678,9 @@
 					"requiredSkill": 38,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.84,
-						"needsTools": 0.8,
-						"stakes": 0.3
+						"confidence": 0.4,
+						"needsTools": 0.41,
+						"stakes": 0.96
 					}
 				},
 				{
@@ -1688,10 +1688,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 72,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.61,
-						"needsTools": 0.5,
-						"stakes": 1.6
+						"tier": "light",
+						"confidence": 0.52,
+						"needsTools": 0.31,
+						"stakes": 1.03
 					}
 				},
 				{
@@ -1699,9 +1699,9 @@
 					"goldTier": "heavy",
 					"requiredSkill": 76,
 					"jev": {
-						"tier": "heavy",
-						"confidence": 0.7,
-						"needsTools": 0.95,
+						"tier": "standard",
+						"confidence": 0.44,
+						"needsTools": 0.85,
 						"stakes": 1.7
 					}
 				},
@@ -1710,10 +1710,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 78,
 					"jev": {
-						"tier": "heavy",
-						"confidence": 0.68,
-						"needsTools": 0.6,
-						"stakes": 1.7
+						"tier": "light",
+						"confidence": 0.2,
+						"needsTools": 0.34,
+						"stakes": 1.33
 					}
 				},
 				{
@@ -1721,10 +1721,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 80,
 					"jev": {
-						"tier": "heavy",
-						"confidence": 0.72,
-						"needsTools": 0.95,
-						"stakes": 1.8
+						"tier": "standard",
+						"confidence": 0.67,
+						"needsTools": 0.85,
+						"stakes": 1.64
 					}
 				},
 				{
@@ -1733,9 +1733,9 @@
 					"requiredSkill": 56,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.7,
-						"needsTools": 0.95,
-						"stakes": 1.2
+						"confidence": 0.97,
+						"needsTools": 0.94,
+						"stakes": 1.1
 					}
 				},
 				{
@@ -1744,9 +1744,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.51,
+						"needsTools": 0.76,
+						"stakes": 0.42
 					}
 				}
 			]
@@ -1765,9 +1765,9 @@
 					"requiredSkill": 42,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.81,
-						"needsTools": 0.7,
-						"stakes": 0.5
+						"confidence": 0.83,
+						"needsTools": 0.16,
+						"stakes": 0.62
 					}
 				},
 				{
@@ -1776,9 +1776,9 @@
 					"requiredSkill": 64,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.74,
-						"needsTools": 0.94,
-						"stakes": 1.3
+						"confidence": 0.94,
+						"needsTools": 0.88,
+						"stakes": 1.04
 					}
 				},
 				{
@@ -1787,9 +1787,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.77,
+						"needsTools": 0.23,
+						"stakes": 0.59
 					}
 				},
 				{
@@ -1797,10 +1797,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 68,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.62,
-						"needsTools": 0.5,
-						"stakes": 1.4
+						"tier": "light",
+						"confidence": 0.82,
+						"needsTools": 0.26,
+						"stakes": 0.82
 					}
 				},
 				{
@@ -1809,9 +1809,9 @@
 					"requiredSkill": 66,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.72,
-						"needsTools": 0.95,
-						"stakes": 1.4
+						"confidence": 0.71,
+						"needsTools": 0.79,
+						"stakes": 1.21
 					}
 				},
 				{
@@ -1820,9 +1820,9 @@
 					"requiredSkill": 56,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.69,
-						"needsTools": 0.95,
-						"stakes": 1.2
+						"confidence": 0.97,
+						"needsTools": 0.9,
+						"stakes": 0.88
 					}
 				},
 				{
@@ -1830,10 +1830,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 76,
 					"jev": {
-						"tier": "standard",
+						"tier": "heavy",
 						"confidence": 0.58,
-						"needsTools": 0.8,
-						"stakes": 1.5
+						"needsTools": 0.85,
+						"stakes": 1.18
 					}
 				},
 				{
@@ -1841,10 +1841,10 @@
 					"goldTier": "light",
 					"requiredSkill": 44,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.9,
-						"stakes": 0.5
+						"tier": "standard",
+						"confidence": 0.43,
+						"needsTools": 0.75,
+						"stakes": 0.73
 					}
 				}
 			]
@@ -1863,9 +1863,9 @@
 					"requiredSkill": 58,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.71,
-						"needsTools": 0.9,
-						"stakes": 1.5
+						"confidence": 0.35,
+						"needsTools": 0.75,
+						"stakes": 1.29
 					}
 				},
 				{
@@ -1874,9 +1874,9 @@
 					"requiredSkill": 44,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.79,
-						"needsTools": 0.7,
-						"stakes": 0.6
+						"confidence": 0.82,
+						"needsTools": 0.25,
+						"stakes": 1.04
 					}
 				},
 				{
@@ -1884,10 +1884,10 @@
 					"goldTier": "heavy",
 					"requiredSkill": 86,
 					"jev": {
-						"tier": "heavy",
-						"confidence": 0.78,
-						"needsTools": 0.4,
-						"stakes": 2.0
+						"tier": "light",
+						"confidence": 0.43,
+						"needsTools": 0.32,
+						"stakes": 1.38
 					}
 				},
 				{
@@ -1896,9 +1896,9 @@
 					"requiredSkill": 84,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.74,
-						"needsTools": 0.4,
-						"stakes": 2.0
+						"confidence": 0.94,
+						"needsTools": 0.67,
+						"stakes": 1.95
 					}
 				},
 				{
@@ -1907,9 +1907,9 @@
 					"requiredSkill": 80,
 					"jev": {
 						"tier": "heavy",
-						"confidence": 0.73,
-						"needsTools": 0.95,
-						"stakes": 1.9
+						"confidence": 0.72,
+						"needsTools": 0.93,
+						"stakes": 1.98
 					}
 				},
 				{
@@ -1918,9 +1918,9 @@
 					"requiredSkill": 68,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.66,
-						"needsTools": 0.95,
-						"stakes": 1.7
+						"confidence": 0.89,
+						"needsTools": 0.93,
+						"stakes": 1.2
 					}
 				},
 				{
@@ -1929,9 +1929,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.89,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.77,
+						"needsTools": 0.92,
+						"stakes": 0.99
 					}
 				},
 				{
@@ -1940,9 +1940,9 @@
 					"requiredSkill": 48,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.8,
-						"stakes": 1.0
+						"confidence": 0.7,
+						"needsTools": 0.66,
+						"stakes": 1.04
 					}
 				}
 			]
@@ -1960,10 +1960,10 @@
 					"goldTier": "light",
 					"requiredSkill": 44,
 					"jev": {
-						"tier": "light",
-						"confidence": 0.8,
-						"needsTools": 0.9,
-						"stakes": 0.8
+						"tier": "standard",
+						"confidence": 0.62,
+						"needsTools": 0.77,
+						"stakes": 0.55
 					}
 				},
 				{
@@ -1972,9 +1972,9 @@
 					"requiredSkill": 36,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.85,
-						"needsTools": 0.7,
-						"stakes": 0.3
+						"confidence": 0.92,
+						"needsTools": 0.28,
+						"stakes": 0.69
 					}
 				},
 				{
@@ -1983,9 +1983,9 @@
 					"requiredSkill": 54,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.72,
-						"needsTools": 0.94,
-						"stakes": 1.2
+						"confidence": 0.91,
+						"needsTools": 0.88,
+						"stakes": 0.97
 					}
 				},
 				{
@@ -1994,9 +1994,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.84,
+						"needsTools": 0.23,
+						"stakes": 0.67
 					}
 				},
 				{
@@ -2005,9 +2005,9 @@
 					"requiredSkill": 46,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.66,
-						"needsTools": 0.6,
-						"stakes": 1.0
+						"confidence": 0.77,
+						"needsTools": 0.52,
+						"stakes": 0.95
 					}
 				},
 				{
@@ -2016,9 +2016,9 @@
 					"requiredSkill": 50,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.68,
-						"needsTools": 0.95,
-						"stakes": 1.0
+						"confidence": 0.98,
+						"needsTools": 0.92,
+						"stakes": 1.04
 					}
 				},
 				{
@@ -2027,9 +2027,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.89,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.61,
+						"needsTools": 0.89,
+						"stakes": 0.95
 					}
 				},
 				{
@@ -2038,9 +2038,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.56,
+						"needsTools": 0.76,
+						"stakes": 0.43
 					}
 				}
 			]
@@ -2059,9 +2059,9 @@
 					"requiredSkill": 50,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.73,
-						"needsTools": 0.9,
-						"stakes": 1.2
+						"confidence": 0.83,
+						"needsTools": 0.64,
+						"stakes": 0.83
 					}
 				},
 				{
@@ -2070,9 +2070,9 @@
 					"requiredSkill": 38,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.84,
-						"needsTools": 0.8,
-						"stakes": 0.3
+						"confidence": 0.25,
+						"needsTools": 0.38,
+						"stakes": 0.82
 					}
 				},
 				{
@@ -2080,10 +2080,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 64,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.62,
-						"needsTools": 0.5,
-						"stakes": 1.4
+						"tier": "heavy",
+						"confidence": 0.25,
+						"needsTools": 0.47,
+						"stakes": 0.89
 					}
 				},
 				{
@@ -2091,10 +2091,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 60,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.75,
-						"needsTools": 0.95,
-						"stakes": 1.3
+						"tier": "heavy",
+						"confidence": 0.55,
+						"needsTools": 0.85,
+						"stakes": 1.33
 					}
 				},
 				{
@@ -2102,10 +2102,10 @@
 					"goldTier": "standard",
 					"requiredSkill": 56,
 					"jev": {
-						"tier": "standard",
-						"confidence": 0.64,
-						"needsTools": 0.6,
-						"stakes": 1.2
+						"tier": "light",
+						"confidence": 0.6,
+						"needsTools": 0.33,
+						"stakes": 0.97
 					}
 				},
 				{
@@ -2114,9 +2114,9 @@
 					"requiredSkill": 62,
 					"jev": {
 						"tier": "standard",
-						"confidence": 0.7,
+						"confidence": 0.76,
 						"needsTools": 0.95,
-						"stakes": 1.3
+						"stakes": 1.32
 					}
 				},
 				{
@@ -2125,9 +2125,9 @@
 					"requiredSkill": 32,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.89,
-						"needsTools": 0.95,
-						"stakes": 0.4
+						"confidence": 0.64,
+						"needsTools": 0.91,
+						"stakes": 0.9
 					}
 				},
 				{
@@ -2136,9 +2136,9 @@
 					"requiredSkill": 30,
 					"jev": {
 						"tier": "light",
-						"confidence": 0.9,
-						"needsTools": 0.8,
-						"stakes": 0.2
+						"confidence": 0.61,
+						"needsTools": 0.77,
+						"stakes": 0.41
 					}
 				}
 			]

@@ -209,7 +209,12 @@ test("a perfect classifier does not give a perfect router: a manual pin outlives
 
 	assert.equal(oracle.classifierAccuracy, 1, "the oracle classifier is right by construction");
 	assert.equal(oracle.overRouteRate, 0);
-	assert.ok(oracle.turnSuccessRate >= scripted.turnSuccessRate);
+
+	// Note what this does *not* assert. Since round 35 the scripted answers are Jev's own,
+	// and on the short pack Jev out-scores the oracle - because it over-routes, and the
+	// tier price inversion means escalating is free. Landing in the "right" tier is not
+	// the same as landing in the best one, which is the round-1 tier table all over again.
+	assert.ok(scripted.overRouteRate > scripted.underRouteRate, "real Jev over-routes on the short pack");
 
 	// ...and yet the router still lands in the wrong tier, because `switching.manualPinTurns`
 	// holds a /model pin across turns the operator did not choose it for.
@@ -415,8 +420,9 @@ test("fan-out gets dramatically more expensive at realistic context", async () =
 		perTurn(long) > perTurn(short) * 2,
 		`a fan-out candidate pays full uncached input, so its price must scale with context ($${perTurn(short).toFixed(2)} -> $${perTurn(long).toFixed(2)} per turn)`,
 	);
+	// Deliberately not asserting $/extra solve: that also depends on how much headroom the
+	// pack leaves, which round 22 showed is a property of the fixture rather than the idea.
 	assert.ok(Number.isFinite(short.listUsdPerExtraSolve) && Number.isFinite(long.listUsdPerExtraSolve));
-	assert.ok(long.listUsdPerExtraSolve > short.listUsdPerExtraSolve, "and each extra solve costs more to buy");
 });
 
 test("on long sessions the all-or-nothing rate understates the work, so the median carries it", async () => {
@@ -900,8 +906,12 @@ test("the routing confidence bar is a stickiness mechanism, not a safety one", a
 	});
 	const [shipped, slightly, high, never] = cells as [ConfidenceCell, ConfidenceCell, ConfidenceCell, ConfidenceCell];
 
-	// The shipped bar barely engages: almost nothing is below it.
-	assert.ok(shipped.suppressed / shipped.turns < 0.1, `the 0.5 bar suppressed ${shipped.suppressed}/${shipped.turns} turns; it is nearly inert`);
+	// Round 12 measured this bar as "nearly inert" against hand-written confidences that
+	// sat almost entirely above it. Against Jev's own - which are systematically low and
+	// systematically *under*-confident - it suppresses a large share of routed turns, many
+	// of which were classified correctly. It is a blunt instrument, not an idle one.
+	assert.ok(shipped.suppressed / shipped.turns > 0.2, `the 0.5 bar suppressed only ${shipped.suppressed}/${shipped.turns} turns`);
+	assert.ok(shipped.suppressedCorrect / shipped.suppressed > 0.4, "most of what it suppresses should be good routes it is throwing away");
 	// Raising it only ever reduces switching.
 	assert.ok(slightly.switches < shipped.switches);
 	assert.ok(high.switches < slightly.switches);
@@ -921,10 +931,12 @@ test("the routing confidence bar is a stickiness mechanism, not a safety one", a
 	}
 	// And it increasingly discards classifications that were correct.
 	assert.ok(high.suppressedCorrect > slightly.suppressedCorrect);
-	// A mid-height bar is the worst of both worlds: it freezes the session on whatever
-	// model it happened to be on, so outcome is non-monotone in the bar.
-	assert.ok(high.turnSuccessRate < shipped.turnSuccessRate, "a high-but-not-total bar should hurt");
-	assert.ok(never.turnSuccessRate > high.turnSuccessRate, "...more than never routing at all does");
+	// A higher bar freezes the session on whatever model it happened to be on, so the
+	// router lands in the right tier less and less often. Measured on landed accuracy
+	// rather than outcome: outcome is confounded by the starting model (round 19), which
+	// is a strong one here, so freezing can flatter it.
+	assert.ok(high.tierAccuracy < shipped.tierAccuracy, "a higher bar should land in the right tier less often");
+	assert.ok(never.tierAccuracy < high.tierAccuracy, "...and never routing at all, least often of all");
 });
 
 test("calibration reads the classifier's own claims and ignores pinned turns", async () => {
@@ -1357,9 +1369,10 @@ test("turning on fan-out moves the answer's dependency from the router to the ju
 	const withFanout = await auditAssumptions({ ...args, candidateN: 3 });
 	const spread = (rows: typeof routingOnly, name: string) => rows.find((r) => r.assumption === name)!.sessionSuccess.spread;
 
-	// Router-side assumptions dominate when the routed model is what answers.
-	assert.equal(routingOnly[0]!.assumption, "routing confidence bar");
-	assert.equal(spread(routingOnly, "judge bias"), 0);
+	// Router-side assumptions dominate when the routed model is what answers; which one
+	// leads depends on the pack and the classifier, so only the contrast is asserted.
+	assert.equal(spread(routingOnly, "judge bias"), 0, "with no fan-out, nothing about the judge can matter");
+	assert.ok(spread(routingOnly, "fleet skill (\u00b1jitter)") > 0.05, "...while the declared fleet very much does");
 
 	// Once a judge chooses the answer, its quality dominates instead - and it is the one
 	// assumption this harness cannot measure offline.
@@ -1554,7 +1567,9 @@ test("the router can keep a rate-limited model, and the heuristic fallback guara
 	// and guards the detector that found it.
 	const outcome = await run({ startModel: "faux-plan-codex/gpt-6-astra" });
 	const ineligible = outcome.turns.filter((t) => !t.eligible);
-	assert.equal(ineligible.length, 1, "the pack should still reach the case");
+	// Two since round 35: Jev's real confidences are lower than the hand-written ones, so
+	// the low-confidence branch is taken more often and the bug's blast radius is larger.
+	assert.ok(ineligible.length >= 1, "the pack should still reach the case");
 	const turn = ineligible[0]!;
 	assert.match(turn.ineligibleReason ?? "", /rate limited \(429\)/);
 	assert.match(turn.reason, /confidence .* < .*; keeping/, "it is the low-confidence branch that keeps it");
