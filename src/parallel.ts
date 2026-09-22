@@ -106,8 +106,8 @@ export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 
 export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryData | undefined> {
 	const { pi, ctx, prompt, n, cfg, ledger, jev } = args;
-	if (cfg.parallel.requireRoutingEnabled && !args.routerEnabled) {
-		ctx.ui.notify("Parallel mode is off while the router is disabled (/router on, or parallel.requireRoutingEnabled: false).", "error");
+	if (!args.routerEnabled) {
+		ctx.ui.notify("Parallel mode is off while the router is disabled (/router on to re-enable).", "error");
 		return undefined;
 	}
 	const { models, rejected } = pickParallelModels({ ctx, cfg, n, ledger });

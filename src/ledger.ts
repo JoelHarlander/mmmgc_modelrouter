@@ -216,16 +216,19 @@ export class Ledger {
 				continue;
 			}
 			const globs = scopeGlobs(cfg, provider, id);
-			const scoped = globs !== undefined;
-			if (scoped && !(modelKey && anyGlobMatch(globs, modelKey))) continue;
 			const spent = windowExhausted(w, cfg, now);
-			if (!scoped) {
-				out.accountWindows.push(id);
-				out.accountWindowsAt = Math.max(out.accountWindowsAt ?? 0, w.lastSeen);
-				if (w.utilization !== undefined) out.accountUtilization = Math.max(out.accountUtilization ?? 0, w.utilization);
+			if (globs !== undefined) {
+				if (!(modelKey && anyGlobMatch(globs, modelKey))) continue;
+				if (spent) out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
+				continue;
 			}
-			if (!spent) continue;
-			(scoped ? out.exhaustedScoped : out.exhaustedAccount).push({ id, reason: `${id} ${spent}` });
+			// `<family>:<role>` is one model family's meter. Unless a scope says which models it
+			// governs, it governs none of them: a full family meter is not a spent credential.
+			if (id.includes(":")) continue;
+			out.accountWindows.push(id);
+			out.accountWindowsAt = Math.max(out.accountWindowsAt ?? 0, w.lastSeen);
+			if (w.utilization !== undefined) out.accountUtilization = Math.max(out.accountUtilization ?? 0, w.utilization);
+			if (spent) out.exhaustedAccount.push({ id, reason: `${id} ${spent}` });
 		}
 		if (state.credits) {
 			sources.add(state.credits.source);
@@ -312,7 +315,7 @@ export interface EntitlementFacts {
 }
 
 /**
- * Model globs a window governs, or undefined when the window is account-wide.
+ * Model globs a window governs, or undefined when no scope claims the window.
  * Scope keys are `"<providerGlob>:<windowId>"`; window ids may themselves contain `:`
  * (a Codex per-model family arrives as `<family>:primary`), so only the first `:` splits.
  */

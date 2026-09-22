@@ -8,7 +8,8 @@ A [pi](https://github.com/earendil-works/pi) extension that routes every turn to
 - **Billing eligibility**: every candidate is assessed before it can be picked. The router separates *what pays*
   (`subscription`, `extra-credits`, `pay-per-token`, `free`) from *how well that is established*
   (`verified`, `stale`, `assumed`, `unverified`), and only a verified subscription-backed route is `preferred`.
-  Extra billed usage and unverified plans are reachable only where the config names them.
+  Paid routes are ordered, not banned: included usage first, then the account's own credits, then per-token
+  billing — so when the subscription really is used up the turn still runs, and the explanation says what paid.
 - **Plan vs on-demand**: subscription (OAuth) providers cost nothing at the margin until their window fills.
   The ledger reads Anthropic and Codex quota headers and 429/402 responses, polls the providers' read-only usage
   endpoints, and steers away from exhausted plans — per model, not just per provider.
@@ -55,7 +56,7 @@ heuristic, which by default keeps the current model.
   },
   "thinking": { "light": "low", "standard": "medium", "heavy": "high" },
   "models": {
-    "anthropic/*": { "billing": "plan" },
+    "claude-bridge/*": { "billing": "plan" },
     "openai-codex/*": { "billing": "plan" },
     "openrouter/*": { "billing": "on-demand" }
   },
@@ -64,8 +65,7 @@ heuristic, which by default keeps the current model.
     "allowUnverifiedSubscription": true,
     "allowExtraBilled": ["openai-codex/*"],
     "requireVerifiedExtraBilled": true,
-    "allowPayPerToken": ["openrouter/*", "vercel-ai-gateway/*", "ds4/*"],
-    "denyPaid": ["xai/*", "anthropic/*"],
+    "allowPayPerToken": ["openrouter/*", "vercel-ai-gateway/*", "ds4/*", "anthropic/*", "xai/*"],
     "evidenceMaxAgeMinutes": 30,
     "probe": { "enabled": true, "timeoutMs": 4000, "minIntervalMinutes": 30 }
   },
@@ -79,6 +79,12 @@ Billing labels: a `models` label wins wherever one matches, glob or not; only wh
 `plan`, everything else is `on-demand`. **A label is not evidence.** It decides which billing question gets asked;
 live quota headers and the read-only usage endpoints in `src/entitlement.ts` decide the answer.
 
+Precedence, once every candidate is assessed: a verified subscription-backed route or a genuinely zero-cost one
+first, then a `plan` label nothing has verified, then the account's own extra credits once its subscription window
+is really spent (the ChatGPT overflow), and last ordinary per-token billing — paid Anthropic and xAI included. A
+route is excluded only when it cannot serve the turn: no auth, a cooldown, or a spent window or balance with no
+paid path behind it.
+
 ### Billing policy
 
 | Key | Effect |
@@ -86,8 +92,7 @@ live quota headers and the read-only usage endpoints in `src/entitlement.ts` dec
 | `allowUnverifiedSubscription` | Keep a `plan`-labelled route usable while its backing is still unverified (it is never *preferred*) |
 | `allowExtraBilled` | Model globs that may spend credits **after** their subscription window is exhausted |
 | `requireVerifiedExtraBilled` | Refuse extra billed usage unless live credit evidence says credits exist |
-| `allowPayPerToken` | Model globs that may bill per token. Not `["*"]`: a route that costs money is reachable only where it is named |
-| `denyPaid` | Model globs that are never routed to, on any basis — verified subscription, credits, per-token or free |
+| `allowPayPerToken` | Model globs that may bill per token. Not `["*"]`: a route that costs money is reachable only where it is named. Naming one orders it last, it does not promote it |
 | `evidenceMaxAgeMinutes` | Evidence older than this is `stale`, not `verified` |
 | `probe` | Read-only entitlement polling. Never touches an inference endpoint |
 
@@ -101,8 +106,8 @@ that cannot authenticate is recorded as a failed probe — the route then stays 
 rather than guessing either way.
 
 A project `.pi/modelrouter.json` is read key by key against a list of what a repository may say: its tier lists,
-`thinking`, `switching`, the `/duo` settings, `notifyOnSwitch`, `enabled` (off only), `billing.denyPaid` (added to
-the global list, never replacing it) and `billing.probe.enabled` (off only). Everything else — `jev`, `entitlement`,
+`thinking`, `switching`, the `/duo` settings, `notifyOnSwitch`, `enabled` (off only) and `billing.probe.enabled`
+(off only). Everything else — `jev`, `entitlement`,
 `plan`, `models`, `scopes`, the rest of `billing`, and every key added in future — comes from the global file
 alone. So a repository can pick the models it prefers and make the router stricter than you configured it, and it
 can never name an endpoint a credential is sent to, assert what pays for a model, or loosen a spend safeguard.
@@ -119,7 +124,7 @@ can never name an endpoint a credential is sent to, assert what pays for a model
 | `/par [N] <prompt>` | N parallel responses (2..8) |
 
 The parallel commands share routing's gate: a model that routing would refuse cannot be fanned out to, and while
-routing is off they refuse outright (`parallel.requireRoutingEnabled`).
+routing is off they refuse outright.
 
 ## Development
 
@@ -128,11 +133,12 @@ npm install
 npm run check          # tsc
 npm test               # node --test (router, billing, entitlement, ledger, parallel, config)
 npm run smoke          # end-to-end on pi's faux provider: no tokens spent
-npm run smoke:billing  # same, with a denyPaid rule that must keep the router off the cheap model
+npm run smoke:billing  # same, with a spend gate that must keep the router off the cheap model
 ```
 
-`npm run smoke` routes a light prompt to `faux/b`; `npm run smoke:billing` adds `denyPaid: ["faux/b"]` and must
-answer from `faux/a` instead. The difference between the two is the billing gate doing its job end to end.
+`npm run smoke` routes a light prompt to the billed `faux/b`, which its global fixture names in `allowPayPerToken`;
+`npm run smoke:billing` names only `faux/a` there, so `faux/b` is not a route that may bill and the answer comes
+from `faux/a` instead. The difference between the two is the billing gate doing its job end to end.
 
 Verified on pi 0.85.1: `pi.setModel()` inside `before_agent_start` applies to the same turn, so the switch
 happens before the first provider request. The interactive surfaces (`/router` cards, routing notifications,

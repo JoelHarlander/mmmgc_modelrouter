@@ -1,4 +1,3 @@
 {
-  "switching": { "minConfidence": 0.3, "manualPinTurns": 0 },
-  "billing": { "denyPaid": ["faux/b"] }
+  "switching": { "minConfidence": 0.3, "manualPinTurns": 0 }
 }

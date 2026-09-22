@@ -63,14 +63,21 @@ const cfg: RouterConfig = mergeConfig(DEFAULT_CONFIG, {
 		standard: ["claude-bridge/claude-opus-5", "xai/grok-4.7"],
 		heavy: ["claude-bridge/claude-fable-5-1", "claude-bridge/claude-opus-5"],
 	},
-	billing: { ...DEFAULT_CONFIG.billing, probe: { ...DEFAULT_CONFIG.billing.probe, enabled: false } },
+	// xAI is labelled per-token here and left out of allowPayPerToken, so the spend policy - not
+	// authentication - is what keeps the fan-out off it.
+	models: { ...DEFAULT_CONFIG.models, "xai/*": { billing: "on-demand" } },
+	billing: {
+		...DEFAULT_CONFIG.billing,
+		allowPayPerToken: ["openrouter/*"],
+		probe: { ...DEFAULT_CONFIG.billing.probe, enabled: false },
+	},
 });
 
 test("a billing-ineligible model is not fanned out to, and the reason is reported", () => {
 	const { models, rejected } = pickParallelModels({ ctx: fakeCtx(opus), cfg, n: 4, ledger: ledger() });
 	const keys = models.map((m) => `${m.provider}/${m.id}`);
 	assert.ok(!keys.includes("xai/grok-4.7"), `xai must not be reachable: ${keys.join(", ")}`);
-	assert.match(rejected.find((r) => r.key === "xai/grok-4.7")?.reason ?? "", /denied for xai\/grok-4.7/);
+	assert.match(rejected.find((r) => r.key === "xai/grok-4.7")?.reason ?? "", /not in billing\.allowPayPerToken/);
 });
 
 test("a model excluded by a model-scoped quota drops out of the fan-out", () => {
@@ -117,23 +124,3 @@ test("the fan-out is refused while automatic routing is disabled", async () => {
 	assert.equal(notices[0]!.level, "error");
 });
 
-test("parallel.requireRoutingEnabled false keeps the old behaviour available", async () => {
-	const optOut = mergeConfig(cfg, { parallel: { ...cfg.parallel, requireRoutingEnabled: false } });
-	const notices: Notice[] = [];
-	// Only one model is eligible here, so the run stops at the eligibility check rather than the
-	// routing-disabled check: that is what proves the disabled gate was not the thing that fired.
-	const pinned = mergeConfig(optOut, { parallel: { ...optOut.parallel, models: ["claude-bridge/claude-opus-5", "xai/grok-4.7"] } });
-	const entry = await runParallel({
-		pi: {} as unknown as ExtensionAPI,
-		ctx: fakeCtx(opus, notices),
-		prompt: "hello",
-		n: 2,
-		cfg: pinned,
-		ledger: ledger(),
-		jev: {} as unknown as JevClient,
-		routerEnabled: false,
-	});
-	assert.equal(entry, undefined);
-	assert.match(notices[0]!.text, /Need at least 2 billing-eligible models/);
-	assert.match(notices[0]!.text, /denied for xai\/grok-4.7/);
-});

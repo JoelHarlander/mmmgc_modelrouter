@@ -11,7 +11,7 @@ import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Container, Text } from "@earendil-works/pi-tui";
-import { assessBilling, describeBasis } from "./billing.ts";
+import { assessBilling, billsPerToken, describeBasis } from "./billing.ts";
 import { loadConfig, modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
 import { refreshEntitlements } from "./entitlement.ts";
 import { type JevChoiceAnswer, JevClient, type JevNoulAnswer, type JevScoreAnswer } from "./jev.ts";
@@ -147,7 +147,8 @@ export default function modelRouter(pi: ExtensionAPI) {
 				lastDecision.switched = false;
 			} else if (cfg.notifyOnSwitch && ctx.hasUI) {
 				const basis = choice.billing ? describeBasis(choice.billing) : "billing unknown";
-				ctx.ui.notify(`router: ${tier} -> ${modelKey(choice.model)} (${(confidence * 100).toFixed(0)}%, ${basis})`, "info");
+				const spend = choice.billing && billsPerToken(choice.billing.basis) ? `, ~$${estimatedSpend(choice).toFixed(4)} this turn` : "";
+				ctx.ui.notify(`router: ${tier} -> ${modelKey(choice.model)} (${(confidence * 100).toFixed(0)}%, ${basis}${spend})`, "info");
 			}
 		}
 		// Staying on a model the billing gate would refuse is worth saying out loud.
@@ -239,6 +240,13 @@ export default function modelRouter(pi: ExtensionAPI) {
 	pi.registerCommand("par", { description: "Ask N models in parallel: /par [N] <prompt>", handler: parallelCommand() });
 
 	// ---- helpers -------------------------------------------------------------
+
+	/** What the chosen route is estimated to bill this turn, so moving onto paid usage is visible. */
+	function estimatedSpend(choice: Pick<Decision, "model" | "candidates">): number {
+		const key = choice.model ? modelKey(choice.model) : undefined;
+		const chosen = choice.candidates.find((c) => c.key === key);
+		return (chosen?.costUsd ?? 0) + (chosen?.switchPenaltyUsd ?? 0);
+	}
 
 	function setStatus(ctx: ExtensionContext, text: string) {
 		if (ctx.hasUI) ctx.ui.setStatus(STATUS_KEY, text);

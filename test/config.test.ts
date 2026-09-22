@@ -98,17 +98,14 @@ test("a project config cannot neutralise a quota scope or re-enable disabled rou
 	assert.deepEqual(cfg.scopes["claude-bridge:7d_opus"], DEFAULT_CONFIG.scopes["claude-bridge:7d_opus"]);
 });
 
-test("a project config can only add to the paid-inference deny list", () => {
+test("a project config cannot widen any spend gate", () => {
 	const cfg = withProject({
-		billing: { denyPaid: ["openrouter/*"], allowPayPerToken: ["*"], allowExtraBilled: ["*"], requireVerifiedExtraBilled: false, allowUnverifiedSubscription: true },
+		billing: { allowPayPerToken: ["*"], allowExtraBilled: ["*"], requireVerifiedExtraBilled: false, allowUnverifiedSubscription: true, evidenceMaxAgeMinutes: 600 },
 	});
-	assert.deepEqual(cfg.billing.denyPaid, [...DEFAULT_CONFIG.billing.denyPaid, "openrouter/*"]);
 	assert.deepEqual(cfg.billing.allowPayPerToken, DEFAULT_CONFIG.billing.allowPayPerToken);
 	assert.deepEqual(cfg.billing.allowExtraBilled, DEFAULT_CONFIG.billing.allowExtraBilled);
 	assert.equal(cfg.billing.requireVerifiedExtraBilled, true);
-
-	const emptied = withProject({ billing: { denyPaid: [] } });
-	for (const glob of DEFAULT_CONFIG.billing.denyPaid) assert.ok(emptied.billing.denyPaid.includes(glob), glob);
+	assert.equal(cfg.billing.evidenceMaxAgeMinutes, DEFAULT_CONFIG.billing.evidenceMaxAgeMinutes);
 });
 
 test("a project config states its routing preferences and may switch probing off", () => {
@@ -126,21 +123,21 @@ test("a project config states its routing preferences and may switch probing off
 	assert.equal(cfg.billing.probe.minIntervalMinutes, DEFAULT_CONFIG.billing.probe.minIntervalMinutes, "an unnamed key beside a named one stays global");
 });
 
-test("a project config cannot route paid Anthropic inference by any means open to it", () => {
+test("a project config cannot reach a billed route the global layer never named", () => {
 	const cfg = withProject({
-		tiers: { light: ["anthropic/claude-opus-5"], standard: ["anthropic/claude-opus-5"], heavy: ["anthropic/claude-opus-5"] },
-		models: { "anthropic/*": { billing: "free", capability: 99 } },
-		billing: { denyPaid: [], allowPayPerToken: ["*"], allowExtraBilled: ["*"], requireVerifiedExtraBilled: false },
+		tiers: { light: ["someone/big"], standard: ["someone/big"], heavy: ["someone/big"] },
+		models: { "someone/*": { billing: "free", capability: 99 } },
+		billing: { allowPayPerToken: ["someone/*"] },
 	});
-	const claude = {
-		id: "claude-opus-5",
-		provider: "anthropic",
-		cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18 },
+	const mystery = {
+		id: "big",
+		provider: "someone",
+		cost: { input: 20, output: 80, cacheRead: 2, cacheWrite: 24 },
 	} as unknown as Parameters<typeof assessBilling>[0]["model"];
 	const registry = { isUsingOAuth: () => false } as unknown as Parameters<typeof assessBilling>[0]["registry"];
-	const a = assessBilling({ model: claude, cfg, registry, ledger: new Ledger(ledgerPath(mkdtempSync(join(tmpdir(), "mr-cfg-")))) });
+	const a = assessBilling({ model: mystery, cfg, registry, ledger: new Ledger(ledgerPath(mkdtempSync(join(tmpdir(), "mr-cfg-")))) });
 
 	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /denied for anthropic\/claude-opus-5/);
-	assert.deepEqual(cfg.models["anthropic/*"], DEFAULT_CONFIG.models["anthropic/*"], "a project may not assert what pays for a model");
+	assert.match(a.reason, /not in billing\.allowPayPerToken/);
+	assert.equal(cfg.models["someone/*"]?.billing, undefined, "a project may not assert what pays for a model");
 });

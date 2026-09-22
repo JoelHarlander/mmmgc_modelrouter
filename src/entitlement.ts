@@ -198,11 +198,10 @@ function parseOpenRouterKey(body: unknown): EntitlementFacts {
 	const facts: EntitlementFacts = { windows: {} };
 	const limit = numOf(data?.limit);
 	const remaining = numOf(data?.limit_remaining);
+	// An uncapped key says nothing about the account balance behind it, which this endpoint never
+	// reports, so credit state stays unknown rather than being called unlimited.
 	if (limit !== undefined && limit > 0 && remaining !== undefined) {
 		facts.credits = { hasCredits: remaining > 0, balance: String(remaining) };
-	} else if (data !== undefined && "limit" in data && data.limit === null) {
-		// An explicit null cap means the key is uncapped, not that the field was missing.
-		facts.credits = { unlimited: true };
 	}
 	const free = obj(data?.free_model_daily_requests);
 	const used = numOf(free?.used);

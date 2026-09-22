@@ -83,8 +83,9 @@ test("an OpenRouter key cap is remaining credit, not a utilization window", () =
 	assert.equal(capped.credits?.balance, "2.5");
 	assert.equal(parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 0 } }).credits?.hasCredits, false);
 
+	// An uncapped key is not an unlimited account: this endpoint never reports the balance.
 	const uncapped = parseEntitlement("openrouter-key", { data: { limit: null } });
-	assert.equal(uncapped.credits?.unlimited, true);
+	assert.equal(uncapped.credits, undefined);
 });
 
 test("gateway credits are read as a balance, and an absent balance asserts nothing", () => {

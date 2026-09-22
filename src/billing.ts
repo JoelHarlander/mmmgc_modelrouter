@@ -11,9 +11,11 @@
  *                  assumption from a configured label or an OAuth heuristic.
  *   eligibility  - whether the configuration permits using the route on that footing.
  *
- * A route is `preferred` only when it is subscription-backed *and* verified. Unverified
- * subscriptions and extra billed usage stay reachable only where the configuration says so, and
- * the reason is always carried into routing explanations rather than silently applied.
+ * A route is `preferred` only when it is subscription-backed *and* verified. Paid routes are not
+ * refused for being paid - they are ranked below included usage, so that when subscription
+ * capacity is genuinely used up the turn still has somewhere to go and the explanation says what
+ * is paying. Only a route that cannot serve the turn - no auth, a cooldown, or a spent window or
+ * balance with no paid path - is excluded.
  */
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
@@ -44,8 +46,13 @@ export interface BillingAssessment {
 	rank: number;
 }
 
-/** Ranks: verified-subscription and free first, then assumed plans, then anything billed. */
-const RANK = { verifiedSubscription: 0, free: 0, assumedSubscription: 1, payPerToken: 2, extraCredits: 3, excluded: 9 } as const;
+/**
+ * The order routes are preferred in: included subscription usage and zero-cost routes first, then
+ * a plan label nothing has verified, then - once subscription capacity really is used up - the
+ * account's own extra credits, and last ordinary per-token billing. Paid routes are ranked, never
+ * refused: only a route that cannot serve the turn at all is excluded.
+ */
+const RANK = { verifiedSubscription: 0, free: 0, assumedSubscription: 1, extraCredits: 2, payPerToken: 3, excluded: 9 } as const;
 
 export interface AssessArgs {
 	model: Model<Api>;
@@ -134,9 +141,6 @@ function assessFree(
 	if (free) evidence.push("catalog list price is zero");
 	else uncertainty.push(`configuration labels ${key} free, but its catalog price is not zero`);
 	if (fromConfig && !free) return assessPayPerToken(key, cfg, evidence, uncertainty);
-	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
-		return excluded("free", "free", "verified", `inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
-	}
 	return {
 		basis: "free",
 		verification: "verified",
@@ -159,11 +163,6 @@ function assessSubscription(
 	uncertainty: string[],
 	now: number,
 ): BillingAssessment {
-	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
-		uncertainty.push(planLabelProvenance(key, fromConfig));
-		return excluded("subscription", "plan", freshness, `inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
-	}
-
 	if (quota.exhaustedAccount.length > 0) {
 		// Subscription is spent. Anything further is extra billed usage, which needs its own permission.
 		const spent = quota.exhaustedAccount.map((w) => w.reason).join(", ");
@@ -264,9 +263,6 @@ function assessExtraCredits(
 }
 
 function assessPayPerToken(key: string, cfg: RouterConfig, evidence: string[], uncertainty: string[]): BillingAssessment {
-	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
-		return excluded("pay-per-token", "on-demand", "verified", `paid inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
-	}
 	if (!anyGlobMatch(cfg.billing.allowPayPerToken, key)) {
 		return excluded("pay-per-token", "on-demand", "verified", `${key} is not in billing.allowPayPerToken`, evidence, uncertainty);
 	}

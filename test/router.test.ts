@@ -158,7 +158,7 @@ test("a low-confidence turn keeps the current model only once billing has cleare
 });
 
 test("a low-confidence turn routes away from a current model the billing gate refuses", () => {
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: ["plan/*"] } });
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowUnverifiedSubscription: false } });
 	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[2], registry: fakeRegistry(models), cfg: denied, ledger: ledger(), contextTokens: 0 });
 	assert.notEqual(d.model?.provider, "plan", "an ineligible route is not kept for want of confidence");
 	assert.equal(d.switched, true);
@@ -166,16 +166,24 @@ test("a low-confidence turn routes away from a current model the billing gate re
 });
 
 test("a low-confidence turn with nothing eligible names the current model as ineligible", () => {
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: ["*"] } });
-	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[2], registry: fakeRegistry(models), cfg: denied, ledger: ledger(), contextTokens: 0 });
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowUnverifiedSubscription: false } });
+	const d = chooseModel({
+		tier: "light",
+		confidence: 0.2,
+		current: models[2],
+		registry: fakeRegistry(models, [], ["cheap", "local"]),
+		cfg: denied,
+		ledger: ledger(),
+		contextTokens: 0,
+	});
 	assert.equal(d.model?.id, "mid", "there is nowhere else to go, so the session stays put");
-	assert.match(d.ineligibleCurrent ?? "", /denied/, "but it is never kept silently");
+	assert.match(d.ineligibleCurrent ?? "", /not verified/, "but it is never kept silently");
 });
 
 test("the model the router refused to keep is still named in the explanation", () => {
 	// A manual /model pick can leave the session on a model no tier lists; leaving it must be explained.
 	const legacy = model("plan", "legacy", { input: 10, output: 50 });
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: ["plan/legacy"] } });
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowUnverifiedSubscription: false } });
 	const d = chooseModel({
 		tier: "light",
 		confidence: 0.2,
@@ -187,5 +195,5 @@ test("the model the router refused to keep is still named in the explanation", (
 	});
 	assert.equal(d.switched, true);
 	const held = d.candidates.find((c) => c.key === "plan/legacy");
-	assert.match(held?.skipped ?? "", /denied for plan\/legacy by billing\.denyPaid/);
+	assert.match(held?.skipped ?? "", /not verified/);
 });

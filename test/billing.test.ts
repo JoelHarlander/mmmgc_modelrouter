@@ -213,17 +213,20 @@ test("an extra-usage window that is itself spent excludes extra billed usage", (
 
 // ---- deny paid fallback ----------------------------------------------------
 
-test("paid Anthropic API inference is denied by the shipped policy", () => {
+test("the paid Anthropic API is reachable, priced and ranked last rather than refused", () => {
+	// Nothing labels `anthropic/*`: pi's auth says API key, so the basis is per-token billing.
 	const a = assess(claudeApi, ledger());
-	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /denied for anthropic\/claude-opus-5/);
+	assert.equal(a.basis, "pay-per-token");
+	assert.equal(a.eligibility, "allowed");
+	assert.ok(a.uncertainty.some((u) => /list-price estimate/.test(u)), a.uncertainty.join(" | "));
+	assert.ok(a.rank > assess(codex, ledger()).rank, "an included-usage route is preferred over it");
 });
 
-test("xAI is denied while its subscription backing is unproven", () => {
-	// `xai/*` is labelled plan by the defaults, but nothing verifies that label.
+test("an xAI route pi holds OAuth for is an assumed subscription, allowed but never preferred", () => {
 	const a = assess(grok, ledger());
-	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /denied for xai\/grok-4.7 by billing\.denyPaid/);
+	assert.equal(a.basis, "subscription");
+	assert.equal(a.verification, "unverified");
+	assert.equal(a.eligibility, "allowed");
 	assert.ok(a.uncertainty.some((u) => /entitlement check|does not prove/.test(u)), a.uncertainty.join(" | "));
 });
 
@@ -366,7 +369,7 @@ test("a verified subscription route wins over a cheaper billed route", () => {
 
 test("an explanation keeps the routes ruled out in the tiers that were skipped over", () => {
 	// Nothing in the light tier is reachable, so routing escalates past it.
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: [...cfg.billing.denyPaid, "openrouter/*"] } });
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowPayPerToken: [] } });
 	const d = chooseModel({
 		tier: "light",
 		confidence: 0.9,
@@ -378,7 +381,7 @@ test("an explanation keeps the routes ruled out in the tiers that were skipped o
 	});
 	assert.equal(d.tier, "standard");
 	const skipped = d.candidates.find((c) => c.key === "openrouter/z-ai/glm-5.3");
-	assert.match(skipped?.skipped ?? "", /denied/, "the light-tier route that was ruled out is still explained");
+	assert.match(skipped?.skipped ?? "", /not in billing\.allowPayPerToken/, "the light-tier route that was ruled out is still explained");
 	assert.ok(d.candidates.some((c) => c.key === "claude-bridge/claude-opus-5" && !c.skipped));
 });
 
@@ -402,6 +405,7 @@ test("routing explanations carry the uncertainty when the subscription is unveri
 test("with every route billing-ineligible the decision names the current model as ineligible", () => {
 	const noneAllowed = mergeConfig(cfg, {
 		tiers: { light: ["anthropic/claude-opus-5"], standard: ["anthropic/claude-opus-5"], heavy: ["anthropic/claude-opus-5"] },
+		billing: { ...cfg.billing, allowPayPerToken: [] },
 	});
 	const d = chooseModel({
 		tier: "standard",
@@ -414,7 +418,7 @@ test("with every route billing-ineligible the decision names the current model a
 	});
 	assert.equal(d.switched, false);
 	assert.match(d.reason, /no configured model is billing-eligible/);
-	assert.match(d.ineligibleCurrent ?? "", /denied/);
+	assert.match(d.ineligibleCurrent ?? "", /not in billing\.allowPayPerToken/);
 });
 
 test("a verified subscription outranks a cheaper billed route, with no way to switch that off", () => {
@@ -453,7 +457,8 @@ test("extra billed usage is priced as money, so a cheaper billed route can win o
 	assert.equal(extra.assessment?.basis, "extra-credits");
 	assert.ok(extra.costUsd > 0, "credit spend is estimated as real money");
 	assert.ok(extra.switchPenaltyUsd > 0, "re-reading context on credits costs money too");
-	assert.equal(d.model?.provider, "openrouter", "pay-per-token outranks spending credits on top of a spent plan");
+	assert.equal(d.model?.provider, "openai-codex", "once the plan is spent, its own credits are the preferred overflow");
+	assert.match(d.reason, /extra-credits/, "and the explanation says the turn moved onto paid usage");
 });
 
 test("a free label the catalog price contradicts is still costed as money", () => {
@@ -498,24 +503,6 @@ test("a zero catalog price decides only where no label claims the route", () => 
 	assert.ok(a.evidence.some((e) => /catalog list price is zero/.test(e)), a.evidence.join(" | "));
 });
 
-test("a free route in billing.denyPaid is excluded, not quietly preferred", () => {
-	const local = model("ds4", "deepseek-v4-flash");
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: [...cfg.billing.denyPaid, "ds4/*"] } });
-	const a = assessBilling({ model: local, cfg: denied, registry: fakeRegistry([local]), ledger: ledger() });
-	assert.equal(a.basis, "free");
-	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /denied for ds4\/deepseek-v4-flash by billing\.denyPaid/);
-});
-
-test("a verified subscription route is still refused when the deny list names it", () => {
-	const l = ledger();
-	l.observeResponse("anthropic", 200, HEALTHY_ANTHROPIC, cfg);
-	const a = assess(claudeApi, l);
-	assert.equal(a.basis, "subscription");
-	assert.equal(a.eligibility, "excluded", "denyPaid is not a fallback rule: it is never routed to");
-	assert.match(a.reason, /denied for anthropic\/claude-opus-5 by billing\.denyPaid/);
-});
-
 test("a fresh credit fact does not verify a quota window that is hours old", () => {
 	const l = ledger();
 	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "50", "x-codex-plan-type": "plus" }, cfg);
@@ -526,4 +513,45 @@ test("a fresh credit fact does not verify a quota window that is hours old", () 
 	assert.equal(a.verification, "stale", "the verdict rests on the windows, not on whatever evidence is newest");
 	assert.notEqual(a.eligibility, "preferred");
 	assert.ok(a.uncertainty.some((u) => /older than 30m/.test(u)), a.uncertainty.join(" | "));
+});
+
+test("a spent subscription overflows onto its own credits before any other billed route", () => {
+	const l = ledger();
+	l.observeResponse("openai-codex", 200, CODEX_EXHAUSTED_WITH_CREDITS, cfg);
+	const both = mergeConfig(cfg, {
+		tiers: { ...cfg.tiers, standard: ["openrouter/z-ai/glm-5.3", "openai-codex/gpt-6-astra", "anthropic/claude-opus-5"] },
+	});
+	const d = chooseModel({
+		tier: "standard",
+		confidence: 0.9,
+		current: undefined,
+		registry: fakeRegistry(ALL, ["claude-bridge", "openai-codex", "xai"]),
+		cfg: both,
+		ledger: l,
+		contextTokens: 10_000,
+	});
+	assert.equal(d.model?.provider, "openai-codex");
+	assert.equal(d.billing?.basis, "extra-credits");
+	const ranks = Object.fromEntries(d.candidates.map((c) => [c.key, c.assessment?.rank]));
+	assert.ok(ranks["openai-codex/gpt-6-astra"]! < ranks["openrouter/z-ai/glm-5.3"]!);
+	assert.ok(ranks["openai-codex/gpt-6-astra"]! < ranks["anthropic/claude-opus-5"]!, "paid Anthropic is the last resort, not the ban it used to be");
+});
+
+test("one filled per-family meter does not condemn the whole subscription", () => {
+	// docs/research/plan-quotas.md: `additional_rate_limits` meters one model family, while the
+	// account's own `rate_limit` still has room. Family ids are discovered at runtime.
+	const l = ledger();
+	l.applyEntitlement(
+		"openai-codex",
+		parseEntitlement("codex-wham-usage", {
+			plan_type: "plus",
+			rate_limit: { primary_window: { used_percent: 20 }, secondary_window: { used_percent: 10 } },
+			additional_rate_limits: [{ limit_name: "GPT-5.3-Codex-Spark", rate_limit: { limit_reached: true, primary_window: { used_percent: 100 } } }],
+			credits: { has_credits: true, balance: "12" },
+		}),
+	);
+	const a = assess(codex, l);
+	assert.equal(a.basis, "subscription", "the plan is not spent, so the turn must not move onto credits");
+	assert.notEqual(a.eligibility, "excluded");
+	assert.equal(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).exhaustedAccount.length, 0);
 });

@@ -1,6 +1,6 @@
 {
   "tiers": { "light": ["faux/b"], "standard": ["faux/a"], "heavy": ["faux/a"] },
   "models": { "faux/*": { "billing": "on-demand" } },
-  "billing": { "allowPayPerToken": ["faux/*"], "probe": { "enabled": false } },
+  "billing": { "allowPayPerToken": ["faux/a"], "probe": { "enabled": false } },
   "notifyOnSwitch": true
 }

@@ -74,11 +74,10 @@ export interface RouterConfig {
 		requireVerifiedExtraBilled: boolean;
 		/**
 		 * Model-key globs allowed to bill per token (gateways, API keys). Deliberately not `["*"]`:
-		 * a route that bills money is reachable only where it was named.
+		 * a route that bills money is reachable only where it was named. Naming one orders it last,
+		 * behind included usage and the account's own credits - it does not promote it.
 		 */
 		allowPayPerToken: string[];
-		/** Model-key globs that must never be routed to, on any basis and whatever else allows them. */
-		denyPaid: string[];
 		/** Entitlement evidence older than this counts as stale, not verified. */
 		evidenceMaxAgeMinutes: number;
 		probe: {
@@ -108,8 +107,6 @@ export interface RouterConfig {
 		defaultN: number;
 		/** Fixed list; empty = pick current model + best authed model of each tier. */
 		models: string[];
-		/** Refuse /duo, /trio and /par while automatic routing is disabled. */
-		requireRoutingEnabled: boolean;
 		judge: "jev" | "none";
 		autoAdopt: boolean;
 		switchToWinner: boolean;
@@ -141,10 +138,10 @@ export const DEFAULT_CONFIG: RouterConfig = {
 	},
 	thinking: { light: "low", standard: "medium", heavy: "high" },
 	models: {
-		"anthropic/*": { billing: "plan" },
+		// The OAuth-backed subscription routes. `anthropic/*` and `xai/*` carry no label: whether
+		// they are a plan or an API key is pi's own auth evidence to answer, not this file's.
 		"claude-bridge/*": { billing: "plan" },
 		"openai-codex/*": { billing: "plan" },
-		"xai/*": { billing: "plan" },
 		"openrouter/*": { billing: "on-demand" },
 		"vercel-ai-gateway/*": { billing: "on-demand" },
 		"ds4/*": { billing: "free" },
@@ -155,10 +152,9 @@ export const DEFAULT_CONFIG: RouterConfig = {
 		// Extra credits exist on the ChatGPT plan only, and only once verified live.
 		allowExtraBilled: ["openai-codex/*"],
 		requireVerifiedExtraBilled: true,
-		// The pay-per-token providers the default tiers name, and no others.
-		allowPayPerToken: ["openrouter/*", "vercel-ai-gateway/*", "ds4/*"],
-		// No paid xAI or paid Anthropic API inference: neither is proven subscription-backed here.
-		denyPaid: ["xai/*", "anthropic/*"],
+		// The pay-per-token routes the default tiers name, and no others. Paid Anthropic and xAI are
+		// reachable here but rank last, so they are the overflow rather than the first choice.
+		allowPayPerToken: ["openrouter/*", "vercel-ai-gateway/*", "ds4/*", "anthropic/*", "xai/*"],
 		evidenceMaxAgeMinutes: 30,
 		probe: { enabled: true, timeoutMs: 4000, minIntervalMinutes: 30 },
 	},
@@ -189,7 +185,6 @@ export const DEFAULT_CONFIG: RouterConfig = {
 	parallel: {
 		defaultN: 2,
 		models: [],
-		requireRoutingEnabled: true,
 		judge: "jev",
 		autoAdopt: false,
 		switchToWinner: false,
@@ -244,8 +239,8 @@ export function loadConfig(cwd: string): { config: RouterConfig; sources: string
 /** Which layer a patch came from. Only the global layer may name an endpoint or a credential. */
 export type ConfigScope = "global" | "project";
 
-/** How a project-local value may be taken: as given, unioned onto the global list, or off only. */
-type ProjectRule = "set" | "union" | "off";
+/** How a project-local value may be taken: as given, or only towards off. */
+type ProjectRule = "set" | "off";
 
 /**
  * Every key a project-local `.pi/modelrouter.json` may speak for, and how. Anything absent here
@@ -270,7 +265,6 @@ export const PROJECT_SETTABLE: Readonly<Record<string, ProjectRule>> = {
 	"parallel.switchToWinner": "set",
 	"parallel.timeoutMs": "set",
 	"parallel.maxResponseCharsForJudge": "set",
-	"billing.denyPaid": "union",
 	"billing.probe.enabled": "off",
 };
 
@@ -315,8 +309,6 @@ function projectValue(base: unknown, patch: unknown, rule: ProjectRule): unknown
 	switch (rule) {
 		case "set":
 			return patch;
-		case "union":
-			return isStringList(patch) ? [...new Set([...(isStringList(base) ? base : []), ...patch])] : base;
 		case "off":
 			return typeof patch === "boolean" ? base === true && patch : base;
 	}
@@ -326,9 +318,6 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 	return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-function isStringList(v: unknown): v is string[] {
-	return Array.isArray(v) && v.every((e) => typeof e === "string");
-}
 
 /** True when any glob in `patterns` matches `modelKey`. */
 export function anyGlobMatch(patterns: readonly string[], modelKey: string): boolean {
