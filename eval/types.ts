@@ -136,6 +136,14 @@ export interface CandidateTurnRecord {
 	judgePick: string;
 	judgeConfidence: number;
 	judgeSolved: boolean;
+	/**
+	 * What a session would actually end up with. src/parallel.ts only auto-adopts the
+	 * judge's pick when its confidence clears `switching.minConfidence`; below that the
+	 * turn keeps the routed model's answer. `gated` marks the turns where that happened.
+	 */
+	gated: boolean;
+	adoptedKey: string;
+	adoptedSolved: boolean;
 	/** The best candidate by true skill: the ceiling a perfect judge would reach. */
 	oracleBest: string;
 	oracleSolved: boolean;

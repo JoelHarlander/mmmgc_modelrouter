@@ -403,3 +403,61 @@ own competence assumption — and it reports which of its conclusions rest on wh
 The single outstanding measurement is still one live command away:
 `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`, 36 Jev calls, no model
 inference, under a cent.
+
+---
+
+## Round 8 — 2026-09-22 — does the confidence bar the code already has actually help?
+
+**Measured.** `src/parallel.ts` does not adopt the judge's pick unconditionally — it
+auto-adopts only when `entry.judge.confidence >= cfg.switching.minConfidence` (0.5 by
+default). Every candidate number in rounds 1–7 reported the **raw pick** and silently
+ignored that gate, so none of them described what a session would actually end up with.
+And nobody had asked the obvious question: does the gate defend against the biased
+judge round 3 identified as the thing that breaks fan-out?
+
+**Changed.** The harness now applies the shipped bar and reports the raw pick and the
+adopted outcome separately: `adoptedSuccessRate`, `adoptedLift`, `gatedTurns`,
+`gateRescueRate`. `--judge-min-confidence` moves the bar, `--sweep gate` sweeps it, and
+a test pins the harness default against the comparison in `src/parallel.ts`.
+
+**What the numbers did** (`swe-router-long-v1`, n=3, noise 10, mean of 5 seeds):
+
+| bias | minConf | raw pick | adopted | adopted lift | gated turns | rescued |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 0.00 | 94.3% | 94.3% | **+19.3pp** | 0.0 | — |
+| 0 | **0.50** | 94.3% | 91.3% | **+16.3pp** | 10.0 | 3.5% |
+| 0 | 0.90 | 94.3% | 84.0% | +9.0pp | 36.4 | 1.6% |
+| 40 | 0.00 | 66.7% | 66.7% | **−8.3pp** | 0.0 | — |
+| 40 | **0.50** | 66.7% | 67.0% | **−8.0pp** | 0.2 | 20.0% |
+| 40 | 0.90 | 66.7% | 68.3% | −6.7pp | 7.6 | 20.9% |
+
+**The gate works exactly when it is not needed, and is blind exactly when it is.**
+At the shipped 0.5 bar it costs **3.0pp** of lift when the judge is good, and recovers
+**0.3pp** when the judge is badly biased. Raising it to 0.9 costs 10.3pp in the good
+case to buy 1.6pp in the bad one.
+
+The mechanism is visible directly in the judge's own confidence:
+
+| injected bias | mean confidence | **mean confidence when wrong** | wrong turns |
+| ---: | ---: | ---: | ---: |
+| 0 | 0.829 | **0.332** | 2 |
+| 20 | 0.608 | **0.722** | 12 |
+| 40 | 0.956 | **0.940** | 18 |
+| 60 | 0.998 | **0.998** | 18 |
+
+An unbiased judge is *unsure* when it errs, which is what a confidence gate needs. A
+biased judge is **confidently wrong** — bias pushes the flashy candidate to the top of
+the distribution, so `choiceConfidence` goes *up* as accuracy goes down. At bias 40 the
+0.5 bar gates 0.2 turns out of 60, because the judge is above it on essentially every
+turn including the ones it gets wrong.
+
+**Consequence for the candidate question.** Confidence gating is not a defence against
+judge bias and should not be treated as one. The only two levers that did work in the
+sweeps are widening the candidate set (round 3: n=4 returned +14.2pp at noise 40 where
+n=3 returned +5.2pp) and having an unbiased judge in the first place — which is what
+`--probe --live-judge` would establish, still for under a cent.
+
+**Next.** The candidate set itself is inherited wholesale from
+`src/parallel.ts#pickParallelModels` and has never been compared against an
+alternative, even though round 3 noticed it never includes the strongest model at n=2
+or n=3.

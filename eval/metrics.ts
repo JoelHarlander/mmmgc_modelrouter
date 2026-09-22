@@ -78,7 +78,16 @@ export interface RunMetrics {
 export interface CandidateMetrics {
 	turns: number;
 	baselineSuccessRate: number;
+	/** The judge's raw pick, adopted unconditionally. */
 	judgeSuccessRate: number;
+	/** What a session actually ends up with: the pick, gated on judge confidence. */
+	adoptedSuccessRate: number;
+	/** adopted - baseline. The lift the shipped auto-adopt path would really deliver. */
+	adoptedLift: number;
+	/** Turns where the judge was not confident enough and the routed answer was kept. */
+	gatedTurns: number;
+	/** Of gated turns, the share where gating saved a turn the judge would have lost. */
+	gateRescueRate: number;
 	oracleSuccessRate: number;
 	/** judge - baseline. The number the captain's question is really about. */
 	judgeLift: number;
@@ -180,6 +189,9 @@ function candidateMetrics(turns: TurnRecord[]): CandidateMetrics {
 	const base = turns.filter((t) => t.candidate!.baselineSolved).length;
 	const judged = turns.filter((t) => t.candidate!.judgeSolved).length;
 	const oracle = turns.filter((t) => t.candidate!.oracleSolved).length;
+	const adopted = turns.filter((t) => t.candidate!.adoptedSolved).length;
+	const gated = turns.filter((t) => t.candidate!.gated);
+	const rescued = gated.filter((t) => t.candidate!.adoptedSolved && !t.candidate!.judgeSolved).length;
 	const solvable = turns.filter((t) => t.candidate!.candidates.some((c) => c.solved));
 	const recallHits = solvable.filter((t) => t.candidate!.judgeSolved).length;
 	const regressions = turns.filter((t) => t.candidate!.baselineSolved && !t.candidate!.judgeSolved).length;
@@ -193,6 +205,10 @@ function candidateMetrics(turns: TurnRecord[]): CandidateMetrics {
 		turns: n,
 		baselineSuccessRate: ratio(base, n),
 		judgeSuccessRate: ratio(judged, n),
+		adoptedSuccessRate: ratio(adopted, n),
+		adoptedLift: round(ratio(adopted, n) - ratio(base, n), 4),
+		gatedTurns: gated.length,
+		gateRescueRate: ratio(rescued, gated.length),
 		oracleSuccessRate: ratio(oracle, n),
 		judgeLift: round(lift, 4),
 		judgeHeadroomCaptured: headroom === 0 ? 0 : round((judged - base) / headroom, 4),

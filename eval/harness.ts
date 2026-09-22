@@ -38,6 +38,11 @@ export interface RunOptions {
 	candidateN?: number;
 	judge?: Judge;
 	judgeNoise?: number;
+	/**
+	 * Confidence the judge must reach before its pick is adopted. Defaults to the shipped
+	 * `switching.minConfidence`, which is the bar src/parallel.ts uses for auto-adopt.
+	 */
+	judgeMinConfidence?: number;
 	seed?: string;
 	jev?: JevClient;
 	ledgerFile?: string;
@@ -255,6 +260,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 				judge,
 				candidateN,
 				seed,
+				minConfidence: options.judgeMinConfidence ?? cfg.switching.minConfidence,
 			});
 		}
 
@@ -285,10 +291,11 @@ interface CandidateTurnArgs {
 	judge: Judge;
 	candidateN: number;
 	seed: string;
+	minConfidence: number;
 }
 
 async function runCandidateTurn(args: CandidateTurnArgs): Promise<CandidateTurnRecord | undefined> {
-	const { task, turn, prompt, requiredSkill, contextTokens, current, baselineSolved, cfg, loaded, ledger, judge, candidateN } = args;
+	const { task, turn, prompt, requiredSkill, contextTokens, current, baselineSolved, cfg, loaded, ledger, judge, candidateN, minConfidence } = args;
 	const specs = pickCandidates({ current, cfg, n: candidateN, byKey: loaded.byKey, unauthed: loaded.unauthed });
 	if (specs.length < 2) return undefined;
 
@@ -330,12 +337,19 @@ async function runCandidateTurn(args: CandidateTurnArgs): Promise<CandidateTurnR
 	}
 	const picked = outcomes.find((o) => o.label === verdict.pick);
 	const oracleBest = outcomes.reduce((a, b) => (b.effectiveSkill > a.effectiveSkill ? b : a));
+	// The shipped gate: below minConfidence the pick is not adopted and the turn keeps
+	// what the router already produced.
+	const gated = verdict.confidence < minConfidence;
+	const currentKey = current ? modelKey(current) : "none";
 
 	return {
 		candidates: outcomes,
 		judgePick: picked?.key ?? "none",
 		judgeConfidence: verdict.confidence,
 		judgeSolved: picked?.solved ?? false,
+		gated,
+		adoptedKey: gated ? currentKey : (picked?.key ?? currentKey),
+		adoptedSolved: gated ? baselineSolved : (picked?.solved ?? baselineSolved),
 		oracleBest: oracleBest.key,
 		oracleSolved: oracleBest.solved,
 		baselineSolved,

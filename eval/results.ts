@@ -72,12 +72,15 @@ const HIGHER_IS_BETTER = new Set([
 	"judgeSuccessRate",
 	"oracleSuccessRate",
 	"judgeLift",
+	"adoptedSuccessRate",
+	"adoptedLift",
+	"gateRescueRate",
 	"judgeHeadroomCaptured",
 	"judgeRecall",
 ]);
 
 /** Metrics that are descriptive rather than good or bad. */
-const NEUTRAL = new Set(["tasks", "turns", "routedTurns", "pinnedTurns", "avgStateChars", "avgCandidates", "tierEscalations"]);
+const NEUTRAL = new Set(["tasks", "turns", "routedTurns", "pinnedTurns", "avgStateChars", "avgCandidates", "tierEscalations", "gatedTurns"]);
 
 export interface MetricDelta {
 	key: string;

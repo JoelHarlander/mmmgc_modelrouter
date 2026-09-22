@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { modelKey } from "../src/config.ts";
+import { DEFAULT_CONFIG, modelKey } from "../src/config.ts";
 import { pickParallelModels } from "../src/parallel.ts";
 import { JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
 import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifier.ts";
@@ -383,6 +383,51 @@ test("a judge that systematically prefers the flashy answer makes the fan-out wo
 	assert.ok(unbiased.judgeLift > 0, "the unbiased judge should still help");
 	assert.ok(biased.judgeLift < 0, "a strong flagship bias should cost more turns than it wins");
 	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
+});
+
+test("the confidence gate is the shipped auto-adopt rule, and a zero bar disables it", async () => {
+	const open = computeMetrics(...unpack(await run({ candidateN: 3, judgeMinConfidence: 0 }))).candidate!;
+	assert.equal(open.gatedTurns, 0);
+	assert.equal(open.adoptedSuccessRate, open.judgeSuccessRate, "with no bar, what is adopted is the raw pick");
+	assert.equal(open.adoptedLift, open.judgeLift);
+
+	const shut = computeMetrics(...unpack(await run({ candidateN: 3, judgeMinConfidence: 1.01 }))).candidate!;
+	assert.equal(shut.gatedTurns, shut.turns, "an unreachable bar gates every turn");
+	assert.equal(shut.adoptedSuccessRate, shut.baselineSuccessRate, "...so every turn keeps the routed answer");
+	assert.equal(shut.adoptedLift, 0);
+
+	// The default bar is the one src/parallel.ts auto-adopts above.
+	const src = readFileSync(join(ROOT, "src", "parallel.ts"), "utf8");
+	assert.match(src, /entry\.judge!\.confidence >= cfg\.switching\.minConfidence/, "src/parallel.ts's auto-adopt bar moved; update the harness default");
+	const dflt = computeMetrics(...unpack(await run({ candidateN: 3 }))).candidate!;
+	const explicit = computeMetrics(...unpack(await run({ candidateN: 3, judgeMinConfidence: DEFAULT_CONFIG.switching.minConfidence }))).candidate!;
+	assert.equal(dflt.adoptedSuccessRate, explicit.adoptedSuccessRate);
+});
+
+test("a biased judge is confidently wrong, so the confidence gate cannot see it coming", async () => {
+	// The long pack: enough candidate turns for the wrong ones to be a sample rather than a handful.
+	const confidenceWhenWrong = async (bias: number) => {
+		const outcome = await run({
+			pack: pack(LONG_PACK),
+			candidateN: 3,
+			judgeMinConfidence: 0,
+			judge: new NoisyJudge({ noise: 10, seed: "g", bias }),
+		});
+		const wrong = outcome.turns
+			.filter((t) => t.candidate && !t.candidate.judgeSolved && t.candidate.candidates.some((c) => c.solved))
+			.map((t) => t.candidate!.judgeConfidence);
+		return { n: wrong.length, mean: wrong.reduce((a, b) => a + b, 0) / Math.max(1, wrong.length) };
+	};
+	const clean = await confidenceWhenWrong(0);
+	const biased = await confidenceWhenWrong(40);
+
+	assert.ok(biased.n > clean.n, "more bias must produce more wrong picks");
+	assert.ok(
+		biased.mean > clean.mean + 0.3,
+		`an unbiased judge is unsure when it errs (${clean.mean.toFixed(2)}); a biased one is not (${biased.mean.toFixed(2)}) - ` +
+			"this is why gating on confidence does not defend against bias",
+	);
+	assert.ok(biased.mean > 0.8, "a strongly biased judge errs at high confidence");
 });
 
 test("jittering the declared fleet skills is deterministic and bounded", () => {

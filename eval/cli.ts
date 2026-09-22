@@ -24,7 +24,7 @@ import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
 import { DEFAULT_TRAFFIC } from "./simulate.ts";
 import { appendLog, compareMetrics, ensureDirFor, latestPath, readRun, resultsDir, type RunRecord, writeRun } from "./results.ts";
-import { renderOracleSweep, renderSweep, renderTrafficSweep, runJudgeSweep, runOracleSweep, runTrafficSweep } from "./sweep.ts";
+import { renderGateSweep, renderOracleSweep, renderSweep, renderTrafficSweep, runJudgeSweep, runOracleSweep, runTrafficSweep } from "./sweep.ts";
 import { formatProblems, validatePack } from "./validate.ts";
 import type { ClassifierMode, TaskPack } from "./types.ts";
 
@@ -46,7 +46,8 @@ interface Args {
 	noWrite: boolean;
 	validateOnly: boolean;
 	allowInconsistent: boolean;
-	sweep?: "judge" | "bias" | "profile" | "oracle";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate";
+	judgeMinConfidence?: number;
 	callsPerTurn?: number;
 	probe: boolean;
 	probePack: string;
@@ -99,6 +100,9 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--judge-bias":
 				args.judgeBias = Number(next());
+				break;
+			case "--judge-min-confidence":
+				args.judgeMinConfidence = Number(next());
 				break;
 			case "--sweep":
 				args.sweep = next() as Args["sweep"];
@@ -206,6 +210,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep bias           sweep the judge's preference for the flashy candidate
   --sweep profile        sweep the measured traffic constants the cost model rests on
   --sweep oracle         jitter the declared model skills and see which findings survive
+  --sweep gate           sweep the confidence bar src/parallel.ts auto-adopts above
+  --judge-min-confidence <c>  that bar (default: switching.minConfidence)
   --calls-per-turn <n>   provider calls per user turn (default 5, the measured median)
   --probe                measure a judge's presentation bias on paired responses and exit
   --probe-pack <file>    probe pack (default eval/tasks/judge-probe-v1.json)
@@ -279,6 +285,17 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "gate") {
+			title = `gate sweep — pack ${pack.id}, classifier ${args.classifier}, mean of 5 seeds per cell`;
+			const c = await runJudgeSweep({
+				...base,
+				candidateNs: [3],
+				noises: [10],
+				biases: [0, 20, 40],
+				minConfidences: [0, 0.3, 0.5, 0.7, 0.9],
+			});
+			cells = c;
+			rendered = renderGateSweep(c, title);
 		} else if (args.sweep === "oracle") {
 			title = `oracle sweep — pack ${pack.id}, turn success per classifier, mean of 5 jittered fleets per row`;
 			const c = await runOracleSweep(base);
@@ -309,6 +326,7 @@ async function main(): Promise<number> {
 		startModel: args.startModel,
 		candidateN: args.candidates,
 		judge: new NoisyJudge({ noise: args.judgeNoise, seed: args.seed, bias: args.judgeBias }),
+		judgeMinConfidence: args.judgeMinConfidence,
 		seed: args.seed,
 		jev,
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
@@ -429,9 +447,13 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 		const c = m.candidate;
 		out.push(`candidate selection (n=${c.avgCandidates}, judge ${record.judge})`);
 		row("baseline success", "candidate.baselineSuccessRate", pct(c.baselineSuccessRate));
-		row("judge success", "candidate.judgeSuccessRate", pct(c.judgeSuccessRate));
+		row("judge success (raw pick)", "candidate.judgeSuccessRate", pct(c.judgeSuccessRate));
+		row("adopted success (gated)", "candidate.adoptedSuccessRate", pct(c.adoptedSuccessRate));
+		row("  gated turns", "candidate.gatedTurns", String(c.gatedTurns));
+		row("  gate rescue rate", "candidate.gateRescueRate", pct(c.gateRescueRate));
 		row("oracle ceiling", "candidate.oracleSuccessRate", pct(c.oracleSuccessRate));
-		row("judge lift", "candidate.judgeLift", pct(c.judgeLift));
+		row("judge lift (raw)", "candidate.judgeLift", pct(c.judgeLift));
+		row("adopted lift", "candidate.adoptedLift", pct(c.adoptedLift));
 		row("headroom captured", "candidate.judgeHeadroomCaptured", pct(c.judgeHeadroomCaptured));
 		row("judge recall", "candidate.judgeRecall", pct(c.judgeRecall));
 		row("judge regressions", "candidate.judgeRegressions", String(c.judgeRegressions));

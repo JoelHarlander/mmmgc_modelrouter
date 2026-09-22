@@ -21,9 +21,14 @@ export interface SweepCell {
 	candidateN: number;
 	noise: number;
 	bias: number;
+	minConfidence: number;
 	seeds: number;
 	baselineSuccessRate: number;
 	judgeSuccessRate: number;
+	adoptedSuccessRate: number;
+	adoptedLift: number;
+	gatedTurns: number;
+	gateRescueRate: number;
 	oracleSuccessRate: number;
 	/** Mean judge - baseline, in rate points. */
 	judgeLift: number;
@@ -43,6 +48,7 @@ export interface SweepOptions {
 	candidateNs?: number[];
 	noises?: number[];
 	biases?: number[];
+	minConfidences?: number[];
 	seeds?: string[];
 }
 
@@ -53,47 +59,75 @@ export async function runJudgeSweep(options: SweepOptions): Promise<SweepCell[]>
 	const candidateNs = options.candidateNs ?? [2, 3, 4];
 	const noises = options.noises ?? DEFAULT_NOISES;
 	const biases = options.biases ?? [0];
+	const minConfidences = options.minConfidences ?? [undefined];
 	const seeds = options.seeds ?? DEFAULT_SEEDS;
 	const cells: SweepCell[] = [];
 
 	for (const candidateN of candidateNs) {
 		for (const bias of biases) {
-			for (const noise of noises) {
-				const runs = [];
-				for (const seed of seeds) {
-					const outcome = await runEval({
-						pack: options.pack,
-						loaded: options.loaded,
-						classifier: options.classifier,
-						startModel: options.startModel,
+			for (const minConfidence of minConfidences) {
+				for (const noise of noises) {
+					const runs = [];
+					for (const seed of seeds) {
+						const outcome = await runEval({
+							pack: options.pack,
+							loaded: options.loaded,
+							classifier: options.classifier,
+							startModel: options.startModel,
+							candidateN,
+							seed,
+							judgeMinConfidence: minConfidence,
+							judge: new NoisyJudge({ noise, seed, bias }),
+						});
+						const m = computeMetrics(outcome.turns, outcome.stateChars).candidate;
+						if (m) runs.push(m);
+					}
+					if (runs.length === 0) continue;
+					const lifts = runs.map((r) => r.judgeLift);
+					cells.push({
 						candidateN,
-						seed,
-						judge: new NoisyJudge({ noise, seed, bias }),
+						noise,
+						bias,
+						minConfidence: minConfidence ?? options.loaded.config.switching.minConfidence,
+						seeds: runs.length,
+						baselineSuccessRate: mean(runs.map((r) => r.baselineSuccessRate)),
+						judgeSuccessRate: mean(runs.map((r) => r.judgeSuccessRate)),
+						adoptedSuccessRate: mean(runs.map((r) => r.adoptedSuccessRate)),
+						adoptedLift: mean(runs.map((r) => r.adoptedLift)),
+						gatedTurns: mean(runs.map((r) => r.gatedTurns)),
+						gateRescueRate: mean(runs.map((r) => r.gateRescueRate)),
+						oracleSuccessRate: mean(runs.map((r) => r.oracleSuccessRate)),
+						judgeLift: mean(lifts),
+						liftSpread: (Math.max(...lifts) - Math.min(...lifts)) / 2,
+						judgeRecall: mean(runs.map((r) => r.judgeRecall)),
+						judgeRegressions: mean(runs.map((r) => r.judgeRegressions)),
+						fanoutListEquivalentUsd: mean(runs.map((r) => r.fanoutListEquivalentUsd)),
+						listUsdPerExtraSolve: meanFinite(runs.map((r) => r.listUsdPerExtraSolve)),
 					});
-					const m = computeMetrics(outcome.turns, outcome.stateChars).candidate;
-					if (m) runs.push(m);
 				}
-				if (runs.length === 0) continue;
-				const lifts = runs.map((r) => r.judgeLift);
-				cells.push({
-					candidateN,
-					noise,
-					bias,
-					seeds: runs.length,
-					baselineSuccessRate: mean(runs.map((r) => r.baselineSuccessRate)),
-					judgeSuccessRate: mean(runs.map((r) => r.judgeSuccessRate)),
-					oracleSuccessRate: mean(runs.map((r) => r.oracleSuccessRate)),
-					judgeLift: mean(lifts),
-					liftSpread: (Math.max(...lifts) - Math.min(...lifts)) / 2,
-					judgeRecall: mean(runs.map((r) => r.judgeRecall)),
-					judgeRegressions: mean(runs.map((r) => r.judgeRegressions)),
-					fanoutListEquivalentUsd: mean(runs.map((r) => r.fanoutListEquivalentUsd)),
-					listUsdPerExtraSolve: meanFinite(runs.map((r) => r.listUsdPerExtraSolve)),
-				});
 			}
 		}
 	}
 	return cells;
+}
+
+/** The gate sweep's own renderer: adoption is the column that matters, not the raw pick. */
+export function renderGateSweep(cells: SweepCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("    n  noise  bias   minConf   baseline   raw pick   adopted      adopted lift   gated  rescued");
+	let last = "";
+	for (const c of cells) {
+		const group = `${c.candidateN}/${c.bias}`;
+		if (group !== last && last !== "") out.push("");
+		last = group;
+		out.push(
+			`  ${String(c.candidateN).padStart(3)}  ${String(c.noise).padStart(5)}  ${String(c.bias).padStart(4)}   ` +
+				`${c.minConfidence.toFixed(2).padStart(7)}   ${pct(c.baselineSuccessRate).padStart(8)}   ${pct(c.judgeSuccessRate).padStart(8)}   ` +
+				`${pct(c.adoptedSuccessRate).padStart(7)}   ${signedPct(c.adoptedLift).padStart(15)}   ${c.gatedTurns.toFixed(1).padStart(5)}   ${pct(c.gateRescueRate).padStart(6)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
 }
 
 export function renderSweep(cells: SweepCell[], title: string): string {

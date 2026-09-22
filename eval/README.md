@@ -10,6 +10,7 @@ npm run eval -- --candidates 3                # candidate-selection mode: 3 resp
 npm run eval -- --sweep judge                 # over what range of judge quality does the lift survive?
 npm run eval -- --sweep bias                  # what a judge that prefers the flagship's style costs
 npm run eval -- --sweep profile               # how far the cost numbers move with the traffic constants
+npm run eval -- --sweep gate                  # does the shipped confidence bar on auto-adopt help?
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
@@ -133,9 +134,15 @@ pays the **full uncached input rate once** and leaves the session's own cache al
 | `coldTurns`, `coldByCause`, `coldPremiumUsd` | cache consequence; `coldPremiumUsd` is exact, each turn is priced cold and warm |
 
 Candidate mode adds `baselineSuccessRate` (the routed model alone),
-`judgeSuccessRate` (the judge's pick), `oracleSuccessRate` (the best candidate — the
-ceiling), `judgeLift`, `judgeHeadroomCaptured`, `judgeRecall`, `judgeRegressions`,
-and `listUsdPerExtraSolve`.
+`judgeSuccessRate` (the judge's raw pick), `adoptedSuccessRate` (what a session would
+actually end up with), `oracleSuccessRate` (the best candidate — the ceiling),
+`judgeLift`, `adoptedLift`, `judgeHeadroomCaptured`, `judgeRecall`,
+`judgeRegressions`, `gatedTurns`, `gateRescueRate` and `listUsdPerExtraSolve`.
+
+`src/parallel.ts` only auto-adopts the judge's pick when its confidence clears
+`switching.minConfidence`, so the harness applies the same bar and reports the raw pick
+and the adopted outcome separately. `--judge-min-confidence` moves the bar and
+`--sweep gate` sweeps it.
 
 The candidate set is chosen by the **same policy** as `src/parallel.ts`, and the judge
 question is the **same string** it sends to Jev. `test/eval.test.ts` pins both against
