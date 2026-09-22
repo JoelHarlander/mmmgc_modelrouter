@@ -68,6 +68,8 @@ export interface RunOptions {
 	traffic?: TrafficProfile;
 	/** Skill points a fully-forgotten, fully context-dependent turn gains. See COMPACTION_SKILL_PENALTY. */
 	compactionPenalty?: number;
+	/** Overrides every task's declared contextSensitivity. */
+	contextSensitivity?: number;
 	signal?: AbortSignal;
 }
 
@@ -286,7 +288,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			: 0;
 		const requiredSkill = requiredSkillAfterCompaction(
 			declaredSkill,
-			task.contextSensitivity ?? DEFAULT_CONTEXT_SENSITIVITY,
+			options.contextSensitivity ?? task.contextSensitivity ?? DEFAULT_CONTEXT_SENSITIVITY,
 			lostFraction,
 			options.compactionPenalty,
 		);

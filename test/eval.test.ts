@@ -15,6 +15,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, mergeConfig, modelKey } from "../src/config.ts";
+import { auditAssumptions } from "../eval/assumptions.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
 import { computeCalibration } from "../eval/calibration.ts";
 import { explainTask } from "../eval/explain.ts";
@@ -1281,4 +1282,44 @@ test("routing is insensitive to where the session started; not routing is entire
 	// Averaged over starting points - i.e. not assuming the user is already on the best
 	// model - routing wins, which is the opposite of what a single start model showed.
 	assert.ok(mean(routed) > mean(never) + 0.15, `routing ${mean(routed)} vs never-switching ${mean(never)}`);
+});
+
+test("the assumption audit ranks what the answer rests on, and separates cost from quality", async () => {
+	const rows = await auditAssumptions({ pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted", candidateN: 0 });
+	const at = (name: string) => rows.find((r) => r.assumption === name)!;
+
+	// Loudest first, so a reader knows what has to be quoted alongside any number.
+	for (let i = 1; i < rows.length; i++) assert.ok(rows[i]!.sessionSuccess.spread <= rows[i - 1]!.sessionSuccess.spread);
+	for (const row of rows) {
+		assert.ok(row.values.length >= 2, `${row.assumption} was not actually varied`);
+		assert.ok(row.sessionSuccess.spread >= 0 && row.sessionSuccess.max <= 1);
+	}
+
+	// With no fan-out, nothing about the judge can touch the outcome.
+	for (const name of ["judge error (noise)", "judge bias", "judge temperature", "judge confidence gate"]) {
+		assert.equal(at(name).sessionSuccess.spread, 0, `${name} moved the outcome with fan-out off`);
+	}
+	// The traffic profile is a cost assumption and must not leak into quality.
+	const calls = at("calls per turn");
+	assert.equal(calls.sessionSuccess.spread, 0);
+	assert.equal(calls.tierAccuracy.spread, 0);
+	assert.ok(calls.listEquivalentUsd.spread > 0, "...but it must move the money");
+	assert.ok(calls.coldPremiumShare.spread > 0.2);
+});
+
+test("turning on fan-out moves the answer's dependency from the router to the judge", async () => {
+	const args = { pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted" as const };
+	const routingOnly = await auditAssumptions({ ...args, candidateN: 0 });
+	const withFanout = await auditAssumptions({ ...args, candidateN: 3 });
+	const spread = (rows: typeof routingOnly, name: string) => rows.find((r) => r.assumption === name)!.sessionSuccess.spread;
+
+	// Router-side assumptions dominate when the routed model is what answers.
+	assert.equal(routingOnly[0]!.assumption, "routing confidence bar");
+	assert.equal(spread(routingOnly, "judge bias"), 0);
+
+	// Once a judge chooses the answer, its quality dominates instead - and it is the one
+	// assumption this harness cannot measure offline.
+	assert.ok(spread(withFanout, "judge bias") > 0.2, "judge bias should dominate once fan-out is on");
+	assert.ok(spread(withFanout, "judge bias") > spread(withFanout, "starting model") * 5);
+	assert.ok(spread(withFanout, "starting model") < spread(routingOnly, "starting model"), "fan-out absorbs a bad starting point");
 });

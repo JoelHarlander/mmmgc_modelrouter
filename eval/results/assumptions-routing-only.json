@@ -1,0 +1,357 @@
+{
+	"title": "assumption audit — pack swe-router-long-v1, classifier scripted, fan-out off",
+	"cells": [
+		{
+			"assumption": "routing confidence bar",
+			"shipped": "0.50",
+			"values": [
+				"0.00",
+				"0.50",
+				"0.80"
+			],
+			"sessionSuccess": {
+				"min": 0.3167,
+				"max": 0.5667,
+				"spread": 0.25
+			},
+			"listEquivalentUsd": {
+				"min": 11.6189,
+				"max": 49.7677,
+				"spread": 38.1488
+			},
+			"tierAccuracy": {
+				"min": 0.4833,
+				"max": 0.7667,
+				"spread": 0.2834
+			},
+			"coldPremiumShare": {
+				"min": 0.377,
+				"max": 0.5023,
+				"spread": 0.1253
+			}
+		},
+		{
+			"assumption": "fleet skill (±jitter)",
+			"shipped": "as declared in fleet.json",
+			"values": [
+				"±0",
+				"±10",
+				"±20"
+			],
+			"sessionSuccess": {
+				"min": 0.5667,
+				"max": 0.7333,
+				"spread": 0.1666
+			},
+			"listEquivalentUsd": {
+				"min": 49.7677,
+				"max": 49.7677,
+				"spread": 0
+			},
+			"tierAccuracy": {
+				"min": 0.6667,
+				"max": 0.7667,
+				"spread": 0.1
+			},
+			"coldPremiumShare": {
+				"min": 0.5023,
+				"max": 0.5023,
+				"spread": 0
+			}
+		},
+		{
+			"assumption": "billing arrangement",
+			"shipped": "as configured (plan + on-demand)",
+			"values": [
+				"as-configured",
+				"all-on-demand",
+				"all-plan"
+			],
+			"sessionSuccess": {
+				"min": 0.4333,
+				"max": 0.5833,
+				"spread": 0.15
+			},
+			"listEquivalentUsd": {
+				"min": 17.4604,
+				"max": 49.7677,
+				"spread": 32.3073
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.4504,
+				"max": 0.5486,
+				"spread": 0.0982
+			}
+		},
+		{
+			"assumption": "/model pin length",
+			"shipped": "3 turns",
+			"values": [
+				"0",
+				"3",
+				"10"
+			],
+			"sessionSuccess": {
+				"min": 0.5333,
+				"max": 0.65,
+				"spread": 0.1167
+			},
+			"listEquivalentUsd": {
+				"min": 39.2293,
+				"max": 54.2279,
+				"spread": 14.9986
+			},
+			"tierAccuracy": {
+				"min": 0.7,
+				"max": 0.8667,
+				"spread": 0.1667
+			},
+			"coldPremiumShare": {
+				"min": 0.4713,
+				"max": 0.5023,
+				"spread": 0.031
+			}
+		},
+		{
+			"assumption": "compaction penalty",
+			"shipped": "12 skill points",
+			"values": [
+				"0",
+				"12",
+				"40"
+			],
+			"sessionSuccess": {
+				"min": 0.55,
+				"max": 0.65,
+				"spread": 0.1
+			},
+			"listEquivalentUsd": {
+				"min": 49.7677,
+				"max": 49.7677,
+				"spread": 0
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.5023,
+				"max": 0.5023,
+				"spread": 0
+			}
+		},
+		{
+			"assumption": "context sensitivity",
+			"shipped": "0.5",
+			"values": [
+				"0.0",
+				"0.5",
+				"1.0"
+			],
+			"sessionSuccess": {
+				"min": 0.5667,
+				"max": 0.65,
+				"spread": 0.0833
+			},
+			"listEquivalentUsd": {
+				"min": 49.7677,
+				"max": 49.7677,
+				"spread": 0
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.5023,
+				"max": 0.5023,
+				"spread": 0
+			}
+		},
+		{
+			"assumption": "starting model",
+			"shipped": "claude-opus-5 (strongest plan route)",
+			"values": [
+				"glm-5.3-flash",
+				"deepseek-v4.1-flash",
+				"glm-5.3",
+				"gpt-6-astra",
+				"claude-opus-5",
+				"claude-fable-5-1"
+			],
+			"sessionSuccess": {
+				"min": 0.5667,
+				"max": 0.6,
+				"spread": 0.0333
+			},
+			"listEquivalentUsd": {
+				"min": 46.4903,
+				"max": 49.7677,
+				"spread": 3.2774
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.4965,
+				"max": 0.5023,
+				"spread": 0.0058
+			}
+		},
+		{
+			"assumption": "judge error (noise)",
+			"shipped": "10 skill points",
+			"values": [
+				"0",
+				"10",
+				"40",
+				"80"
+			],
+			"sessionSuccess": {
+				"min": 0.5667,
+				"max": 0.5667,
+				"spread": 0
+			},
+			"listEquivalentUsd": {
+				"min": 49.7677,
+				"max": 49.7677,
+				"spread": 0
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.5023,
+				"max": 0.5023,
+				"spread": 0
+			}
+		},
+		{
+			"assumption": "judge bias",
+			"shipped": "0 (unmeasured on live Jev)",
+			"values": [
+				"0",
+				"20",
+				"40"
+			],
+			"sessionSuccess": {
+				"min": 0.5667,
+				"max": 0.5667,
+				"spread": 0
+			},
+			"listEquivalentUsd": {
+				"min": 49.7677,
+				"max": 49.7677,
+				"spread": 0
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.5023,
+				"max": 0.5023,
+				"spread": 0
+			}
+		},
+		{
+			"assumption": "judge temperature",
+			"shipped": "6",
+			"values": [
+				"2",
+				"6",
+				"18"
+			],
+			"sessionSuccess": {
+				"min": 0.5667,
+				"max": 0.5667,
+				"spread": 0
+			},
+			"listEquivalentUsd": {
+				"min": 49.7677,
+				"max": 49.7677,
+				"spread": 0
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.5023,
+				"max": 0.5023,
+				"spread": 0
+			}
+		},
+		{
+			"assumption": "calls per turn",
+			"shipped": "5 (measured median)",
+			"values": [
+				"2",
+				"5",
+				"20"
+			],
+			"sessionSuccess": {
+				"min": 0.5667,
+				"max": 0.5667,
+				"spread": 0
+			},
+			"listEquivalentUsd": {
+				"min": 37.7948,
+				"max": 111.6518,
+				"spread": 73.857
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.2236,
+				"max": 0.662,
+				"spread": 0.4384
+			}
+		},
+		{
+			"assumption": "judge confidence gate",
+			"shipped": "switching.minConfidence (0.50)",
+			"values": [
+				"0.00",
+				"0.50",
+				"0.90"
+			],
+			"sessionSuccess": {
+				"min": 0.5667,
+				"max": 0.5667,
+				"spread": 0
+			},
+			"listEquivalentUsd": {
+				"min": 49.7677,
+				"max": 49.7677,
+				"spread": 0
+			},
+			"tierAccuracy": {
+				"min": 0.7667,
+				"max": 0.7667,
+				"spread": 0
+			},
+			"coldPremiumShare": {
+				"min": 0.5023,
+				"max": 0.5023,
+				"spread": 0
+			}
+		}
+	]
+}

@@ -37,6 +37,23 @@ Jump to the round that established each claim, and what it rests on.
 | Every compaction in the pack was **avoidable by routing**: a roomier model was authed and available | **16** | fleet windows |
 | Those avoidable compactions cost **5 turns of quality (8.3pp)** on top of their money and cache | **17** | penalty 6–40 pts |
 
+**What the whole thing rests on** (round 20, `--sweep assumptions`, ordered by how far
+each moves session success on the long pack):
+
+| | routing only | with fan-out (n=3) |
+| --- | ---: | ---: |
+| routing confidence bar | **±25.0pp** | ±26.7pp |
+| fleet skill (±20 jitter) | ±16.6pp | ±1.7pp |
+| billing arrangement | ±15.0pp | ±10.0pp |
+| `/model` pin length | ±11.7pp | ±5.0pp |
+| starting model | ±3.3pp | ±1.7pp |
+| **judge bias** | **0.0pp** | **±26.7pp** |
+| judge error / gate / temperature | 0.0pp | ±15.0 / ±15.0 / ±11.7pp |
+| calls per turn | 0.0pp *(but ±$74 and ±43.8pp of cold share)* | 0.0pp |
+
+**Turning on fan-out moves the answer's dependency from the router to the judge** — and
+the judge is the one thing this harness cannot measure offline.
+
 **Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
 judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
 calls, no model inference, under a cent. Which of the three candidate-selection
@@ -1218,3 +1235,71 @@ result. The quality half never was one, and the findings index now says so with 
 strikethrough rather than a caveat.
 
 **Next.** `--classifier live --record` and `--probe --live-judge`.
+
+---
+
+## Round 20 — 2026-09-23 — audit every assumption, not just the one that bit
+
+**Measured.** Round 19 withdrew a headline finding because a default nobody had swept —
+the model the session starts on — turned out to be producing it. That was luck: I went
+looking for it. This round is the systematic version. Vary **every** declared constant
+in the harness, one at a time, and report how far each headline metric travels.
+
+**Changed.** `--sweep assumptions` varies twelve assumptions — starting model, fleet
+skill jitter, billing arrangement, judge error, judge bias, judge temperature, calls per
+turn, compaction penalty, context sensitivity, the routing confidence bar, `/model` pin
+length, and the judge confidence gate — and ranks them by how far each moves session
+success. It runs in about 1.5 seconds. `--candidates 0` gives the routing-only picture;
+the default gives the picture with fan-out on. Also added `--context-sensitivity` so the
+last unswept declared constant has a lever.
+
+**What the numbers did.** Two pictures, and the contrast is the result.
+
+**Routing only** — the answer rests on the router's own configuration:
+
+| assumption | session ok | list $ | tier acc |
+| --- | ---: | ---: | ---: |
+| **routing confidence bar** | 31.7%–56.7% (**±25.0pp**) | $12–$50 | ±28.3pp |
+| fleet skill (±20) | 56.7%–73.3% (±16.6pp) | $50 | ±10.0pp |
+| billing arrangement | 43.3%–58.3% (±15.0pp) | $17–$50 | ±0.0pp |
+| `/model` pin length | 53.3%–65.0% (±11.7pp) | $39–$54 | ±16.7pp |
+| starting model | 56.7%–60.0% (±3.3pp) | $46–$50 | ±0.0pp |
+| every judge assumption | **0.0pp** | $50 | ±0.0pp |
+| calls per turn | **0.0pp** | **$38–$112** | ±0.0pp |
+
+**With fan-out on** — the judge takes over:
+
+| assumption | session ok |
+| --- | ---: |
+| **judge bias** | 58.3%–85.0% (**±26.7pp**) |
+| routing confidence bar | 61.7%–88.3% (±26.7pp) |
+| judge error (noise) | 73.3%–88.3% (±15.0pp) |
+| judge confidence gate | 73.3%–88.3% (±15.0pp) |
+| judge temperature | 75.0%–86.7% (±11.7pp) |
+| **starting model** | 85.0%–86.7% (**±1.7pp**) |
+| **fleet skill (±20)** | 85.0%–86.7% (**±1.7pp**) |
+
+**Three things fall out.**
+
+1. **Fan-out transfers the answer's dependency from the router to the judge.** Judge
+   bias goes from moving *nothing* (0.0pp) to being the single loudest assumption
+   (±26.7pp), while the starting model falls from ±3.3pp to ±1.7pp and fleet skill from
+   ±16.6pp to ±1.7pp. Running several candidates absorbs a bad starting point and a
+   wrong guess about who is good at what — and replaces both with a bet on the judge.
+   That is the sharpest possible argument for why `--probe --live-judge` is the
+   outstanding measurement: it is not one input among twelve, it is *the* input.
+2. **Cost and quality assumptions are cleanly separated, and the harness proves it.**
+   `calls per turn` moves the bill by **$38–$112** and the cold-start share by
+   **±43.8pp** while moving session success by exactly **0.0pp**. A test holds that.
+3. **The routing confidence bar is the loudest router-side assumption in both pictures**
+   (±25.0pp and ±26.7pp) — louder than the fleet's declared competence. Round 12 found
+   the shipped 0.50 setting nearly inert and a higher one actively harmful; round 20
+   says that knob deserves more care than anything else the router exposes.
+
+**What this round is really for.** Nineteen rounds produced a lot of numbers. This is
+the page that says which of them a reader has to qualify. Everything above the fold in
+those tables must be quoted with the assumption that produced it; everything below it
+survives being wrong.
+
+**Next.** `--classifier live --record` and `--probe --live-judge`, and after round 20 the
+second one is not one loose end among many — it is the loose end.

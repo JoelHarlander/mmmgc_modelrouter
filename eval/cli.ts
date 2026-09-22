@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { JevClient } from "../src/jev.ts";
 import { JevJudge, NoisyJudge } from "./candidates.ts";
+import { auditAssumptions, renderAssumptions } from "./assumptions.ts";
 import { auditConfig, renderAudit } from "./audit.ts";
 import { computeCalibration, renderCalibration } from "./calibration.ts";
 import { explainTask } from "./explain.ts";
@@ -68,6 +69,7 @@ interface Args {
 	fleet: string;
 	classifier: ClassifierMode;
 	candidates: number;
+	candidatesExplicit: boolean;
 	judgeNoise: number;
 	seed: string;
 	startModel?: string;
@@ -84,7 +86,7 @@ interface Args {
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin" | "start";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin" | "start" | "assumptions";
 	exploreTurns?: number;
 	calibration: boolean;
 	explain?: string;
@@ -92,6 +94,7 @@ interface Args {
 	candidatePolicy?: string;
 	judgeMinConfidence?: number;
 	compactionPenalty?: number;
+	contextSensitivity?: number;
 	callsPerTurn?: number;
 	probe: boolean;
 	probePack: string;
@@ -106,6 +109,7 @@ function parseArgs(argv: string[]): Args {
 		fleet: join(ROOT, "eval", "tasks", "fleet.json"),
 		classifier: "scripted",
 		candidates: 0,
+		candidatesExplicit: false,
 		judgeNoise: 10,
 		seed: "swe-router-v1",
 		unauthed: [],
@@ -145,6 +149,7 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--candidates":
 				args.candidates = Number(next());
+				args.candidatesExplicit = true;
 				break;
 			case "--judge-noise":
 				args.judgeNoise = Number(next());
@@ -202,6 +207,9 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--validate":
 				args.validateOnly = true;
+				break;
+			case "--context-sensitivity":
+				args.contextSensitivity = Number(next());
 				break;
 			case "--compaction-penalty":
 				args.compactionPenalty = Number(next());
@@ -301,8 +309,10 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep strategy       fan out every turn, or only to learn a winner then commit?
   --sweep pin            sweep switching.manualPinTurns, how long a /model pin holds
   --sweep start          does any of this depend on where the session started?
+  --sweep assumptions    vary every declared constant and rank what the answer rests on
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
+  --context-sensitivity <x>  override every task's declared contextSensitivity (0..1)
   --calibration          is the classifier's confidence worth anything?
   --explain <task id>    print the turn-by-turn trace behind one task's score
   --record               write the classifier's real answers back into the task pack
@@ -402,6 +412,12 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "assumptions") {
+			title = `assumption audit — pack ${pack.id}, classifier ${args.classifier}, fan-out ${args.candidatesExplicit && args.candidates < 2 ? "off" : `n=${args.candidatesExplicit ? args.candidates : 3}`}`;
+			const candidateN = args.candidatesExplicit ? args.candidates : 3;
+			const c = await auditAssumptions({ pack, loaded, classifier: args.classifier, candidateN });
+			cells = c;
+			rendered = renderAssumptions(c, title);
 		} else if (args.sweep === "start") {
 			title = `start sweep — pack ${pack.id}, every fleet model as the session's starting point`;
 			const c = await runStartSweep(base);
@@ -472,6 +488,7 @@ async function main(): Promise<number> {
 		candidatePolicy: args.candidatePolicy,
 		exploreTurns: args.exploreTurns,
 		compactionPenalty: args.compactionPenalty,
+		contextSensitivity: args.contextSensitivity,
 		seed: args.seed,
 		jev,
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,

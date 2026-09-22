@@ -17,6 +17,7 @@ npm run eval -- --sweep policy                # what the inherited candidate set
 npm run eval -- --sweep strategy              # fan out every turn, or only to learn a winner then commit?
 npm run eval -- --sweep pin                   # what a /model pin costs once it outlives its question
 npm run eval -- --sweep start                 # does any of this depend on where the session started?
+npm run eval -- --sweep assumptions           # rank every declared constant by how much it moves the answer
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --explain <task id>           # the turn-by-turn trace behind one task's score
@@ -259,6 +260,21 @@ references a model the catalogue does not price.
 `--audit-local` audits this machine's merged config instead. That is useful and
 deliberately not the default, because its answer differs per machine.
 
+## What the answer rests on
+
+`npm run eval -- --sweep assumptions` varies every declared constant one at a time and
+ranks them by how far each moves session success. Run it before quoting any number from
+this harness: everything above the fold has to be quoted with the assumption that
+produced it, and everything below it survives being wrong.
+
+It also shows the harness's central structural result. With fan-out off, the answer
+rests on the router's own configuration and **no judge assumption moves it at all**.
+Turn fan-out on and judge bias becomes the single loudest input (±26.7pp) while the
+starting model and the fleet's declared competence fall to ±1.7pp each. Running several
+candidates absorbs a bad starting point and a wrong guess about who is good at what —
+and replaces both with a bet on the judge, which is the one thing that cannot be
+measured offline.
+
 ## Ground truth and `--validate`
 
 `requiredSkill` is the only hand-declared claim about a turn: how hard it is, on the
@@ -285,7 +301,8 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `metrics.ts` | the metric set and how to read each direction |
 | `results.ts` | results IO, the round log, run comparison |
 | `explain.ts` | `--explain`: the trace behind one task's score |
-| `sweep.ts` | the judge, bias, traffic-profile, oracle, gate, policy, confidence, strategy and pin sweeps |
+| `sweep.ts` | the judge, bias, traffic-profile, oracle, gate, policy, confidence, strategy, pin and start sweeps |
+| `assumptions.ts` | `--sweep assumptions`: what the answer rests on |
 | `record.ts` | writing a live classifier's answers back into a pack |
 | `probe.ts` | the judge bias probe and its calibration |
 | `calibration.ts` | is the classifier's confidence worth anything? |
