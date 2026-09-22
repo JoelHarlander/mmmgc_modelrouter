@@ -4,17 +4,19 @@ A [pi](https://github.com/earendil-works/pi) extension that routes every turn to
 [TypeSafe AI's Jev](https://docs.typesafe.ai) as a fast, cheap classifier, and supports N-way parallel responses.
 
 - **Routing**: one Jev call per turn (a few hundred input tokens, output is free) classifies the request into
-  `light | standard | heavy`, plus `needs_tools` and `stakes`. Code then picks the cheapest authed model in that tier.
+  `light | standard | heavy`, plus `needs_tools` and `stakes`. Code then picks the best-ranked billing-eligible
+  model in that tier, cheapest first within a rank.
 - **Billing eligibility**: every candidate is assessed before it can be picked. The router separates *what pays*
   (`subscription`, `extra-credits`, `pay-per-token`, `free`) from *how well that is established*
-  (`verified`, `stale`, `unverified`), and only a verified subscription-backed route is `preferred`.
-  Paid routes are ordered, not banned: included usage first, then the account's own credits, then per-token
+  (`verified`, `stale`, `unverified`), and only a verified subscription-backed route — or a zero-cost one — is
+  `preferred`. Paid routes are ordered, not banned: included usage first, then the account's own credits, then per-token
   billing — so when the subscription really is used up the turn still runs, and the explanation says what paid.
 - **Plan vs on-demand**: subscription (OAuth) providers cost nothing at the margin until their window fills.
   The ledger reads Anthropic and Codex quota headers and 429/402 responses, polls the providers' read-only usage
   endpoints, and steers away from exhausted plans — per model, not just per provider.
 - **Cache-aware switching**: leaving a model with a warm prompt cache is charged as a context re-read.
-- **Manual override wins**: `/model` pins your choice for `switching.manualPinTurns` turns.
+- **Manual override wins**: `/model` pins your choice for `switching.manualPinTurns` turns. The pin is honoured
+  whatever pays for it, but the status line names the basis and a pin nothing may bill says so.
 - **Parallel**: `/duo`, `/trio`, `/par N <prompt>` fan the same conversation out to N models in-process, show
   timings and cost, let Jev pick the best answer, and let you adopt one into the session.
 
@@ -123,10 +125,12 @@ spent — it carries it as uncertainty on every route of that provider and stops
 Quota is a fact about a credential, not about a provider id. `entitlement.<provider>.authProvider` names the
 credential a provider id *claims* to route on — `claude-bridge` claims `anthropic`'s — and that claim is only
 ever a question. The answer is pi's: the two ids are one account when pi hands out the same credential for both,
-which the router asks once a turn and compares in memory, never storing or reporting it. Where that holds, the
-account is worth one read-only probe per interval rather than one per id, one set of windows serves both, and a
-refusal seen through either excludes the routes of both. Where it does not hold, or cannot be answered, each id
-keeps its own probe and its own quota — so a spent subscription never excludes a route billed on a different
+which the router compares in memory and never stores or reports. Because resolving a credential can cost an OAuth
+refresh on the turn's critical path, the question is asked until it answers and only when the probe is due after
+that, bounded by `billing.probe.timeoutMs` like the probe itself. Where the answer holds, the account is worth one
+read-only probe per interval rather than one per id, one set of windows serves both, and a refusal seen through
+either excludes the routes of both. Where it does not hold, or cannot be answered, each id keeps its own probe
+and its own quota — so a spent subscription never excludes a route billed on a different
 credential, which is exactly when the paid overflow is needed.
 
 `entitlement` maps a provider to its read-only usage endpoint. The shipped entries are Anthropic's

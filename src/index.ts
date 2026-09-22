@@ -2,10 +2,10 @@
  * pi-modelrouter — route each turn to the right-sized model, cheaply.
  *
  * Per turn: build a compact state -> one Jev call (tier / needs_tools / stakes)
- * -> pick the cheapest authed model in that tier (plan quota + cache-switch aware)
- * -> pi.setModel before the agent loop starts.
+ * -> pick the cheapest billing-eligible model in that tier (billing basis + plan quota +
+ * cache-switch aware, see billing.ts) -> pi.setModel before the agent loop starts.
  *
- * Commands: /router [status|on|off|reload|explain], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
+ * Commands: /router [status|on|off|reload|explain|billing], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
  */
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";

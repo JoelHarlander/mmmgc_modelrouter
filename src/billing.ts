@@ -11,7 +11,7 @@
  *                  assumption from a configured label or an OAuth heuristic.
  *   eligibility  - whether the configuration permits using the route on that footing.
  *
- * A route is `preferred` only when it is subscription-backed *and* verified. Paid routes are not
+ * A route is `preferred` only when it is subscription-backed *and* verified, or zero-cost. Paid routes are not
  * refused for being paid - they are ranked below included usage, so that when subscription
  * capacity is genuinely used up the turn still has somewhere to go and the explanation says what
  * is paying. Only a route that cannot serve the turn - no auth, a cooldown, or a spent window or
@@ -86,7 +86,7 @@ export function billsPerToken(basis: BillingBasis): boolean {
 }
 
 export function assessBilling(args: AssessArgs): BillingAssessment {
-	const { model, cfg, registry, ledger } = args;
+	const { model, cfg, ledger } = args;
 	const now = args.now ?? Date.now();
 	const key = modelKey(model);
 	const quota = ledger.assess(model.provider, key, cfg, now);

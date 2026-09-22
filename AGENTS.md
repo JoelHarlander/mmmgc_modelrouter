@@ -19,8 +19,8 @@ must live, since a project file may not state them) and the user's real global c
   or model names carry no billing meaning on their own — `src/billing.ts` decides eligibility from live evidence.
 - `src/billing.ts` keeps three questions separate and every explanation should too: the **basis** (what pays), the
   **verification** (how well that is established), and the **eligibility** (what the config permits). Only a
-  verified subscription route is `preferred`. Never let a config label stand in for evidence. `RANK` sorts evidence
-  only within the subscription basis (verified before assumed); it must never put another account's credits ahead
+  verified subscription route, or a zero-cost one, is `preferred`. Never let a config label stand in for evidence.
+  `RANK` sorts evidence only within the subscription basis (verified before assumed); it must never put another account's credits ahead
   of a subscription nothing says is spent, or the turn spends money while included usage sits unused.
 - Quota state is keyed by *credential*, not provider id, but only where that is proven. `credentialOf()` is what
   the config declares - it keys `cfg.scopes` and names the pair worth testing - while `refreshEntitlements`
