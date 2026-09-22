@@ -102,6 +102,8 @@ export interface TurnRecord {
 	confidence: number;
 	/** "heuristic" means the classifier failed and src/router.ts#heuristicTier routed instead. */
 	classifierSource: "jev" | "heuristic" | "oracle" | "pinned";
+	/** The classifier's raw answer, before the stakes override. What `--record` writes back. */
+	classifierAnswer?: ScriptedJev;
 	model: string;
 	previousModel?: string;
 	switched: boolean;

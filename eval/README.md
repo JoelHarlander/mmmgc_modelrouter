@@ -15,6 +15,7 @@ npm run eval -- --sweep profile               # how far the cost numbers move wi
 npm run eval -- --sweep gate                  # does the shipped confidence bar on auto-adopt help?
 npm run eval -- --sweep policy                # what the inherited candidate set costs vs alternatives
 npm run eval -- --sweep strategy              # fan out every turn, or only to learn a winner then commit?
+npm run eval -- --sweep pin                   # what a /model pin costs once it outlives its question
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
@@ -96,6 +97,12 @@ not.
 | `heuristic` | `src/router.ts#heuristicTier`, the real zero-cost fallback | none |
 | `oracle` | always the fixture's `goldTier` at confidence 1 — the ceiling a perfect classifier reaches | none |
 | `live` | a real Jev call through `src/jev.ts` | **yes, and it is billed** |
+
+`--classifier live --record` writes what Jev actually said back into the pack's
+`turns[].jev`, so one live run makes every later offline run replay a real classifier.
+The merge rewrites the classifier answers and nothing else: `requiredSkill`, prompts
+and pins survive, pinned turns are skipped because the classifier was never consulted,
+and a recorded pack still has to pass `--validate`.
 
 Live mode needs both `--classifier live` and `ROUTER_EVAL_LIVE=1`; either one alone
 refuses to run. Nothing else in the harness can reach a network: the offline fleet's
@@ -254,7 +261,8 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `simulate.ts` | the competence oracle and the token/cost model |
 | `metrics.ts` | the metric set and how to read each direction |
 | `results.ts` | results IO, the round log, run comparison |
-| `sweep.ts` | judge, bias, traffic-profile and oracle sweeps |
+| `sweep.ts` | the judge, bias, traffic-profile, oracle, gate, policy, confidence, strategy and pin sweeps |
+| `record.ts` | writing a live classifier's answers back into a pack |
 | `probe.ts` | the judge bias probe and its calibration |
 | `calibration.ts` | is the classifier's confidence worth anything? |
 | `audit.ts` | the shipped config priced from `docs/data` |

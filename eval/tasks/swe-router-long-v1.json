@@ -1,7 +1,7 @@
 {
 	"version": 1,
 	"id": "swe-router-long-v1",
-	"description": "Long-session companion to swe-router-v1. Six SWE-bench-style issues worked over 8-12 turns each, at the context sizes this machine's own pi logs actually reach (the cache-cost study measured Opus context per call at p50 235k, p90 370k; this pack spans 80k-256k). The short pack under-weights the cache: at 20k of context a cold start is rounding error, at 200k it is the largest line in the turn. The turn shape matters too - hard turns interleaved with cheap follow-ups is what makes the router oscillate, and each oscillation is a cache flush. Same contract as swe-router-v1: requiredSkill is the declared ground truth, goldTier is derived and checked.",
+	"description": "Long-session companion to swe-router-v1. Six SWE-bench-style issues worked over 8-12 turns each, at the context sizes this machine's own pi logs actually reach (the cache-cost study measured Opus context per call at p50 235k, p90 370k; this pack spans 80k-256k). The short pack under-weights the cache: at 20k of context a cold start is rounding error, at 200k it is the largest line in the turn. The turn shape matters too - hard turns interleaved with cheap follow-ups is what makes the router oscillate, and each oscillation is a cache flush. Same contract as swe-router-v1: requiredSkill is the declared ground truth, goldTier is derived and checked. Four turns carry a `manualPin`: the operator pinning a cheap model for a trivial follow-up, which src/index.ts then honours for switching.manualPinTurns afterwards - three of them are still in force when the next hard turn arrives, which is the pattern that makes a pin cost something.",
 	"tasks": [
 		{
 			"id": "django__django-16379-session",
@@ -71,6 +71,7 @@
 					"prompt": "Show me the diff.",
 					"goldTier": "light",
 					"requiredSkill": 32,
+					"manualPin": "faux-or/glm-5.3-flash",
 					"jev": {
 						"tier": "light",
 						"confidence": 0.88,
@@ -225,6 +226,7 @@
 					"prompt": "Show the diff.",
 					"goldTier": "light",
 					"requiredSkill": 30,
+					"manualPin": "faux-or/glm-5.3-flash",
 					"jev": {
 						"tier": "light",
 						"confidence": 0.89,
@@ -508,6 +510,7 @@
 					"prompt": "Show me the diff.",
 					"goldTier": "light",
 					"requiredSkill": 30,
+					"manualPin": "faux-or/glm-5.3",
 					"jev": {
 						"tier": "light",
 						"confidence": 0.9,
@@ -672,6 +675,7 @@
 					"prompt": "Show me the diff.",
 					"goldTier": "light",
 					"requiredSkill": 30,
+					"manualPin": "faux-or/glm-5.3-flash",
 					"jev": {
 						"tier": "light",
 						"confidence": 0.9,

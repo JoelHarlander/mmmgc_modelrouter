@@ -21,6 +21,7 @@ import { JevJudge, NoisyJudge } from "./candidates.ts";
 import { auditConfig, renderAudit } from "./audit.ts";
 import { computeCalibration, renderCalibration } from "./calibration.ts";
 import { loadProbePack, renderProbe, runProbe } from "./probe.ts";
+import { recordAnswers, renderRecord } from "./record.ts";
 import { loadFleet } from "./fleet.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/config.ts";
 import { runEval } from "./harness.ts";
@@ -39,6 +40,7 @@ import {
 } from "./results.ts";
 import {
 	renderConfidenceSweep,
+	renderPinSweep,
 	renderStrategySweep,
 	renderGateSweep,
 	renderOracleSweep,
@@ -46,6 +48,7 @@ import {
 	renderSweep,
 	renderTrafficSweep,
 	runConfidenceSweep,
+	runPinSweep,
 	runStrategySweep,
 	runJudgeSweep,
 	runOracleSweep,
@@ -78,9 +81,10 @@ interface Args {
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin";
 	exploreTurns?: number;
 	calibration: boolean;
+	record: boolean;
 	candidatePolicy?: string;
 	judgeMinConfidence?: number;
 	callsPerTurn?: number;
@@ -106,6 +110,7 @@ function parseArgs(argv: string[]): Args {
 		validateOnly: false,
 		auditConfig: false,
 		calibration: false,
+		record: false,
 		auditLocal: false,
 		allowInconsistent: false,
 		gate: false,
@@ -199,6 +204,9 @@ function parseArgs(argv: string[]): Args {
 			case "--calibration":
 				args.calibration = true;
 				break;
+			case "--record":
+				args.record = true;
+				break;
 			case "--audit-config":
 				args.auditConfig = true;
 				break;
@@ -280,8 +288,11 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep policy         compare the shipped candidate set against alternatives
   --sweep confidence     sweep switching.minConfidence, the routing bar
   --sweep strategy       fan out every turn, or only to learn a winner then commit?
+  --sweep pin            sweep switching.manualPinTurns, how long a /model pin holds
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --calibration          is the classifier's confidence worth anything?
+  --record               write the classifier's real answers back into the task pack
+                         (needs --classifier live; rewrites turns[].jev and nothing else)
   --candidate-policy <p> shipped | strongest | cheapest | spread | tier-top
   --judge-min-confidence <c>  that bar (default: switching.minConfidence)
   --calls-per-turn <n>   provider calls per user turn (default 5, the measured median)
@@ -377,6 +388,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "pin") {
+			title = `pin sweep — pack ${pack.id}, classifier ${args.classifier}`;
+			const c = await runPinSweep(base);
+			cells = c;
+			rendered = renderPinSweep(c, title);
 		} else if (args.sweep === "strategy") {
 			title = `strategy sweep — pack ${pack.id}, classifier ${args.classifier}, n=${args.candidates || 3}, mean of 5 seeds`;
 			const c = await runStrategySweep({ ...base, candidateN: args.candidates || 3 });
@@ -441,6 +457,17 @@ async function main(): Promise<number> {
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
 	});
 	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+
+	if (args.record) {
+		if (args.classifier !== "live") {
+			process.stderr.write("--record needs --classifier live: there is nothing to record from a fixture\n");
+			return 2;
+		}
+		const result = recordAnswers(pack, outcome.turns);
+		writeFileSync(args.pack, `${JSON.stringify(result.pack, null, "\t")}\n`);
+		process.stdout.write(renderRecord(result, args.pack.replace(`${ROOT}/`, "")));
+		return 0;
+	}
 
 	if (args.calibration) {
 		const report = computeCalibration(outcome.turns, loaded.config.switching.minConfidence);

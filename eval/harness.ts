@@ -160,6 +160,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		let classifierSource: TurnRecord["classifierSource"] = "pinned";
 		let requestedTier = goldTier;
 		let confidence = 1;
+		let classifierAnswer: TurnRecord["classifierAnswer"];
 
 		if (isPinned) {
 			// src/index.ts returns before the Jev call, so a pinned turn costs nothing to route.
@@ -183,6 +184,12 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			});
 			classifierCostUsd = classification.costUsd;
 			classifierSource = classification.source;
+			classifierAnswer = {
+				tier: classification.tier,
+				confidence: round2(classification.confidence),
+				needsTools: classification.needsTools === undefined ? undefined : round2(classification.needsTools),
+				stakes: classification.stakes === undefined ? undefined : round2(classification.stakes),
+			};
 			requestedTier = applyStakesOverride(classification.tier, classification.stakes);
 			confidence = classification.confidence;
 			decision = chooseModel({
@@ -252,6 +259,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			effectiveTier,
 			confidence,
 			classifierSource,
+			classifierAnswer,
 			model: chosenKey,
 			previousModel: previousKey,
 			switched: previousKey !== undefined && previousKey !== chosenKey,
@@ -417,6 +425,10 @@ function checkEligibility(
 function findModel(loaded: LoadedFleet, key: string): Model<Api> | undefined {
 	const { provider, id } = splitModel(key);
 	return loaded.registry.find(provider, id);
+}
+
+function round2(n: number): number {
+	return Math.round(n * 100) / 100;
 }
 
 function splitModel(key: string): { provider: string; id: string } {

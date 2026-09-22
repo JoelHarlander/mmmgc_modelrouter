@@ -16,7 +16,7 @@ Jump to the round that established each claim, and what it rests on.
 | Cheapest-in-tier means the strongest model is never chosen, in any profile | 2 | — |
 | At realistic context, **switching costs ~half of a long session's spend** ($34.26, 34 switches in 60 turns) | 4 | ±20pt fleet jitter (r7), traffic constants (r5) |
 | A profile that never changes model still pays 14 cold starts, all `thinking-change` | 4 | — |
-| Never switching *also* wins on quality | 4 | **not robust** — 5/5 → 2/5 under ±20pt jitter (r7) |
+| Never switching *also* wins on quality | 4 | **not robust — REVERSED in r15** once the pack contains operator pins (5/5 → 0/5) |
 | Fan-out costs 2.9× more per extra solve at realistic context ($4.94 → $14.28) | 4 | traffic constants (r5) |
 | Candidate selection is worth **~+15pp** when the judge is good | 3 | traffic constants (r5) |
 | **~20 points of judge bias makes fan-out worse than not running it** | 3 | 5 seeds × 3 widths |
@@ -31,6 +31,7 @@ Jump to the round that established each claim, and what it rests on.
 | …but commitment **amplifies** judge bias: at 20 points, every explore depth is worse than not fanning out at all | **13** | 5 seeds |
 | **The router's quality depends on your billing, not your work**: same config, same tasks, 86.7% → 68.3% when models stop being free | **14** | isolates one variable |
 | On a plan, "never switch" is free and best; **off a plan it is the most expensive option** (2× the router's spend) | **14** | both packs |
+| The shipped `manualPinTurns: 3` leaves **7 of 12 pinned turns in the wrong tier**, costing 10pp of session success | **15** | long pack |
 
 **Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
 judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
@@ -895,3 +896,82 @@ subscription. For everyone else it under-reports by ~50×, which is what rounds 
 been saying with a fixture and can now say with the variable isolated.
 
 **Next.** Unchanged: `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 15 — 2026-09-22 — the operator, and the asterisk on every scripted number
+
+**Measured.** Two things the harness had been quietly assuming away.
+
+1. **The operator.** `switching.manualPinTurns: 3` means a `/model` pin governs three
+   turns. Round 12 caught one pin, set for a one-line question, still deciding a heavy
+   turn two turns later — and then found the long pack contained **no pins at all**. A
+   shipped behaviour with essentially no coverage.
+2. **The asterisk.** Every `scripted` number in fourteen rounds came from classifier
+   answers *I wrote by hand*. Round 12's calibration curve is, strictly, a curve of my
+   handwriting.
+
+**Changed.**
+
+- **`--record`** runs the pack against live Jev and writes what it actually said back
+  into `turns[].jev`. The merge is deliberately narrow — it rewrites the classifier
+  answers and nothing else, so `requiredSkill`, prompts and pins survive untouched, a
+  recorded pack still has to pass `--validate`, pinned turns are skipped (the classifier
+  was never consulted), and a fixture that models an outage keeps modelling one. Tested
+  offline against a stubbed live run; recording a pack's own answers back is a no-op.
+- **Four `manualPin`s in the long pack**, in the pattern round 12 found: the operator
+  pins a cheap model for a trivial follow-up ("show me the diff"), and the pin is still
+  in force when the next hard turn arrives. One is harmless by construction, as a control.
+- **`--sweep pin`** over `manualPinTurns`.
+
+**What the pin sweep says** (`swe-router-long-v1`, 60 turns):
+
+| pin turns | pinned | **wrong tier while pinned** | tier acc | session ok | switches | list $ |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 0 | 0 | 86.7% | 75.0% | 34 | $69.27 |
+| 1 | 4 | 1 | 85.0% | 75.0% | 35 | $69.41 |
+| **3 (shipped)** | 12 | **7** | 76.7% | **65.0%** | 30 | $57.40 |
+| 5 | 19 | 9 | 76.7% | 61.7% | 26 | $46.10 |
+| 10 | 25 | 14 | 70.0% | 58.3% | 21 | $39.98 |
+
+The shipped three-turn pin is **not a free convenience**. It holds 12 of 60 turns, and
+**7 of those 12 run in the wrong tier for the work** — served by a model the operator
+chose for a different question. It costs **10pp of tier accuracy and 10pp of session
+success** and buys back $11.87 and four switches. A one-turn pin — respect the
+operator's choice for the turn they made it on — costs essentially nothing (1 wrong
+turn, no quality loss, +$0.14).
+
+**And adding the operator reversed a headline.** Round 4 reported that never switching
+beats perfect routing on *quality* as well as cost; round 7 swept the fleet and warned
+that the quality half was **not robust** while the cost half was. Round 15 is that
+warning coming true from a different direction — not fleet jitter, but a more realistic
+pack:
+
+| | short pack | long pack, **before** pins | long pack, **with** pins |
+| --- | ---: | ---: | ---: |
+| `heuristic` beats `oracle` on quality | 5/5 | 5/5 | **0/5** |
+| `oracle` costs more than `heuristic` | 5/5 | 5/5 | **5/5** |
+
+Pins fall on whichever profile is running, and they hurt the never-switching profile
+more than the routing one, because a router can climb back out of a bad pin and a fixed
+model has nowhere to climb to. **The cost finding is unmoved at every jitter level, as
+it has been in every round that has tested it.** The quality finding has now flipped
+twice and should be treated as a property of a fixture, which is what round 7 said and
+what the index has recorded since.
+
+Round 9's candidate-policy result is unchanged in substance and stronger in relative
+terms: `tier-top` now returns **+31.7pp at $3.26 per extra solve** against `shipped`'s
++24.3pp at $8.97, and is still completely unmoved by a 20-point judge bias that costs
+the shipped set most of its lift (+24.3pp → +5.3pp, regressions 0.4 → 6.4).
+
+**Five tests changed with the fixture, and the change is the point.** Each had been
+keyed to a magnitude from the old pack. They now assert the *mechanism* — a fan-out
+candidate's bill scales with context because it pays uncached input; a biased judge
+costs the shipped candidate set its lift because its flashiest member is not its
+strongest; with routing switched off every remaining switch must be an operator pin.
+Mechanisms survive a better fixture; magnitudes do not, and a test that pins a magnitude
+is a test that will be quietly loosened later.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --record` now removes the
+asterisk on every scripted number, and `--probe --live-judge` still decides the
+candidate question. Both are under a cent and neither is closeable offline.

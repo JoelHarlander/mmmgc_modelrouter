@@ -304,6 +304,62 @@ export function renderPolicySweep(cells: PolicyCell[], title: string): string {
 	return `${out.join("\n")}\n`;
 }
 
+export interface PinCell {
+	manualPinTurns: number;
+	pinnedTurns: number;
+	tierAccuracy: number;
+	sessionSuccessRate: number;
+	switches: number;
+	listEquivalentUsd: number;
+	coldPremiumUsd: number;
+	/** Pinned turns the operator's model was wrong for: the cost of the pin outliving its request. */
+	pinnedWrongTier: number;
+}
+
+/**
+ * What `switching.manualPinTurns` costs. A `/model` pin is the operator overriding the
+ * router, and the router respects it for N turns afterwards. Round 12 found a pin set
+ * for a one-line question still governing a heavy turn two turns later; this measures
+ * how much of that there is across the pack.
+ */
+export async function runPinSweep(options: SweepOptions & { pinTurns?: number[] }): Promise<PinCell[]> {
+	const pins = options.pinTurns ?? [0, 1, 2, 3, 5, 10];
+	const cells: PinCell[] = [];
+	for (const manualPinTurns of pins) {
+		const loaded: LoadedFleet = {
+			...options.loaded,
+			config: mergeConfig(options.loaded.config, { switching: { ...options.loaded.config.switching, manualPinTurns } }),
+		};
+		const outcome = await runEval({ pack: options.pack, loaded, classifier: options.classifier, startModel: options.startModel });
+		const m = computeMetrics(outcome.turns, outcome.stateChars);
+		cells.push({
+			manualPinTurns,
+			pinnedTurns: m.pinnedTurns,
+			tierAccuracy: m.tierAccuracy,
+			sessionSuccessRate: m.sessionSuccessRate,
+			switches: m.switches,
+			listEquivalentUsd: m.listEquivalentUsd,
+			coldPremiumUsd: m.coldPremiumUsd,
+			pinnedWrongTier: outcome.turns.filter((t) => t.pinned && t.effectiveTier !== t.goldTier).length,
+		});
+	}
+	return cells;
+}
+
+export function renderPinSweep(cells: PinCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  pin turns   pinned   wrong tier while pinned   tier acc   session ok   switches      list $   cold prem");
+	for (const c of cells) {
+		out.push(
+			`  ${String(c.manualPinTurns).padStart(9)}   ${String(c.pinnedTurns).padStart(6)}   ${String(c.pinnedWrongTier).padStart(23)}   ` +
+				`${pct(c.tierAccuracy).padStart(8)}   ${pct(c.sessionSuccessRate).padStart(10)}   ${String(c.switches).padStart(8)}   ` +
+				`${usd(c.listEquivalentUsd).padStart(9)}   ${usd(c.coldPremiumUsd).padStart(9)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
 export interface StrategyCell {
 	strategy: string;
 	exploreTurns: number;

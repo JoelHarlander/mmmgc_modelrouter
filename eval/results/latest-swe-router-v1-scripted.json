@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T13-44-58-swe-router-v1-scripted-3444a21",
-	"at": "2026-09-22T13:44:58.306Z",
+	"runId": "2026-09-22T13-49-56-swe-router-v1-scripted-1e487b5",
+	"at": "2026-09-22T13:49:56.710Z",
 	"profile": "swe-router-v1-scripted",
 	"pack": "swe-router-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,7 +11,7 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "3444a21",
+	"git": "1e487b5",
 	"metrics": {
 		"tasks": 15,
 		"turns": 31,
@@ -65,6 +65,12 @@
 			"effectiveTier": "light",
 			"confidence": 0.86,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "light",
+				"confidence": 0.86,
+				"needsTools": 0.25,
+				"stakes": 0.4
+			},
 			"model": "faux-or/glm-5.3-flash",
 			"switched": false,
 			"pinned": false,
@@ -92,6 +98,12 @@
 			"effectiveTier": "light",
 			"confidence": 0.71,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "light",
+				"confidence": 0.71,
+				"needsTools": 0.95,
+				"stakes": 1
+			},
 			"model": "faux-or/glm-5.3-flash",
 			"switched": false,
 			"pinned": false,
@@ -119,6 +131,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.58,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.58,
+				"needsTools": 0.96,
+				"stakes": 1.2
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
 			"pinned": false,
@@ -146,6 +164,12 @@
 			"effectiveTier": "light",
 			"confidence": 0.74,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "light",
+				"confidence": 0.74,
+				"needsTools": 0.94,
+				"stakes": 0.8
+			},
 			"model": "faux-or/glm-5.3-flash",
 			"previousModel": "faux-plan-codex/gpt-6-astra",
 			"switched": true,
@@ -174,6 +198,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.79,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.79,
+				"needsTools": 0.93,
+				"stakes": 1.4
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
 			"pinned": false,
@@ -201,6 +231,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.68,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.68,
+				"needsTools": 0.95,
+				"stakes": 1.1
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"previousModel": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
@@ -228,6 +264,12 @@
 			"effectiveTier": "heavy",
 			"confidence": 0.64,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "heavy",
+				"confidence": 0.64,
+				"needsTools": 0.9,
+				"stakes": 1.7
+			},
 			"model": "faux-plan-anthropic/claude-opus-5",
 			"switched": false,
 			"pinned": false,
@@ -255,6 +297,12 @@
 			"effectiveTier": "light",
 			"confidence": 0.7,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "light",
+				"confidence": 0.7,
+				"needsTools": 0.95,
+				"stakes": 0.9
+			},
 			"model": "faux-or/glm-5.3-flash",
 			"previousModel": "faux-plan-anthropic/claude-opus-5",
 			"switched": true,
@@ -283,6 +331,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.81,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.81,
+				"needsTools": 0.94,
+				"stakes": 1.5
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
 			"pinned": false,
@@ -310,6 +364,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.55,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.55,
+				"needsTools": 0.6,
+				"stakes": 1.2
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"previousModel": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
@@ -337,6 +397,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.76,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.76,
+				"needsTools": 0.93,
+				"stakes": 1.1
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
 			"pinned": false,
@@ -364,6 +430,12 @@
 			"effectiveTier": "light",
 			"confidence": 0.83,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "light",
+				"confidence": 0.83,
+				"needsTools": 0.9,
+				"stakes": 0.5
+			},
 			"model": "faux-or/glm-5.3-flash",
 			"previousModel": "faux-plan-codex/gpt-6-astra",
 			"switched": true,
@@ -392,6 +464,12 @@
 			"effectiveTier": "light",
 			"confidence": 0.52,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "light",
+				"confidence": 0.52,
+				"needsTools": 0.92,
+				"stakes": 1.3
+			},
 			"model": "faux-or/glm-5.3-flash",
 			"switched": false,
 			"pinned": false,
@@ -419,6 +497,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.72,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.72,
+				"needsTools": 0.94,
+				"stakes": 1.4
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"previousModel": "faux-or/glm-5.3-flash",
 			"switched": true,
@@ -447,6 +531,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.69,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.69,
+				"needsTools": 0.95,
+				"stakes": 1.2
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
 			"pinned": false,
@@ -474,6 +564,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.74,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.74,
+				"needsTools": 0.95,
+				"stakes": 1.3
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"previousModel": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
@@ -501,6 +597,12 @@
 			"effectiveTier": "heavy",
 			"confidence": 0.77,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "heavy",
+				"confidence": 0.77,
+				"needsTools": 0.85,
+				"stakes": 1.9
+			},
 			"model": "faux-plan-anthropic/claude-opus-5",
 			"switched": false,
 			"pinned": false,
@@ -528,6 +630,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.66,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.66,
+				"needsTools": 0.95,
+				"stakes": 1.6
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"previousModel": "faux-plan-anthropic/claude-opus-5",
 			"switched": true,
@@ -556,6 +664,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.61,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.61,
+				"needsTools": 0.9,
+				"stakes": 1.8
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
 			"pinned": false,
@@ -583,6 +697,12 @@
 			"effectiveTier": "heavy",
 			"confidence": 0.73,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "heavy",
+				"confidence": 0.73,
+				"needsTools": 0.55,
+				"stakes": 1.9
+			},
 			"model": "faux-plan-anthropic/claude-opus-5",
 			"previousModel": "faux-plan-codex/gpt-6-astra",
 			"switched": true,
@@ -611,6 +731,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.59,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.59,
+				"needsTools": 0.96,
+				"stakes": 1.9
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"previousModel": "faux-plan-anthropic/claude-opus-5",
 			"switched": true,
@@ -639,6 +765,12 @@
 			"effectiveTier": "heavy",
 			"confidence": 0.82,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "heavy",
+				"confidence": 0.82,
+				"needsTools": 0.88,
+				"stakes": 2
+			},
 			"model": "faux-plan-anthropic/claude-opus-5",
 			"switched": false,
 			"pinned": false,
@@ -666,6 +798,12 @@
 			"effectiveTier": "heavy",
 			"confidence": 0.45,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "heavy",
+				"confidence": 0.45,
+				"needsTools": 0.3,
+				"stakes": 2
+			},
 			"model": "faux-plan-anthropic/claude-opus-5",
 			"previousModel": "faux-plan-anthropic/claude-opus-5",
 			"switched": false,
@@ -693,6 +831,12 @@
 			"effectiveTier": "heavy",
 			"confidence": 0.78,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "heavy",
+				"confidence": 0.78,
+				"needsTools": 0.96,
+				"stakes": 1.9
+			},
 			"model": "faux-plan-anthropic/claude-opus-5",
 			"previousModel": "faux-plan-anthropic/claude-opus-5",
 			"switched": false,
@@ -720,6 +864,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.75,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.75,
+				"needsTools": 0.94,
+				"stakes": 1.4
+			},
 			"model": "faux-plan-codex/gpt-6-astra",
 			"switched": false,
 			"pinned": false,
@@ -747,6 +897,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.71,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.71,
+				"needsTools": 0.95,
+				"stakes": 1.5
+			},
 			"model": "faux-or/glm-5.3",
 			"previousModel": "faux-plan-codex/gpt-6-astra",
 			"switched": true,
@@ -775,6 +931,12 @@
 			"effectiveTier": "heavy",
 			"confidence": 0.68,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "heavy",
+				"confidence": 0.68,
+				"needsTools": 0.9,
+				"stakes": 1.9
+			},
 			"model": "faux-plan-anthropic/claude-opus-5",
 			"switched": false,
 			"pinned": false,
@@ -857,6 +1019,10 @@
 			"effectiveTier": "heavy",
 			"confidence": 0.34,
 			"classifierSource": "heuristic",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.34
+			},
 			"model": "faux-plan-anthropic/claude-opus-5",
 			"switched": false,
 			"pinned": false,
@@ -884,6 +1050,12 @@
 			"effectiveTier": "standard",
 			"confidence": 0.62,
 			"classifierSource": "jev",
+			"classifierAnswer": {
+				"tier": "standard",
+				"confidence": 0.62,
+				"needsTools": 0.8,
+				"stakes": 1.3
+			},
 			"model": "faux-or/glm-5.3",
 			"previousModel": "faux-plan-anthropic/claude-opus-5",
 			"switched": true,

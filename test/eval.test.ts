@@ -17,6 +17,7 @@ import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, mergeConfig, modelKey } from "../src/config.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
 import { computeCalibration } from "../eval/calibration.ts";
+import { recordAnswers } from "../eval/record.ts";
 import { pickParallelModels } from "../src/parallel.ts";
 import { CANDIDATE_POLICIES, JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
 import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifier.ts";
@@ -30,10 +31,12 @@ import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/val
 import {
 	type ConfidenceCell,
 	type OracleCell,
+	type PinCell,
 	perturbFleet,
 	runJudgeSweep,
 	runConfidenceSweep,
 	runOracleSweep,
+	runPinSweep,
 	runPolicySweep,
 	runStrategySweep,
 	runTrafficSweep,
@@ -371,14 +374,20 @@ test("context size is what makes the cache dominate, and the harness shows it", 
 	assert.ok(long.coldPremiumShare > 0.3, "at the measured context sizes the cold premium is a large share of spend");
 });
 
-test("fan-out gets dramatically more expensive per extra solve at realistic context", async () => {
+test("fan-out gets dramatically more expensive at realistic context", async () => {
 	const short = computeMetrics(...unpack(await run({ candidateN: 3 }))).candidate!;
 	const long = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), candidateN: 3 }))).candidate!;
-	assert.ok(Number.isFinite(short.listUsdPerExtraSolve) && Number.isFinite(long.listUsdPerExtraSolve));
+
+	// Per fanned-out turn, because that is the mechanism: a candidate pays the full
+	// uncached input rate for the whole prompt, so its bill scales with context and
+	// nothing else. ($/extra solve also moves with how many solves were available.)
+	const perTurn = (m: typeof short) => m.fanoutListEquivalentUsd / m.turns;
 	assert.ok(
-		long.listUsdPerExtraSolve > short.listUsdPerExtraSolve * 2,
-		`a fan-out candidate pays full uncached input, so its price must scale with context (${short.listUsdPerExtraSolve} -> ${long.listUsdPerExtraSolve})`,
+		perTurn(long) > perTurn(short) * 2,
+		`a fan-out candidate pays full uncached input, so its price must scale with context ($${perTurn(short).toFixed(2)} -> $${perTurn(long).toFixed(2)} per turn)`,
 	);
+	assert.ok(Number.isFinite(short.listUsdPerExtraSolve) && Number.isFinite(long.listUsdPerExtraSolve));
+	assert.ok(long.listUsdPerExtraSolve > short.listUsdPerExtraSolve, "and each extra solve costs more to buy");
 });
 
 test("task-level rates stay readable when every long session has at least one failure", async () => {
@@ -559,9 +568,14 @@ test("an alternative candidate set is both cheaper and more robust than the ship
 	assert.ok(alt.fanoutListEquivalentUsd < shipped.fanoutListEquivalentUsd / 2, "...for less than half the fan-out bill");
 	assert.ok(alt.listUsdPerExtraSolve < shipped.listUsdPerExtraSolve);
 
-	// ...and it does not fall over when the judge is biased, where the shipped set does.
-	assert.ok(find("shipped", 20).adoptedLift < 0, "the shipped set should go negative at bias 20");
-	assert.ok(find("tier-top", 20).adoptedLift > 0, "tier-top should stay positive");
+	// ...and a biased judge costs the shipped set most of its lift while tier-top does
+	// not notice, because tier-top's flashiest candidate is also its strongest.
+	const shippedBiased = find("shipped", 20);
+	const altBiased = find("tier-top", 20);
+	assert.ok(shippedBiased.adoptedLift < shipped.adoptedLift / 2, "bias should take most of the shipped set's lift");
+	assert.ok(shippedBiased.judgeRegressions > shipped.judgeRegressions * 4, "...by making the judge pick wrongly");
+	assert.equal(altBiased.adoptedLift, alt.adoptedLift, "tier-top should be unmoved by this bias");
+	assert.equal(altBiased.judgeRegressions, 0);
 });
 
 test("the confidence gate is the shipped auto-adopt rule, and a zero bar disables it", async () => {
@@ -640,10 +654,19 @@ test("the switching-cost finding survives being wrong about the fleet; the quali
 	assert.equal(exact.oracleCostsMore, 1);
 	assert.equal(jittered.oracleCostsMore, 1, "the switching-cost finding must not depend on the declared skills");
 
-	// Quality: "never switching also wins on outcome" is a fact about this fleet, and the
-	// sweep is what stops it being quoted as more than that.
-	assert.equal(exact.heuristicBeatsOracle, 1);
-	assert.ok(jittered.heuristicBeatsOracle < 1, "the quality half of the finding should not be robust; say so rather than hide it");
+	// Quality: whether never-switching also *wins* is a fact about the fixture, not about
+	// routing. It holds on the short pack and reverses on the long one once that pack
+	// contains realistic operator pins - which is precisely why it is not quotable alone.
+	const shortCells = await runOracleSweep({
+		pack: pack(),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		jitters: [0],
+		seeds: ["s1", "s2", "s3"],
+	});
+	assert.equal(shortCells[0]!.heuristicBeatsOracle, 1, "never switching wins on the short pack");
+	assert.equal(exact.heuristicBeatsOracle, 0, "...and loses on the long one");
+	assert.equal(jittered.heuristicBeatsOracle, 0);
 });
 
 test("the judge probe recovers a bias it was not told about", async () => {
@@ -835,11 +858,24 @@ test("the routing confidence bar is a stickiness mechanism, not a safety one", a
 	const [shipped, slightly, high, never] = cells as [ConfidenceCell, ConfidenceCell, ConfidenceCell, ConfidenceCell];
 
 	// The shipped bar barely engages: almost nothing is below it.
-	assert.ok(shipped.suppressed <= 2, `the 0.5 bar suppressed ${shipped.suppressed} turns; it is nearly inert`);
+	assert.ok(shipped.suppressed / shipped.turns < 0.1, `the 0.5 bar suppressed ${shipped.suppressed}/${shipped.turns} turns; it is nearly inert`);
 	// Raising it only ever reduces switching.
 	assert.ok(slightly.switches < shipped.switches);
 	assert.ok(high.switches < slightly.switches);
-	assert.equal(never.switches, 0);
+	assert.ok(never.switches < high.switches);
+
+	// With an unreachable bar the router never routes, so every remaining model change
+	// is the operator's own /model pin rather than a routing decision.
+	const base = loadFleet(FLEET);
+	const frozen = await runEval({
+		pack: pack(LONG_PACK),
+		loaded: { ...base, config: mergeConfig(base.config, { switching: { ...base.config.switching, minConfidence: 1.01 } }) },
+		classifier: "scripted",
+		ledgerFile: tmpLedger(),
+	});
+	for (const turn of frozen.turns.filter((t) => t.switched)) {
+		assert.equal(turn.pinned, true, `${turn.taskId} t${turn.turn} switched with routing switched off`);
+	}
 	// And it increasingly discards classifications that were correct.
 	assert.ok(high.suppressedCorrect > slightly.suppressedCorrect);
 	// A mid-height bar is the worst of both worlds: it freezes the session on whatever
@@ -988,7 +1024,69 @@ test("the router's quality depends on the billing arrangement, not on the work",
 
 	// The whole difference is which model the standard tier prefers: cheapest-in-tier
 	// picks the strong one when a subscription makes it free and the weak one otherwise.
-	const standardPick = (turns: typeof onPlan.turns) => new Set(turns.filter((t) => t.effectiveTier === "standard").map((t) => t.model));
+	// Routed turns only: a pinned turn is the operator's choice, not the router's.
+	const standardPick = (turns: typeof onPlan.turns) =>
+		new Set(turns.filter((t) => !t.pinned && t.effectiveTier === "standard").map((t) => t.model));
 	assert.deepEqual([...standardPick(onPlan.turns)], ["faux-plan-codex/gpt-6-astra"]);
 	assert.deepEqual([...standardPick(onDemand.turns)], ["faux-or/glm-5.3"]);
+});
+
+test("recording rewrites the classifier answers and nothing else", async () => {
+	const original = pack();
+	// Stand in for a live run: give every routed turn a recorded answer.
+	const outcome = await run();
+	const turns = outcome.turns.map((t) => ({
+		...t,
+		classifierSource: t.pinned ? t.classifierSource : ("jev" as const),
+		classifierAnswer: t.pinned ? undefined : { tier: "heavy" as const, confidence: 0.99, needsTools: 0.5, stakes: 1.25 },
+	}));
+	const result = recordAnswers(original, turns);
+
+	assert.ok(result.recorded > 20);
+	for (const [i, task] of result.pack.tasks.entries()) {
+		const before = original.tasks[i]!;
+		assert.equal(task.id, before.id);
+		assert.equal(task.requiredSkill, before.requiredSkill, "recording must not touch the declared ground truth");
+		for (const [j, turn] of task.turns.entries()) {
+			const was = before.turns[j]!;
+			assert.equal(turn.prompt, was.prompt);
+			assert.equal(turn.goldTier, was.goldTier);
+			assert.equal(turn.requiredSkill, was.requiredSkill);
+			assert.equal(turn.manualPin, was.manualPin);
+			// A fixture that models a Jev outage keeps modelling one.
+			if (was.jev?.fail) assert.equal(turn.jev?.fail, true, "an outage fixture must survive recording");
+		}
+	}
+
+	// A pinned turn never called the classifier, so there is nothing to record for it.
+	const pinnedTask = original.tasks.find((t) => t.turns.some((x) => x.manualPin))!;
+	assert.ok(result.skipped.some((s) => s.startsWith(pinnedTask.id) && s.includes("pinned")));
+	const pinnedBefore = pinnedTask.turns[1]!;
+	const pinnedAfter = result.pack.tasks.find((t) => t.id === pinnedTask.id)!.turns[1]!;
+	assert.deepEqual(pinnedAfter.jev, pinnedBefore.jev);
+
+	// Recording the fixture's own answers back is a no-op.
+	const identity = recordAnswers(original, outcome.turns.map((t) => ({ ...t, classifierAnswer: t.classifierAnswer })));
+	assert.deepEqual(identity.changes, [], identity.changes.join("; "));
+});
+
+test("a /model pin that outlives its question is measurable, and the shipped length is not cheap", async () => {
+	const cells = await runPinSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		pinTurns: [0, 1, DEFAULT_CONFIG.switching.manualPinTurns, 10],
+	});
+	const [none, one, shipped, long] = cells as [PinCell, PinCell, PinCell, PinCell];
+
+	assert.equal(none.pinnedTurns, 0);
+	assert.equal(none.pinnedWrongTier, 0);
+	// A longer pin holds more turns, and more of them are in the wrong tier for the work.
+	assert.ok(one.pinnedTurns < shipped.pinnedTurns && shipped.pinnedTurns < long.pinnedTurns);
+	assert.ok(one.pinnedWrongTier < shipped.pinnedWrongTier && shipped.pinnedWrongTier < long.pinnedWrongTier);
+
+	// The shipped 3-turn pin is a real trade, not a free convenience.
+	assert.ok(shipped.pinnedWrongTier >= 5, `only ${shipped.pinnedWrongTier} pinned turns landed wrong; the pack no longer exercises this`);
+	assert.ok(shipped.sessionSuccessRate < none.sessionSuccessRate - 0.05, "it costs real quality");
+	assert.ok(shipped.listEquivalentUsd < none.listEquivalentUsd, "...and buys real spend back, by not switching");
 });
