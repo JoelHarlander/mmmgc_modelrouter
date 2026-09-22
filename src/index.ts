@@ -1,0 +1,276 @@
+/**
+ * pi-modelrouter — route each turn to the right-sized model, cheaply.
+ *
+ * Per turn: build a compact state -> one Jev call (tier / needs_tools / stakes)
+ * -> pick the cheapest authed model in that tier (plan quota + cache-switch aware)
+ * -> pi.setModel before the agent loop starts.
+ *
+ * Commands: /router [status|on|off|reload|explain], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
+ */
+import { join } from "node:path";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { Container, Text } from "@earendil-works/pi-tui";
+import { loadConfig, modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
+import { type JevChoiceAnswer, JevClient, type JevNoulAnswer, type JevScoreAnswer } from "./jev.ts";
+import { Ledger } from "./ledger.ts";
+import { PARALLEL_ENTRY_TYPE, type ParallelEntryData, renderParallelEntry, runParallel } from "./parallel.ts";
+import { billingFor, chooseModel, type Decision, heuristicTier } from "./router.ts";
+import { buildRoutingState, routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "./state.ts";
+
+const STATUS_KEY = "modelrouter";
+
+export default function modelRouter(pi: ExtensionAPI) {
+	let cfg: RouterConfig = loadConfig(process.cwd()).config;
+	let jev = new JevClient(cfg.jev);
+	const ledger = new Ledger(join(getAgentDir(), "modelrouter", "usage.json"));
+
+	let turn = 0;
+	let pinnedUntilTurn = 0;
+	let selfSwitching = false;
+	let lastDecision: Decision | undefined;
+	let enabled = cfg.enabled;
+
+	const reload = (cwd: string) => {
+		const loaded = loadConfig(cwd);
+		cfg = loaded.config;
+		jev = new JevClient(cfg.jev);
+		enabled = cfg.enabled;
+		return loaded;
+	};
+
+	pi.registerEntryRenderer<ParallelEntryData>(PARALLEL_ENTRY_TYPE, (entry, { expanded }, theme) =>
+		renderParallelEntry(entry.data, expanded, theme),
+	);
+
+	// ---- routing -------------------------------------------------------------
+
+	const refreshGatewayKey = async (ctx: ExtensionContext) => {
+		try {
+			jev.setStoredGatewayKey(await ctx.modelRegistry.getApiKeyForProvider("vercel-ai-gateway"));
+		} catch {
+			jev.setStoredGatewayKey(undefined);
+		}
+	};
+
+	pi.on("session_start", async (_event, ctx) => {
+		reload(ctx.cwd);
+		await refreshGatewayKey(ctx);
+		turn = 0;
+		pinnedUntilTurn = 0;
+		updateStatus(ctx);
+	});
+
+	pi.on("before_agent_start", async (event, ctx) => {
+		turn += 1;
+		if (!enabled || !ctx.model) return;
+		if (turn <= pinnedUntilTurn) {
+			setStatus(ctx, `pinned ${modelKey(ctx.model)} (${pinnedUntilTurn - turn + 1} more turn${pinnedUntilTurn - turn === 0 ? "" : "s"})`);
+			return;
+		}
+		const started = Date.now();
+		let tier: Tier;
+		let confidence: number;
+		let jevMs: number | undefined;
+		let jevModel: string | undefined;
+		let needsTools: number | undefined;
+		let stakes: number | undefined;
+
+		if (jev.available()) {
+			try {
+				const state = buildRoutingState(event.prompt, ctx, cfg, turn);
+				const res = await jev.ask(state, routingQuestions(), ctx.signal);
+				const t = res.answers[TIER_QUESTION_KEY] as JevChoiceAnswer | undefined;
+				if (!t || !TIERS.includes(t.choice as Tier)) throw new Error("no tier answer");
+				tier = t.choice as Tier;
+				confidence = t.confidence;
+				needsTools = (res.answers[TOOLS_QUESTION_KEY] as JevNoulAnswer | undefined)?.noul;
+				stakes = (res.answers[STAKES_QUESTION_KEY] as JevScoreAnswer | undefined)?.score;
+				// High stakes with a confident "light" call is the one place we override Jev.
+				if (stakes !== undefined && stakes >= 1.5 && tier === "light") tier = "standard";
+				jevMs = res.ms;
+				jevModel = res.model;
+				ledger.recordJev(res.transport, res.model, res.usage.input_tokens, res.usage.output_tokens, res.costUsd);
+			} catch (err) {
+				const h = heuristicTier(event.prompt);
+				tier = h.tier;
+				confidence = h.confidence;
+				if (ctx.hasUI) ctx.ui.notify(`router: Jev failed (${err instanceof Error ? err.message : String(err)}); heuristic tier ${tier}`, "warning");
+			}
+		} else {
+			const h = heuristicTier(event.prompt);
+			tier = h.tier;
+			confidence = h.confidence;
+		}
+
+		const choice = chooseModel({
+			tier,
+			confidence,
+			current: ctx.model,
+			registry: ctx.modelRegistry,
+			cfg,
+			ledger,
+			contextTokens: ctx.getContextUsage()?.tokens ?? 0,
+		});
+		lastDecision = { ...choice, jevMs, jevModel, needsTools, stakes, at: started };
+
+		if (choice.model && choice.switched) {
+			selfSwitching = true;
+			const ok = await pi.setModel(choice.model);
+			selfSwitching = false;
+			if (!ok) {
+				lastDecision.reason += " (setModel refused: no auth)";
+				lastDecision.switched = false;
+			} else if (cfg.notifyOnSwitch && ctx.hasUI) {
+				ctx.ui.notify(`router: ${tier} -> ${modelKey(choice.model)} (${(confidence * 100).toFixed(0)}%)`, "info");
+			}
+		}
+		const level = cfg.thinking[choice.tier];
+		if (level && choice.model?.reasoning) pi.setThinkingLevel(level);
+		updateStatus(ctx);
+	});
+
+	pi.on("model_select", async (event) => {
+		if (selfSwitching) return;
+		if (event.source === "set" || event.source === "cycle") {
+			pinnedUntilTurn = turn + cfg.switching.manualPinTurns;
+		}
+	});
+
+	pi.on("message_end", async (event) => {
+		const m = event.message as { role?: string; provider?: string; model?: string; usage?: Parameters<Ledger["record"]>[2] };
+		if (m.role !== "assistant" || !m.provider || !m.model) return;
+		ledger.record(m.provider, m.model, m.usage);
+	});
+
+	pi.on("after_provider_response", async (event, ctx) => {
+		if (!ctx.model) return;
+		ledger.observeResponse(ctx.model.provider, event.status, event.headers ?? {}, cfg);
+	});
+
+	pi.on("session_shutdown", async () => {
+		ledger.save();
+	});
+
+	// ---- commands ------------------------------------------------------------
+
+	pi.registerCommand("router", {
+		description: "Model router: status | on | off | reload | explain",
+		handler: async (args, ctx) => {
+			const sub = (args ?? "").trim().split(/\s+/)[0] ?? "";
+			switch (sub) {
+				case "on":
+					enabled = true;
+					ctx.ui.notify("router: enabled", "info");
+					break;
+				case "off":
+					enabled = false;
+					ctx.ui.notify("router: disabled (model stays as is)", "info");
+					break;
+				case "reload": {
+					const loaded = reload(ctx.cwd);
+					await refreshGatewayKey(ctx);
+					ctx.ui.notify(`router: reloaded (${loaded.sources.length ? loaded.sources.join(", ") : "defaults"})${loaded.errors.length ? `; errors: ${loaded.errors.join("; ")}` : ""}`, loaded.errors.length ? "warning" : "info");
+					break;
+				}
+				case "explain":
+					showExplain(ctx);
+					break;
+				default:
+					showStatus(ctx);
+			}
+			updateStatus(ctx);
+		},
+	});
+
+	const parallelCommand = (fixedN?: number) => async (args: string, ctx: ExtensionCommandContext) => {
+		let rest = (args ?? "").trim();
+		let n = fixedN ?? cfg.parallel.defaultN;
+		if (!fixedN) {
+			const m = rest.match(/^(\d+)\s+([\s\S]*)$/);
+			if (m) {
+				n = Math.max(2, Math.min(8, Number(m[1])));
+				rest = m[2]!.trim();
+			}
+		}
+		if (!rest) {
+			const typed = await ctx.ui.editor("Prompt for the parallel run", "");
+			if (!typed?.trim()) return;
+			rest = typed.trim();
+		}
+		await runParallel({ pi, ctx, prompt: rest, n, cfg, ledger, jev });
+	};
+	pi.registerCommand("duo", { description: "Ask 2 models the same prompt in parallel", handler: parallelCommand(2) });
+	pi.registerCommand("trio", { description: "Ask 3 models the same prompt in parallel", handler: parallelCommand(3) });
+	pi.registerCommand("par", { description: "Ask N models in parallel: /par [N] <prompt>", handler: parallelCommand() });
+
+	// ---- helpers -------------------------------------------------------------
+
+	function setStatus(ctx: ExtensionContext, text: string) {
+		if (ctx.hasUI) ctx.ui.setStatus(STATUS_KEY, text);
+	}
+
+	function updateStatus(ctx: ExtensionContext) {
+		if (!ctx.hasUI) return;
+		if (!enabled) return setStatus(ctx, "router off");
+		if (!lastDecision) return setStatus(ctx, jev.available() ? `router ready (${jev.transport()})` : "router (no Jev credential: heuristic)");
+		const d = lastDecision;
+		const bits = [`${d.tier}${d.tier !== d.requestedTier ? `←${d.requestedTier}` : ""}`, `${(d.confidence * 100).toFixed(0)}%`];
+		if (d.jevMs !== undefined) bits.push(`${d.jevMs}ms`);
+		setStatus(ctx, `router ${bits.join(" ")}${d.switched ? " ⇄" : ""}`);
+	}
+
+	function showStatus(ctx: ExtensionCommandContext) {
+		const lines: string[] = [];
+		lines.push(`enabled: ${enabled}   jev: ${jev.describe()}   pinned: ${pinnedUntilTurn > turn ? `${pinnedUntilTurn - turn} turns` : "no"}`);
+		if (ctx.model) lines.push(`current: ${modelKey(ctx.model)} (${billingFor(ctx.model, cfg, ctx.modelRegistry)})`);
+		for (const tier of TIERS) {
+			const items = (cfg.tiers[tier] ?? []).map((key) => {
+				const slash = key.indexOf("/");
+				const m = ctx.modelRegistry.find(key.slice(0, slash), key.slice(slash + 1));
+				if (!m) return `${key}✗`;
+				if (!ctx.modelRegistry.hasConfiguredAuth(m)) return `${key}(no auth)`;
+				const block = ledger.isBlocked(m.provider, cfg);
+				return block.blocked ? `${key}(blocked: ${block.reason})` : `${key}(${billingFor(m, cfg, ctx.modelRegistry)})`;
+			});
+			lines.push(`${tier}: ${items.join(", ") || "-"}`);
+		}
+		lines.push(...ledger.summaryLines());
+		if (lastDecision) lines.push(`last: ${lastDecision.reason}`);
+		showCard(ctx, "router status", lines);
+	}
+
+	function showExplain(ctx: ExtensionCommandContext) {
+		if (!lastDecision) {
+			ctx.ui.notify("router: no decision yet this session", "info");
+			return;
+		}
+		const d = lastDecision;
+		const lines = [
+			`tier ${d.tier} (asked ${d.requestedTier}) confidence ${(d.confidence * 100).toFixed(0)}%` +
+				(d.jevModel ? ` via ${d.jevModel} in ${d.jevMs}ms` : " via heuristic"),
+			`needs_tools ${d.needsTools?.toFixed(2) ?? "-"}   stakes ${d.stakes?.toFixed(2) ?? "-"}`,
+			`chosen: ${d.model ? modelKey(d.model) : "-"}${d.switched ? " (switched)" : ""}`,
+			`reason: ${d.reason}`,
+		];
+		for (const c of d.candidates) {
+			lines.push(
+				c.skipped
+					? `  ${c.key}: skipped (${c.skipped})`
+					: `  ${c.key}: ${c.billing} ~$${c.costUsd.toFixed(4)}${c.switchPenaltyUsd ? ` +switch $${c.switchPenaltyUsd.toFixed(4)}` : ""} cap ${c.capability}`,
+			);
+		}
+		showCard(ctx, "router explain", lines);
+	}
+
+	function showCard(ctx: ExtensionCommandContext, title: string, lines: string[]) {
+		pi.appendEntry("modelrouter-card", { title, lines });
+	}
+
+	pi.registerEntryRenderer<{ title: string; lines: string[] }>("modelrouter-card", (entry, _opts, theme) => {
+		const c = new Container();
+		c.addChild(new Text(theme.fg("accent", `[${entry.data?.title ?? "router"}]`), 1, 0));
+		for (const line of entry.data?.lines ?? []) c.addChild(new Text(line, 1, 0));
+		return c;
+	});
+}

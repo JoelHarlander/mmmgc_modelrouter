@@ -1,0 +1,2233 @@
+[
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "AA Intelligence Index",
+    "score": 52.67,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "GPQA Diamond",
+    "score": 96.06,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 88.39,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 59.09,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "tau3-Banking",
+    "score": 41.44,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-6-astra",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "AA Intelligence Index",
+    "score": 38.36,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/gpt-5-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "GPQA Diamond",
+    "score": 93.54,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 84.27,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 14.65,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": 60.61,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "tau2-bench",
+    "score": 93.86,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "tau3-Banking",
+    "score": 38.97,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "AA Intelligence Index",
+    "score": 24.07,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/gpt-5-4-mini",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "GPQA Diamond",
+    "score": 87.47,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-4-mini",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 59.18,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-4-mini",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 2.02,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-4-mini",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": 52.27,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-4-mini",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "tau2-bench",
+    "score": 83.33,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-4-mini",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "tau3-Banking",
+    "score": 25.57,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-4-mini",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gpt-5-4-mini",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "AA Intelligence Index",
+    "score": 53.35,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/claude-fable-5-1",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "GPQA Diamond",
+    "score": 93.74,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-fable-5-1",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 91.39,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-fable-5-1",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 52.02,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-fable-5-1",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-fable-5-1",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-fable-5-1",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "tau3-Banking",
+    "score": 47.22,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-fable-5-1",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-fable-5-1",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "AA Intelligence Index",
+    "score": 50.78,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/claude-opus-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "GPQA Diamond",
+    "score": 93.23,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-opus-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 89.14,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-opus-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 48.99,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-opus-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-opus-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-opus-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "tau3-Banking",
+    "score": 42.06,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-opus-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-opus-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "AA Intelligence Index",
+    "score": 38.16,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/claude-sonnet-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "GPQA Diamond",
+    "score": 91.11,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-sonnet-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 80.52,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-sonnet-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 14.14,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-sonnet-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-sonnet-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-sonnet-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "tau3-Banking",
+    "score": 37.32,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-sonnet-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-sonnet-5",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "AA Intelligence Index",
+    "score": 15.41,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/claude-4-5-haiku",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "GPQA Diamond",
+    "score": 64.65,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-4-5-haiku",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-4-5-haiku",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-4-5-haiku",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": 27.27,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-4-5-haiku",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "tau2-bench",
+    "score": 32.46,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-4-5-haiku",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "tau3-Banking",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-4-5-haiku",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": 51.11,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/claude-4-5-haiku",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "AA Intelligence Index",
+    "score": 44.31,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/grok-4-6",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "GPQA Diamond",
+    "score": 94.95,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/grok-4-6",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 88.39,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/grok-4-6",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 21.21,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/grok-4-6",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/grok-4-6",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/grok-4-6",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "tau3-Banking",
+    "score": 50.72,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/grok-4-6",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/grok-4-6",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "AA Intelligence Index",
+    "score": 44.78,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/glm-5-3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "GPQA Diamond",
+    "score": 91.72,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 83.9,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 41.92,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "tau3-Banking",
+    "score": 50.31,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "AA Intelligence Index",
+    "score": 41.81,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/glm-5-3-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "GPQA Diamond",
+    "score": 91.21,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 84.27,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 32.83,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "tau3-Banking",
+    "score": 47.22,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/glm-5-3-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "AA Intelligence Index",
+    "score": 36.0,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-pro",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "GPQA Diamond",
+    "score": 92.83,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-pro",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 78.65,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-pro",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 14.14,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-pro",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-pro",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-pro",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "tau3-Banking",
+    "score": 39.59,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-pro",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-pro",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "AA Intelligence Index",
+    "score": 34.33,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "GPQA Diamond",
+    "score": 90.81,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 78.65,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 12.12,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "tau3-Banking",
+    "score": 39.38,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "AA Intelligence Index",
+    "score": 39.46,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "GPQA Diamond",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 26.77,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "tau3-Banking",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/deepseek-v4-1-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "AA Intelligence Index",
+    "score": 39.06,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/gemini-3-7-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "GPQA Diamond",
+    "score": 94.55,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-7-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 85.77,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-7-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 13.64,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-7-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-7-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-7-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "tau3-Banking",
+    "score": 32.78,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-7-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-7-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "AA Intelligence Index",
+    "score": 32.6,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "GPQA Diamond",
+    "score": 92.22,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 78.65,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 6.57,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": 40.91,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "tau2-bench",
+    "score": 95.32,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "tau3-Banking",
+    "score": 32.16,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "AA Intelligence Index",
+    "score": 29.72,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/gemini-3-1-pro-preview",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "GPQA Diamond",
+    "score": 94.14,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-1-pro-preview",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 73.78,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-1-pro-preview",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 4.04,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-1-pro-preview",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": 53.79,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-1-pro-preview",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "tau2-bench",
+    "score": 95.61,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-1-pro-preview",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "tau3-Banking",
+    "score": 21.44,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-1-pro-preview",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/gemini-3-1-pro-preview",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "AA Intelligence Index",
+    "score": 43.59,
+    "unit": "index (v4.3.2)",
+    "source": "https://artificialanalysis.ai/models/kimi-k3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "GPQA Diamond",
+    "score": 93.54,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/kimi-k3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "Terminal-Bench 2.1 (AA)",
+    "score": 85.02,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/kimi-k3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "Terminal-Bench 4.0 (AA)",
+    "score": 12.63,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/kimi-k3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "Terminal-Bench Hard (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/kimi-k3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "tau2-bench",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/kimi-k3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "tau3-Banking",
+    "score": 45.98,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/kimi-k3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "LiveCodeBench (AA)",
+    "score": null,
+    "unit": "%",
+    "source": "https://artificialanalysis.ai/models/kimi-k3",
+    "retrieved": "2026-09-20"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "Aider Polyglot",
+    "score": null,
+    "unit": "%",
+    "source": "https://aider.chat/docs/leaderboards/",
+    "retrieved": "2026-09-20",
+    "note": "aider.chat leaderboard last updated 2025-11-20 (newest entry: gpt-5); no candidate model has been evaluated"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "AA Coding Agent Index",
+    "score": 62,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/articles/benchmarking-gpt-6-astra",
+    "retrieved": "2026-09-20",
+    "note": "GPT-6 Astra (max) in Codex harness"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "AA Coding Agent Index",
+    "score": 62,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/articles/benchmarking-gpt-6-astra",
+    "retrieved": "2026-09-20",
+    "note": "Claude Fable 5.1 (max, with fallback) in Claude Code harness"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "AA Coding Agent Index",
+    "score": 60,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/articles/benchmarking-gpt-6-astra",
+    "retrieved": "2026-09-20",
+    "note": "Claude Opus 5 in Claude Code harness"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "AA Coding Agent Index",
+    "score": null,
+    "unit": "index",
+    "source": "https://artificialanalysis.ai/agents/coding",
+    "retrieved": "2026-09-20",
+    "note": "live Coding Agent Index leaderboard loads data client-side; no per-model value published in accessible sources"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "SWE-bench Verified",
+    "score": 66.6,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "'Claude 4.5 Haiku (high)', mini-SWE-agent, 2026-02-17 submission"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "SWE-bench Verified",
+    "score": 80.6,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro (README)",
+    "retrieved": "2026-09-20",
+    "note": "DeepSeek V4-Pro Max; lab-reported (comparison table), mini-SWE-agent-style harness not specified"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "SWE-bench Verified",
+    "score": 79.0,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "DeepSeek V4-Flash Max; lab-reported"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "SWE-bench Verified",
+    "score": 80.6,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro (README)",
+    "retrieved": "2026-09-20",
+    "note": "'Gemini-3.1-Pro High'; as measured by DeepSeek in V4 comparison table"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "SWE-bench Verified",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://swebench.com/ (index leaderboard embed, Verified table)",
+    "retrieved": "2026-09-20",
+    "note": "no submission on swebench.com (leaderboard's newest entries date to 2026-02) and lab does not report it; the 2026 SWE ecosystem has moved to DeepSWE/FrontierSWE/SWE-Marathon"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "SWE-bench Pro",
+    "score": 46.1,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "'gemini-3.1-pro (thinking)' on Scale public leaderboard"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "SWE-bench Pro",
+    "score": 55.4,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro (README)",
+    "retrieved": "2026-09-20",
+    "note": "V4-Pro Max; lab-reported"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "SWE-bench Pro",
+    "score": 52.6,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "V4-Flash Max; lab-reported"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "SWE-bench Pro",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://scale.com/leaderboard/swe_bench_pro_public",
+    "retrieved": "2026-09-20",
+    "note": "not listed on Scale SWE-bench Pro public leaderboard and not reported by the lab"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "Terminal-Bench 2.1 (lab)",
+    "score": 90.6,
+    "unit": "% pass@1",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "DeepSeek Harness 'Minimal' mode, N=3, no network access; AA has no TB 2.1 value for this model"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "Terminal-Bench 4.0 (official tbench.ai)",
+    "score": 58.18,
+    "unit": "%",
+    "source": "https://tbench.ai (Terminal-Bench 4.0 leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "official leaderboard, max effort, Codex/Claude Code-family harnesses as submitted"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "Terminal-Bench 4.0 (official tbench.ai)",
+    "score": 57.88,
+    "unit": "%",
+    "source": "https://tbench.ai (Terminal-Bench 4.0 leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "official leaderboard, max effort, Codex/Claude Code-family harnesses as submitted"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "Terminal-Bench 4.0 (official tbench.ai)",
+    "score": 53.94,
+    "unit": "%",
+    "source": "https://tbench.ai (Terminal-Bench 4.0 leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "official leaderboard, max effort, Codex/Claude Code-family harnesses as submitted"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "Terminal-Bench 4.0 (official tbench.ai)",
+    "score": 41.82,
+    "unit": "%",
+    "source": "https://tbench.ai (Terminal-Bench 4.0 leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "official leaderboard, max effort, Codex/Claude Code-family harnesses as submitted"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "Terminal-Bench 4.0 (official tbench.ai)",
+    "score": 20.3,
+    "unit": "%",
+    "source": "https://tbench.ai (Terminal-Bench 4.0 leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "official leaderboard, max effort, Codex/Claude Code-family harnesses as submitted"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "Terminal-Bench 4.0 (official tbench.ai)",
+    "score": 12.42,
+    "unit": "%",
+    "source": "https://tbench.ai (Terminal-Bench 4.0 leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "official leaderboard, max effort, Codex/Claude Code-family harnesses as submitted"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "Terminal-Bench 4.0 (official tbench.ai)",
+    "score": 11.21,
+    "unit": "%",
+    "source": "https://tbench.ai (Terminal-Bench 4.0 leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "official leaderboard, max effort, Codex/Claude Code-family harnesses as submitted"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "LiveCodeBench (lab)",
+    "score": 93.5,
+    "unit": "% pass@1",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro (README)",
+    "retrieved": "2026-09-20",
+    "note": "V4-Pro Max; lab-reported"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "LiveCodeBench (lab)",
+    "score": 91.6,
+    "unit": "% pass@1",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "V4-Flash Max; lab-reported"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "LiveCodeBench (official site)",
+    "score": null,
+    "unit": "% pass@1",
+    "source": "https://livecodebench.github.io/leaderboard.html",
+    "retrieved": "2026-09-20",
+    "note": "official LiveCodeBench leaderboard data (performances_generation.json) stops at mid-2025 models (Gemini 2.5, o4-mini era); candidate not evaluated"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "GPQA Diamond (lab)",
+    "score": 90.9,
+    "unit": "% pass@1",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "DeepSeek-measured, max reasoning effort"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "DeepSWE v1.1",
+    "score": 68.0,
+    "unit": "% resolved",
+    "source": "https://artificialanalysis.ai/articles/benchmarking-gpt-6-astra",
+    "retrieved": "2026-09-20",
+    "note": "AA article: GPT-6 Astra 68% (vs GPT-5.6 Sol 72%) in the AA Coding Agent Index run"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "DeepSWE v1.1",
+    "score": 67.0,
+    "unit": "% resolved",
+    "source": "https://www.kimi.com/blog/kimi-k3",
+    "retrieved": "2026-09-20",
+    "note": "from official DeepSWE leaderboard as cited in Kimi K3 blog"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "DeepSWE v1.1",
+    "score": 74.0,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "Opus-5.0 as measured by DeepSeek"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "DeepSWE v1.1",
+    "score": 65.9,
+    "unit": "% resolved",
+    "source": "https://x.ai/news/grok-4-6",
+    "retrieved": "2026-09-20",
+    "note": "x.ai-reported"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "DeepSWE v1.1",
+    "score": 66.9,
+    "unit": "% resolved",
+    "source": "https://z.ai/blog/glm-5.3",
+    "retrieved": "2026-09-20",
+    "note": "z.ai-reported, mini-swe-agent harness"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "DeepSWE v1.1",
+    "score": 63.4,
+    "unit": "% resolved",
+    "source": "https://z.ai/blog/glm-5.3-flash",
+    "retrieved": "2026-09-20",
+    "note": "z.ai-reported"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "DeepSWE v1.1",
+    "score": 62.7,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "DeepSeek-measured"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "DeepSWE v1.1",
+    "score": 54.4,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "DeepSeek-measured"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "DeepSWE v1.1",
+    "score": 74.2,
+    "unit": "% resolved",
+    "source": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash (README)",
+    "retrieved": "2026-09-20",
+    "note": "DeepSeek-measured (74.2 mini-SWE; 69.8 Claude Code, 72.6 DSH Minimal)"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "DeepSWE v1.1",
+    "score": 65.3,
+    "unit": "% resolved",
+    "source": "https://z.ai/blog/glm-5.3-flash",
+    "retrieved": "2026-09-20",
+    "note": "as measured by Z.ai in GLM-5.3-Flash comparison table"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "DeepSWE v1.1",
+    "score": 67.5,
+    "unit": "% resolved",
+    "source": "https://www.kimi.com/blog/kimi-k3",
+    "retrieved": "2026-09-20",
+    "note": "Kimi Code harness (67.3 with mini-SWE-agent per official leaderboard)"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "DeepSWE v1.1",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://deepswe.datacurve.ai/",
+    "retrieved": "2026-09-20",
+    "note": "no value found in any accessible source (official leaderboard site not reachable via curl; not reported by the lab)"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "DeepSWE v1.1",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://deepswe.datacurve.ai/",
+    "retrieved": "2026-09-20",
+    "note": "no value found in any accessible source (official leaderboard site not reachable via curl; not reported by the lab)"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "DeepSWE v1.1",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://deepswe.datacurve.ai/",
+    "retrieved": "2026-09-20",
+    "note": "no value found in any accessible source (official leaderboard site not reachable via curl; not reported by the lab)"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "DeepSWE v1.1",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://deepswe.datacurve.ai/",
+    "retrieved": "2026-09-20",
+    "note": "no value found in any accessible source (official leaderboard site not reachable via curl; not reported by the lab)"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "DeepSWE v1.1",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://deepswe.datacurve.ai/",
+    "retrieved": "2026-09-20",
+    "note": "no value found in any accessible source (official leaderboard site not reachable via curl; not reported by the lab)"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "DeepSWE v1.1",
+    "score": null,
+    "unit": "% resolved",
+    "source": "https://deepswe.datacurve.ai/",
+    "retrieved": "2026-09-20",
+    "note": "no value found in any accessible source (official leaderboard site not reachable via curl; not reported by the lab)"
+  },
+  {
+    "model": "anthropic/claude-fable-5.1",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.1371,
+    "unit": "score (rank 1)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "openai/gpt-6-astra",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.1154,
+    "unit": "score (rank 2)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "anthropic/claude-opus-5",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.1016,
+    "unit": "score (rank 4)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "moonshotai/kimi-k3",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.0622,
+    "unit": "score (rank 8)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "anthropic/claude-sonnet-5",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.0597,
+    "unit": "score (rank 9)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "openai/gpt-5.5",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.0503,
+    "unit": "score (rank 10)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.0488,
+    "unit": "score (rank 12)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "deepseek/deepseek-v4-pro",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.0414,
+    "unit": "score (rank 16)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "z-ai/glm-5.3",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.0305,
+    "unit": "score (rank 18)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "xai/grok-4.6",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.0201,
+    "unit": "score (rank 21)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "deepseek/deepseek-v4-flash",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.018,
+    "unit": "score (rank 22)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "z-ai/glm-5.3-flash",
+    "benchmark": "LMArena Agent Score",
+    "score": 0.0115,
+    "unit": "score (rank 25)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "google/gemini-3.7-flash",
+    "benchmark": "LMArena Agent Score",
+    "score": -0.006,
+    "unit": "score (rank 28)",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "LMArena agent leaderboard avgScore, best/max-effort variant"
+  },
+  {
+    "model": "openai/gpt-5.4-mini",
+    "benchmark": "LMArena Agent Score",
+    "score": null,
+    "unit": "score",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "not listed on the LMArena agent leaderboard"
+  },
+  {
+    "model": "anthropic/claude-haiku-4.5",
+    "benchmark": "LMArena Agent Score",
+    "score": null,
+    "unit": "score",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "not listed on the LMArena agent leaderboard"
+  },
+  {
+    "model": "google/gemini-3.5-flash",
+    "benchmark": "LMArena Agent Score",
+    "score": null,
+    "unit": "score",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "not listed on the LMArena agent leaderboard"
+  },
+  {
+    "model": "google/gemini-3.1-pro-preview",
+    "benchmark": "LMArena Agent Score",
+    "score": null,
+    "unit": "score",
+    "source": "https://lmarena.ai/leaderboard (agent leaderboard)",
+    "retrieved": "2026-09-20",
+    "note": "not listed on the LMArena agent leaderboard"
+  }
+]

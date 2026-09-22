@@ -1,0 +1,7183 @@
+{
+  "anthropic/claude-fable-5.1": {
+    "id": "anthropic/claude-fable-5.1",
+    "name": "Claude Fable 5.1",
+    "created": 1755815280,
+    "released": 1788134400,
+    "description": "Claude Fable 5.1 improves on Fable 5 across long-running agentic coding, knowledge work, and research, following instructions precisely over sessions that run unattended for hours.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "mandatory": false,
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "anthropic | anthropic/claude-fable-5.1",
+        "model_name": "Claude Fable 5.1",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00001",
+          "completion": "0.00005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000025",
+          "input_cache_write": "0.0000125",
+          "discount": 0
+        },
+        "provider_name": "anthropic",
+        "has_zdr": false,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "explicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.000011",
+              "completion": "0.000055",
+              "input_cache_read": "0.000000275",
+              "input_cache_write": "0.00001375"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.964,
+        "latency_last_1h": {
+          "p50": 4397,
+          "p95": 9402.699999999999
+        },
+        "throughput_last_1h": {
+          "p50": 77.5,
+          "p95": 82.85
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "bedrock | anthropic/claude-fable-5.1",
+        "model_name": "Claude Fable 5.1",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00001",
+          "completion": "0.00005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000025",
+          "input_cache_write": "0.0000125",
+          "discount": 0
+        },
+        "provider_name": "bedrock",
+        "has_zdr": false,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "explicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 2184.5,
+          "p95": 2233.05
+        },
+        "throughput_last_1h": {
+          "p50": 79.5,
+          "p95": 84.55
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "vertexAnthropic | anthropic/claude-fable-5.1",
+        "model_name": "Claude Fable 5.1",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00001",
+          "completion": "0.00005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000025",
+          "input_cache_write": "0.0000125",
+          "discount": 0
+        },
+        "provider_name": "vertexAnthropic",
+        "has_zdr": false,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "explicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.8697,
+        "latency_last_1h": {
+          "p50": 1335.5,
+          "p95": 1592.45
+        },
+        "throughput_last_1h": {
+          "p50": 84,
+          "p95": 87.55
+        },
+        "supports_implicit_caching": false
+      }
+    ]
+  },
+  "anthropic/claude-haiku-4.5": {
+    "id": "anthropic/claude-haiku-4.5",
+    "name": "Claude Haiku 4.5",
+    "created": 1755815280,
+    "released": 1760486400,
+    "description": "Claude Haiku 4.5 matches Sonnet 4's performance on coding, computer use, and agent tasks at substantially lower cost and faster speeds. It delivers near-frontier performance and Claude\u2019s unique character at a price point that works for scaled sub-agent deployments, free tier products, and intelligence-sensitive applications with budget constraints.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "mandatory": false,
+      "supports_max_tokens": true
+    },
+    "endpoints": [
+      {
+        "name": "anthropic | anthropic/claude-haiku-4.5",
+        "model_name": "Claude Haiku 4.5",
+        "context_length": 200000,
+        "pricing": {
+          "prompt": "0.000001",
+          "completion": "0.000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000001",
+          "input_cache_write": "0.00000125",
+          "discount": 0
+        },
+        "provider_name": "anthropic",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "explicit-caching",
+          "file-input",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "web-search"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 64000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.949,
+        "uptime_last_1h": 99.8892,
+        "uptime_last_1d": 99.8557,
+        "latency_last_1h": {
+          "p50": 443.5,
+          "p95": 490.05
+        },
+        "throughput_last_1h": {
+          "p50": 101,
+          "p95": 108
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "bedrock | anthropic/claude-haiku-4.5",
+        "model_name": "Claude Haiku 4.5",
+        "context_length": 200000,
+        "pricing": {
+          "prompt": "0.000001",
+          "completion": "0.000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000001",
+          "input_cache_write": "0.00000125",
+          "discount": 0
+        },
+        "provider_name": "bedrock",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "file-input",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "explicit-caching",
+          "web-search"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000011",
+              "completion": "0.0000055",
+              "input_cache_read": "0.00000011",
+              "input_cache_write": "0.000001375"
+            }
+          },
+          {
+            "scope": "specific",
+            "geo_region": "eu",
+            "provider_region": "eu-central-1",
+            "pricing": {
+              "prompt": "0.0000011",
+              "completion": "0.0000055",
+              "input_cache_read": "0.00000011",
+              "input_cache_write": "0.000001375"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 64000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 682.5,
+          "p95": 988.2999999999998
+        },
+        "throughput_last_1h": {
+          "p50": 110,
+          "p95": 120
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "claudeaws | anthropic/claude-haiku-4.5",
+        "model_name": "Claude Haiku 4.5",
+        "context_length": 200000,
+        "pricing": {
+          "prompt": "0.000001",
+          "completion": "0.000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000001",
+          "input_cache_write": "0.00000125",
+          "discount": 0
+        },
+        "provider_name": "claudeaws",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "file-input",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "explicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 64000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9972,
+        "latency_last_1h": {
+          "p50": 977,
+          "p95": 1658.0999999999995
+        },
+        "throughput_last_1h": {
+          "p50": 93,
+          "p95": 198
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "vertexAnthropic | anthropic/claude-haiku-4.5",
+        "model_name": "Claude Haiku 4.5",
+        "context_length": 200000,
+        "pricing": {
+          "prompt": "0.000001",
+          "completion": "0.000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000001",
+          "input_cache_write": "0.00000125",
+          "discount": 0
+        },
+        "provider_name": "vertexAnthropic",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "explicit-caching",
+          "file-input",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "web-search"
+        ],
+        "inference_regions": [
+          {
+            "scope": "specific",
+            "geo_region": "us",
+            "provider_region": "us-east5",
+            "pricing": {
+              "prompt": "0.0000011",
+              "completion": "0.0000055",
+              "input_cache_read": "0.00000011",
+              "input_cache_write": "0.000001375"
+            }
+          },
+          {
+            "scope": "specific",
+            "geo_region": "eu",
+            "provider_region": "europe-west1",
+            "pricing": {
+              "prompt": "0.0000011",
+              "completion": "0.0000055",
+              "input_cache_read": "0.00000011",
+              "input_cache_write": "0.000001375"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 64000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9914,
+        "latency_last_1h": {
+          "p50": 726,
+          "p95": 1546.4499999999998
+        },
+        "throughput_last_1h": {
+          "p50": 100,
+          "p95": 103.4
+        },
+        "supports_implicit_caching": false
+      }
+    ]
+  },
+  "anthropic/claude-opus-5": {
+    "id": "anthropic/claude-opus-5",
+    "name": "Claude Opus 5",
+    "created": 1755815280,
+    "released": 1784851200,
+    "description": "Claude Opus 5 is the latest model in Anthropic's Opus family and a step-change improvement over Opus 4.8. It delivers major gains over Opus 4.8 in agentic coding, professional knowledge work, and long-horizon reasoning, and it is stronger per token across effort levels.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "anthropic | anthropic/claude-opus-5",
+        "model_name": "Claude Opus 5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000005",
+          "completion": "0.000025",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000005",
+          "input_cache_write": "0.00000625",
+          "discount": 0
+        },
+        "provider_name": "anthropic",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "tool-use",
+          "reasoning",
+          "vision",
+          "file-input",
+          "explicit-caching",
+          "web-search",
+          "fast"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000055",
+              "completion": "0.0000275",
+              "input_cache_read": "0.00000055",
+              "input_cache_write": "0.000006875"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 98.3989,
+        "latency_last_1h": {
+          "p50": 1696,
+          "p95": 5267
+        },
+        "throughput_last_1h": {
+          "p50": 284.5,
+          "p95": 425.75
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "bedrock | anthropic/claude-opus-5",
+        "model_name": "Claude Opus 5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000005",
+          "completion": "0.000025",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000005",
+          "input_cache_write": "0.00000625",
+          "discount": 0
+        },
+        "provider_name": "bedrock",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "tool-use",
+          "reasoning",
+          "vision",
+          "file-input",
+          "explicit-caching",
+          "web-search"
+        ],
+        "inference_regions": [
+          {
+            "scope": "specific",
+            "geo_region": "eu",
+            "provider_region": "eu-central-1",
+            "pricing": {
+              "prompt": "0.0000055",
+              "completion": "0.0000275",
+              "input_cache_read": "0.00000055",
+              "input_cache_write": "0.000006875"
+            }
+          },
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000055",
+              "completion": "0.0000275",
+              "input_cache_read": "0.00000055",
+              "input_cache_write": "0.000006875"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 92.2727,
+        "uptime_last_1h": 93.7997,
+        "uptime_last_1d": 99.9544,
+        "latency_last_1h": {
+          "p50": 5329.5,
+          "p95": 9822.8
+        },
+        "throughput_last_1h": {
+          "p50": 75,
+          "p95": 90
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "claudeaws | anthropic/claude-opus-5",
+        "model_name": "Claude Opus 5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000005",
+          "completion": "0.000025",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000005",
+          "input_cache_write": "0.00000625",
+          "discount": 0
+        },
+        "provider_name": "claudeaws",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "tool-use",
+          "reasoning",
+          "vision",
+          "file-input",
+          "explicit-caching",
+          "web-search"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": null,
+        "uptime_last_1h": null,
+        "uptime_last_1d": 30.2161,
+        "latency_last_1h": null,
+        "throughput_last_1h": null,
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "vertexAnthropic | anthropic/claude-opus-5",
+        "model_name": "Claude Opus 5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000005",
+          "completion": "0.000025",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000005",
+          "input_cache_write": "0.00000625",
+          "discount": 0
+        },
+        "provider_name": "vertexAnthropic",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "tool-use",
+          "reasoning",
+          "vision",
+          "file-input",
+          "explicit-caching",
+          "web-search"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000055",
+              "completion": "0.0000275",
+              "input_cache_read": "0.00000055",
+              "input_cache_write": "0.000006875"
+            }
+          },
+          {
+            "scope": "zone",
+            "geo_region": "eu",
+            "pricing": {
+              "prompt": "0.0000055",
+              "completion": "0.0000275",
+              "input_cache_read": "0.00000055",
+              "input_cache_write": "0.000006875"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.9716,
+        "uptime_last_1h": 99.9797,
+        "uptime_last_1d": 99.9082,
+        "latency_last_1h": {
+          "p50": 3019,
+          "p95": 7905.099999999986
+        },
+        "throughput_last_1h": {
+          "p50": 82,
+          "p95": 173
+        },
+        "supports_implicit_caching": false
+      }
+    ]
+  },
+  "anthropic/claude-sonnet-5": {
+    "id": "anthropic/claude-sonnet-5",
+    "name": "Claude Sonnet 5",
+    "created": 1755815280,
+    "released": 1782691200,
+    "description": "Sonnet 5 is an upgrade to Sonnet 4.6, with gains across agentic coding and professional work. It builds on the strengths of previous Sonnet models, bringing top-tier intelligence at Sonnet pricing for coding, agents, and everyday professional work at scale.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "mandatory": false,
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "anthropic | anthropic/claude-sonnet-5",
+        "model_name": "Claude Sonnet 5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000002",
+          "completion": "0.00001",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "input_cache_write": "0.0000025",
+          "discount": 0
+        },
+        "provider_name": "anthropic",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "explicit-caching",
+          "file-input",
+          "vision",
+          "web-search"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000022",
+              "completion": "0.000011",
+              "input_cache_read": "0.00000022",
+              "input_cache_write": "0.00000275"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.8959,
+        "uptime_last_1h": 99.9636,
+        "uptime_last_1d": 99.9769,
+        "latency_last_1h": {
+          "p50": 1286.5,
+          "p95": 5859.149999999999
+        },
+        "throughput_last_1h": {
+          "p50": 102,
+          "p95": 107.85
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "bedrock | anthropic/claude-sonnet-5",
+        "model_name": "Claude Sonnet 5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000002",
+          "completion": "0.00001",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "input_cache_write": "0.0000025",
+          "discount": 0
+        },
+        "provider_name": "bedrock",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "explicit-caching",
+          "file-input",
+          "vision",
+          "web-search"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000022",
+              "completion": "0.000011",
+              "input_cache_read": "0.00000022",
+              "input_cache_write": "0.00000275"
+            }
+          },
+          {
+            "scope": "specific",
+            "geo_region": "eu",
+            "provider_region": "eu-central-1",
+            "pricing": {
+              "prompt": "0.0000022",
+              "completion": "0.000011",
+              "input_cache_read": "0.00000022",
+              "input_cache_write": "0.00000275"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1783,
+          "p95": 6342.799999999999
+        },
+        "throughput_last_1h": {
+          "p50": 84,
+          "p95": 115.65
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "claudeaws | anthropic/claude-sonnet-5",
+        "model_name": "Claude Sonnet 5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000002",
+          "completion": "0.00001",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "input_cache_write": "0.0000025",
+          "discount": 0
+        },
+        "provider_name": "claudeaws",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "explicit-caching",
+          "file-input",
+          "vision",
+          "web-search"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9983,
+        "latency_last_1h": {
+          "p50": 3225.5,
+          "p95": 6480.349999999999
+        },
+        "throughput_last_1h": {
+          "p50": 103,
+          "p95": 197
+        },
+        "supports_implicit_caching": false
+      },
+      {
+        "name": "vertexAnthropic | anthropic/claude-sonnet-5",
+        "model_name": "Claude Sonnet 5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000002",
+          "completion": "0.00001",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "input_cache_write": "0.0000025",
+          "discount": 0
+        },
+        "provider_name": "vertexAnthropic",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "explicit-caching",
+          "file-input",
+          "web-search",
+          "vision"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000022",
+              "completion": "0.000011",
+              "input_cache_read": "0.00000022",
+              "input_cache_write": "0.00000275"
+            }
+          },
+          {
+            "scope": "zone",
+            "geo_region": "eu",
+            "pricing": {
+              "prompt": "0.0000022",
+              "completion": "0.000011",
+              "input_cache_read": "0.00000022",
+              "input_cache_write": "0.00000275"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9951,
+        "latency_last_1h": {
+          "p50": 1476.5,
+          "p95": 6133.549999999999
+        },
+        "throughput_last_1h": {
+          "p50": 103,
+          "p95": 108
+        },
+        "supports_implicit_caching": false
+      }
+    ]
+  },
+  "deepseek/deepseek-v4-flash": {
+    "id": "deepseek/deepseek-v4-flash",
+    "name": "DeepSeek V4 Flash",
+    "created": 1755815280,
+    "released": 1776902400,
+    "description": "",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text\u2192text",
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "mandatory": false,
+      "supported_efforts": [
+        "high",
+        "xhigh"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "alibaba | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000022",
+          "completion": "0.00000066",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000022",
+          "discount": 0,
+          "peak_pricing": {
+            "multiplier": 2,
+            "windows": [
+              {
+                "start_minute_utc": 0,
+                "end_minute_utc": 840
+              }
+            ]
+          }
+        },
+        "provider_name": "alibaba",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9851,
+        "latency_last_1h": {
+          "p50": 2497.5,
+          "p95": 8455.799999999996
+        },
+        "throughput_last_1h": {
+          "p50": 95,
+          "p95": 104.39999999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "azure | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000019",
+          "completion": "0.00000051",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000028",
+          "discount": 0
+        },
+        "provider_name": "azure",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 99.963,
+        "uptime_last_1d": 99.6211,
+        "latency_last_1h": {
+          "p50": 9627,
+          "p95": 35483
+        },
+        "throughput_last_1h": {
+          "p50": 102,
+          "p95": 183.79999999999995
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "baseten | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000013",
+          "completion": "0.00000026",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000028",
+          "discount": 0
+        },
+        "provider_name": "baseten",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.00000013",
+              "completion": "0.00000026",
+              "input_cache_read": "0.000000028"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 96.7691,
+        "latency_last_1h": {
+          "p50": 563,
+          "p95": 1088.3999999999999
+        },
+        "throughput_last_1h": {
+          "p50": 384.5,
+          "p95": 388.54999999999995
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "deepinfra | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000006",
+          "completion": "0.00000018",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000015",
+          "discount": 0
+        },
+        "provider_name": "deepinfra",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 99.9867,
+        "uptime_last_1d": 99.9355,
+        "latency_last_1h": {
+          "p50": 1081,
+          "p95": 3472.6
+        },
+        "throughput_last_1h": {
+          "p50": 42,
+          "p95": 60.99999999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "digitalocean | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 262114,
+        "pricing": {
+          "prompt": "0.000000112",
+          "completion": "0.000000224",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000028",
+          "discount": 0
+        },
+        "provider_name": "digitalocean",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 52459,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 534,
+          "p95": 1386.6
+        },
+        "throughput_last_1h": {
+          "p50": 47,
+          "p95": 67.6
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "fireworks | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000022",
+          "completion": "0.00000066",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000007",
+          "discount": 0
+        },
+        "provider_name": "fireworks",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.00000033",
+              "completion": "0.00000099",
+              "input_cache_read": "0.0000000105"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "deprecated_at": 1790294400000,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9966,
+        "latency_last_1h": {
+          "p50": 769.5,
+          "p95": 3169.7499999999973
+        },
+        "throughput_last_1h": {
+          "p50": 158,
+          "p95": 226.04999999999995
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "gmicloud | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 1048575,
+        "pricing": {
+          "prompt": "0.000000286",
+          "completion": "0.000000858",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000000091",
+          "discount": 0
+        },
+        "provider_name": "gmicloud",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 2109,
+          "p95": 4017.899999999998
+        },
+        "throughput_last_1h": {
+          "p50": 158,
+          "p95": 158
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "novita | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000044",
+          "completion": "0.00000132",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000028",
+          "discount": 0
+        },
+        "provider_name": "novita",
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 393216,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1803,
+          "p95": 3665.2
+        },
+        "throughput_last_1h": {
+          "p50": 129,
+          "p95": 142.5
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "wafer | deepseek/deepseek-v4-flash",
+        "model_name": "DeepSeek V4 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000001",
+          "completion": "0.00000025",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000005",
+          "discount": 0
+        },
+        "provider_name": "wafer",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 434.5,
+          "p95": 1269.0499999999997
+        },
+        "throughput_last_1h": {
+          "p50": 117,
+          "p95": 184
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "deepseek/deepseek-v4-pro": {
+    "id": "deepseek/deepseek-v4-pro",
+    "name": "DeepSeek V4 Pro",
+    "created": 1755815280,
+    "released": 1776902400,
+    "description": "",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text\u2192text",
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "mandatory": false,
+      "supported_efforts": [
+        "high",
+        "xhigh"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "alibaba | deepseek/deepseek-v4-pro",
+        "model_name": "DeepSeek V4 Pro",
+        "context_length": 1048600,
+        "pricing": {
+          "prompt": "0.0000024",
+          "completion": "0.0000048",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "discount": 0
+        },
+        "provider_name": "alibaba",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 3019,
+          "p95": 5870.799999999999
+        },
+        "throughput_last_1h": {
+          "p50": 57,
+          "p95": 71
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "azure | deepseek/deepseek-v4-pro",
+        "model_name": "DeepSeek V4 Pro",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000174",
+          "completion": "0.00000348",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000145",
+          "discount": 0
+        },
+        "provider_name": "azure",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 613.5,
+          "p95": 817.8
+        },
+        "throughput_last_1h": {
+          "p50": 109,
+          "p95": 115.10000000000001
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "baseten | deepseek/deepseek-v4-pro",
+        "model_name": "DeepSeek V4 Pro",
+        "context_length": 1048600,
+        "pricing": {
+          "prompt": "0.00000132",
+          "completion": "0.00000396",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000132",
+          "discount": 0
+        },
+        "provider_name": "baseten",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.00000132",
+              "completion": "0.00000396",
+              "input_cache_read": "0.000000132"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048600,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9893,
+        "latency_last_1h": {
+          "p50": 936,
+          "p95": 4748.5
+        },
+        "throughput_last_1h": {
+          "p50": 125.5,
+          "p95": 152.95
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "deepinfra | deepseek/deepseek-v4-pro",
+        "model_name": "DeepSeek V4 Pro",
+        "context_length": 65536,
+        "pricing": {
+          "prompt": "0.0000013",
+          "completion": "0.0000026",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000001",
+          "discount": 0
+        },
+        "provider_name": "deepinfra",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 65536,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 500,
+          "p95": 1654.5999999999997
+        },
+        "throughput_last_1h": {
+          "p50": 51,
+          "p95": 56.7
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "deepseek | deepseek/deepseek-v4-pro",
+        "model_name": "DeepSeek V4 Pro",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000066",
+          "completion": "0.00000198",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000022",
+          "discount": 0,
+          "peak_pricing": {
+            "multiplier": 2,
+            "windows": [
+              {
+                "start_minute_utc": 60,
+                "end_minute_utc": 240,
+                "days_of_week": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5
+                ]
+              },
+              {
+                "start_minute_utc": 360,
+                "end_minute_utc": 600,
+                "days_of_week": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5
+                ]
+              }
+            ]
+          }
+        },
+        "provider_name": "deepseek",
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.9345,
+        "uptime_last_1h": 99.8835,
+        "uptime_last_1d": 99.9121,
+        "latency_last_1h": {
+          "p50": 1850,
+          "p95": 3962
+        },
+        "throughput_last_1h": {
+          "p50": 71.5,
+          "p95": 78.95
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "novita | deepseek/deepseek-v4-pro",
+        "model_name": "DeepSeek V4 Pro",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000016",
+          "completion": "0.0000032",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000135",
+          "discount": 0
+        },
+        "provider_name": "novita",
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 393216,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.7999,
+        "latency_last_1h": {
+          "p50": 1309,
+          "p95": 1871.8999999999999
+        },
+        "throughput_last_1h": {
+          "p50": 49,
+          "p95": 68
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "deepseek/deepseek-v4.1-flash": {
+    "id": "deepseek/deepseek-v4.1-flash",
+    "name": "DeepSeek V4.1 Flash",
+    "created": 1755815280,
+    "released": 1788825600,
+    "description": "DeepSeek V4.1 Flash is an AI model from DeepSeek designed for fast, efficient multimodal interactions. It combines native multimodal capabilities with a new architecture focused on stronger performance, faster responses, and lower computational cost.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image\u2192text",
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "alibaba | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000006",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000015",
+          "discount": 0,
+          "peak_pricing": {
+            "multiplier": 2,
+            "windows": [
+              {
+                "start_minute_utc": 0,
+                "end_minute_utc": 840
+              }
+            ]
+          }
+        },
+        "provider_name": "alibaba",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.8569,
+        "uptime_last_1h": 99.6114,
+        "uptime_last_1d": 99.9504,
+        "latency_last_1h": {
+          "p50": 4711.5,
+          "p95": 18986.499999999996
+        },
+        "throughput_last_1h": {
+          "p50": 164,
+          "p95": 176
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "baseten | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "baseten",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000003",
+              "completion": "0.0000012",
+              "input_cache_read": "0.00000003"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 32768,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.9023,
+        "uptime_last_1h": 99.8701,
+        "uptime_last_1d": 99.5789,
+        "latency_last_1h": {
+          "p50": 1090,
+          "p95": 4009
+        },
+        "throughput_last_1h": {
+          "p50": 277,
+          "p95": 277
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "boundless | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000002",
+          "completion": "0.000001",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000001",
+          "discount": 0
+        },
+        "provider_name": "boundless",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 97.0916,
+        "latency_last_1h": {
+          "p50": 345,
+          "p95": 1064.0999999999958
+        },
+        "throughput_last_1h": {
+          "p50": 133.5,
+          "p95": 164.75
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "deepinfra | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000002",
+          "completion": "0.0000006",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000006",
+          "discount": 0
+        },
+        "provider_name": "deepinfra",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9958,
+        "latency_last_1h": {
+          "p50": 365,
+          "p95": 2228.5
+        },
+        "throughput_last_1h": {
+          "p50": 76,
+          "p95": 105.79999999999998
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "deepseek | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000006",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000003",
+          "discount": 0,
+          "peak_pricing": {
+            "multiplier": 2,
+            "windows": [
+              {
+                "start_minute_utc": 60,
+                "end_minute_utc": 240,
+                "days_of_week": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5
+                ]
+              },
+              {
+                "start_minute_utc": 360,
+                "end_minute_utc": 600,
+                "days_of_week": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5
+                ]
+              }
+            ]
+          }
+        },
+        "provider_name": "deepseek",
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 384000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.8939,
+        "uptime_last_1h": 99.8692,
+        "uptime_last_1d": 99.8888,
+        "latency_last_1h": {
+          "p50": 1549,
+          "p95": 3168
+        },
+        "throughput_last_1h": {
+          "p50": 243,
+          "p95": 270.4
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "fireworks | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000022",
+          "completion": "0.00000066",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000007",
+          "discount": 0
+        },
+        "provider_name": "fireworks",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9774,
+        "latency_last_1h": {
+          "p50": 1113,
+          "p95": 3041.1
+        },
+        "throughput_last_1h": {
+          "p50": 158,
+          "p95": 225.79999999999995
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "gmicloud | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048575,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000006",
+          "discount": 0
+        },
+        "provider_name": "gmicloud",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048575,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1563,
+          "p95": 1900.8
+        },
+        "throughput_last_1h": {
+          "p50": 255,
+          "p95": 292.79999999999995
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "modal | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "modal",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1455,
+          "p95": 5056.399999999996
+        },
+        "throughput_last_1h": {
+          "p50": 164.5,
+          "p95": 177.54999999999998
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "morph | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "morph",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9595,
+        "latency_last_1h": {
+          "p50": 1403.5,
+          "p95": 3862.7499999999955
+        },
+        "throughput_last_1h": {
+          "p50": 23.5,
+          "p95": 33.4
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "novita | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000006",
+          "discount": 0
+        },
+        "provider_name": "novita",
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 393216,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9991,
+        "latency_last_1h": {
+          "p50": 3735,
+          "p95": 22358.79999999999
+        },
+        "throughput_last_1h": {
+          "p50": 233,
+          "p95": 240.2
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "parasail | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000006",
+          "discount": 0
+        },
+        "provider_name": "parasail",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 888,
+          "p95": 4156.799999999999
+        },
+        "throughput_last_1h": {
+          "p50": 126,
+          "p95": 126
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "particle | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000025",
+          "completion": "0.000001",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "particle",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.6148,
+        "latency_last_1h": {
+          "p50": 618,
+          "p95": 788.5
+        },
+        "throughput_last_1h": {
+          "p50": 164.5,
+          "p95": 174.85
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "relace | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000006",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000015",
+          "discount": 0
+        },
+        "provider_name": "relace",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9804,
+        "latency_last_1h": {
+          "p50": 1130,
+          "p95": 7018.899999999995
+        },
+        "throughput_last_1h": {
+          "p50": 27.5,
+          "p95": 46.3
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "runware | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000006",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000001",
+          "discount": 0
+        },
+        "provider_name": "runware",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 94.1176,
+        "uptime_last_1h": 86.6667,
+        "uptime_last_1d": 99.8502,
+        "latency_last_1h": {
+          "p50": 705,
+          "p95": 1922.6
+        },
+        "throughput_last_1h": {
+          "p50": 139,
+          "p95": 222
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "togetherai | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000006",
+          "discount": 0
+        },
+        "provider_name": "togetherai",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9833,
+        "latency_last_1h": {
+          "p50": 387,
+          "p95": 1753
+        },
+        "throughput_last_1h": {
+          "p50": 166,
+          "p95": 166
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "wafer | deepseek/deepseek-v4.1-flash",
+        "model_name": "DeepSeek V4.1 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000003",
+          "completion": "0.0000012",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000006",
+          "discount": 0
+        },
+        "provider_name": "wafer",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 550,
+          "p95": 1176.8
+        },
+        "throughput_last_1h": {
+          "p50": 63,
+          "p95": 99.9
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "google/gemini-3.1-pro-preview": {
+    "id": "google/gemini-3.1-pro-preview",
+    "name": "Gemini 3.1 Pro Preview",
+    "created": 1755815280,
+    "released": 1771459200,
+    "description": "Improved SWE and agentic capabilities, improved token efficiency and thinking, and expanded thinking levels.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "google | google/gemini-3.1-pro-preview",
+        "model_name": "Gemini 3.1 Pro Preview",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000002",
+          "prompt_tiers": [
+            {
+              "cost": "0.000002",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.000004",
+              "min": 200001
+            }
+          ],
+          "completion": "0.000012",
+          "completion_tiers": [
+            {
+              "cost": "0.000012",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.000018",
+              "min": 200001
+            }
+          ],
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "input_cache_read_tiers": [
+            {
+              "cost": "0.0000002",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.0000004",
+              "min": 200001
+            }
+          ],
+          "service_tiers": {
+            "priority": {
+              "prompt": "0.0000036",
+              "completion": "0.0000216",
+              "input_cache_read": "0.00000036",
+              "long_context": {
+                "threshold": 200001,
+                "prompt": "0.0000072",
+                "completion": "0.0000324",
+                "input_cache_read": "0.00000072"
+              }
+            },
+            "flex": {
+              "prompt": "0.000001",
+              "completion": "0.000006",
+              "input_cache_read": "0.0000002",
+              "long_context": {
+                "threshold": 200001,
+                "prompt": "0.000002",
+                "completion": "0.000009",
+                "input_cache_read": "0.0000004"
+              }
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "google",
+        "has_no_training": true,
+        "tags": [
+          "file-input",
+          "tool-use",
+          "reasoning",
+          "vision",
+          "web-search",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 64000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.945,
+        "latency_last_1h": {
+          "p50": 7475.5,
+          "p95": 8164.05
+        },
+        "throughput_last_1h": {
+          "p50": 119,
+          "p95": 125
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "vertex | google/gemini-3.1-pro-preview",
+        "model_name": "Gemini 3.1 Pro Preview",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000002",
+          "prompt_tiers": [
+            {
+              "cost": "0.000002",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.000004",
+              "min": 200001
+            }
+          ],
+          "completion": "0.000012",
+          "completion_tiers": [
+            {
+              "cost": "0.000012",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.000018",
+              "min": 200001
+            }
+          ],
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "input_cache_read_tiers": [
+            {
+              "cost": "0.0000002",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.0000004",
+              "min": 200001
+            }
+          ],
+          "service_tiers": {
+            "priority": {
+              "prompt": "0.0000036",
+              "completion": "0.0000216",
+              "input_cache_read": "0.00000036",
+              "long_context": {
+                "threshold": 200001,
+                "prompt": "0.0000072",
+                "completion": "0.0000324",
+                "input_cache_read": "0.00000072"
+              }
+            },
+            "flex": {
+              "prompt": "0.000001",
+              "completion": "0.000006",
+              "long_context": {
+                "threshold": 200001,
+                "prompt": "0.000002",
+                "completion": "0.000009"
+              }
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "vertex",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "file-input",
+          "tool-use",
+          "reasoning",
+          "vision",
+          "web-search",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 64000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.988,
+        "latency_last_1h": {
+          "p50": 3852,
+          "p95": 9731
+        },
+        "throughput_last_1h": {
+          "p50": 99,
+          "p95": 118.85000000000001
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "google/gemini-3.5-flash": {
+    "id": "google/gemini-3.5-flash",
+    "name": "Gemini 3.5 Flash",
+    "created": 1755815280,
+    "released": 1779148800,
+    "description": "Google's latest model, highly optimized for coding proficiency and parallel agentic execution loops. Defaults to medium thinking effort for faster and more cost-efficient responses.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file+video\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file",
+        "video"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "supported_efforts": [
+        "minimal",
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "google | google/gemini-3.5-flash",
+        "model_name": "Gemini 3.5 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000015",
+          "completion": "0.000009",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000015",
+          "service_tiers": {
+            "priority": {
+              "prompt": "0.0000027",
+              "completion": "0.0000162",
+              "input_cache_read": "0.00000027"
+            },
+            "flex": {
+              "prompt": "0.00000075",
+              "completion": "0.0000045",
+              "input_cache_read": "0.00000008"
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "google",
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "file-input",
+          "vision",
+          "tool-use",
+          "web-search",
+          "implicit-caching",
+          "video-input"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 64000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 99.3789,
+        "uptime_last_1d": 99.9477,
+        "latency_last_1h": {
+          "p50": 1595,
+          "p95": 4053.1999999999944
+        },
+        "throughput_last_1h": {
+          "p50": 285,
+          "p95": 285
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "vertex | google/gemini-3.5-flash",
+        "model_name": "Gemini 3.5 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000015",
+          "completion": "0.000009",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000015",
+          "service_tiers": {
+            "priority": {
+              "prompt": "0.0000027",
+              "completion": "0.0000162",
+              "input_cache_read": "0.00000027"
+            },
+            "flex": {
+              "prompt": "0.00000075",
+              "completion": "0.0000045",
+              "input_cache_read": "0.00000008"
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "vertex",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "file-input",
+          "vision",
+          "tool-use",
+          "web-search",
+          "implicit-caching",
+          "video-input"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.00000165",
+              "completion": "0.0000099",
+              "input_cache_read": "0.000000165"
+            }
+          },
+          {
+            "scope": "zone",
+            "geo_region": "eu",
+            "pricing": {
+              "prompt": "0.00000165",
+              "completion": "0.0000099",
+              "input_cache_read": "0.000000165"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 64000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9818,
+        "latency_last_1h": {
+          "p50": 1482,
+          "p95": 8475.199999999999
+        },
+        "throughput_last_1h": {
+          "p50": 161.5,
+          "p95": 172.54999999999998
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "google/gemini-3.7-flash": {
+    "id": "google/gemini-3.7-flash",
+    "name": "Gemini 3.7 Flash",
+    "created": 1755815280,
+    "released": 1786579200,
+    "description": "Gemini 3.7 Flash is the next iteration in the Gemini 3 model family, featuring algorithmic improvements to its core reasoning foundation. It supports customizable thinking configurations to control the mix of quality, cost and latency.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file+video\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file",
+        "video"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "google | google/gemini-3.7-flash",
+        "model_name": "Gemini 3.7 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000075",
+          "completion": "0.00000375",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000075",
+          "service_tiers": {
+            "flex": {
+              "prompt": "0.000000375",
+              "completion": "0.000001875",
+              "input_cache_read": "0.0000000375"
+            },
+            "priority": {
+              "prompt": "0.00000135",
+              "completion": "0.00000675",
+              "input_cache_read": "0.000000135"
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "google",
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "file-input",
+          "vision",
+          "tool-use",
+          "web-search",
+          "implicit-caching",
+          "video-input"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 65536,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.6855,
+        "uptime_last_1h": 99.8708,
+        "uptime_last_1d": 99.9435,
+        "latency_last_1h": {
+          "p50": 1060.5,
+          "p95": 4307.349999999999
+        },
+        "throughput_last_1h": {
+          "p50": 276,
+          "p95": 399.79999999999984
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "vertex | google/gemini-3.7-flash",
+        "model_name": "Gemini 3.7 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000075",
+          "completion": "0.00000375",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000075",
+          "service_tiers": {
+            "flex": {
+              "prompt": "0.000000375",
+              "completion": "0.000001875",
+              "input_cache_read": "0.0000000375"
+            },
+            "priority": {
+              "prompt": "0.00000135",
+              "completion": "0.00000675",
+              "input_cache_read": "0.000000135"
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "vertex",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "file-input",
+          "vision",
+          "tool-use",
+          "web-search",
+          "implicit-caching",
+          "video-input"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "eu",
+            "pricing": {
+              "prompt": "0.000000825",
+              "completion": "0.000004125",
+              "input_cache_read": "0.0000000825"
+            }
+          },
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.000000825",
+              "completion": "0.000004125",
+              "input_cache_read": "0.0000000825"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 65536,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 99.9887,
+        "uptime_last_1d": 99.9828,
+        "latency_last_1h": {
+          "p50": 2159,
+          "p95": 5740
+        },
+        "throughput_last_1h": {
+          "p50": 118,
+          "p95": 141.95
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "moonshotai/kimi-k3": {
+    "id": "moonshotai/kimi-k3",
+    "name": "Kimi K3",
+    "created": 1755815280,
+    "released": 1784160000,
+    "description": "Kimi\u2019s flagship model for long-horizon coding and end-to-end knowledge work, with a 1M-token context window.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "supported_efforts": [
+        "low",
+        "high",
+        "max"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "alibaba | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "alibaba",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.8681,
+        "latency_last_1h": {
+          "p50": 1345.5,
+          "p95": 2550.95
+        },
+        "throughput_last_1h": {
+          "p50": 76,
+          "p95": 86
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "baseten | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "baseten",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.000003",
+              "completion": "0.000015",
+              "input_cache_read": "0.0000003"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.9732,
+        "uptime_last_1h": 99.9886,
+        "uptime_last_1d": 99.3195,
+        "latency_last_1h": {
+          "p50": 1577,
+          "p95": 10101.8
+        },
+        "throughput_last_1h": {
+          "p50": 126,
+          "p95": 150
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "blackbox | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "blackbox",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": null,
+        "uptime_last_1h": null,
+        "uptime_last_1d": null,
+        "latency_last_1h": null,
+        "throughput_last_1h": null,
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "boundless | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000023",
+          "completion": "0.0000114",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000023",
+          "discount": 0
+        },
+        "provider_name": "boundless",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9321,
+        "latency_last_1h": {
+          "p50": 716,
+          "p95": 3808.9999999999995
+        },
+        "throughput_last_1h": {
+          "p50": 108.5,
+          "p95": 137.14999999999998
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "deepinfra | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000285",
+          "completion": "0.00001425",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000285",
+          "discount": 0
+        },
+        "provider_name": "deepinfra",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 96.9857,
+        "latency_last_1h": {
+          "p50": 612.5,
+          "p95": 4802.099999999998
+        },
+        "throughput_last_1h": {
+          "p50": 62,
+          "p95": 82.1
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "digitalocean | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000285",
+          "completion": "0.00001425",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000285",
+          "discount": 0
+        },
+        "provider_name": "digitalocean",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9948,
+        "latency_last_1h": {
+          "p50": 738.5,
+          "p95": 1994.0499999999993
+        },
+        "throughput_last_1h": {
+          "p50": 77,
+          "p95": 82.95
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "fireworks | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "fireworks",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000045",
+              "completion": "0.0000225",
+              "input_cache_read": "0.00000045"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9923,
+        "latency_last_1h": {
+          "p50": 2141,
+          "p95": 34414.799999999945
+        },
+        "throughput_last_1h": {
+          "p50": 46,
+          "p95": 61
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "inference-net | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000021",
+          "completion": "0.00001095",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000023",
+          "discount": 0
+        },
+        "provider_name": "inference-net",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "structured-output",
+          "tool-use",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning",
+          "response_format",
+          "structured_outputs"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1430,
+          "p95": 3141
+        },
+        "throughput_last_1h": {
+          "p50": 41,
+          "p95": 94.44999999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "modal | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "modal",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.3673,
+        "latency_last_1h": {
+          "p50": 620,
+          "p95": 3319
+        },
+        "throughput_last_1h": {
+          "p50": 86.5,
+          "p95": 106.04999999999998
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "moonshotai | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "moonshotai",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision",
+          "video-input"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.3197,
+        "uptime_last_1h": 99.2341,
+        "uptime_last_1d": 96.2473,
+        "latency_last_1h": {
+          "p50": 9703,
+          "p95": 45357
+        },
+        "throughput_last_1h": {
+          "p50": 50,
+          "p95": 73.7
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "morph | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000025",
+          "completion": "0.000014",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000029",
+          "discount": 0
+        },
+        "provider_name": "morph",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 2763,
+          "p95": 4573.2
+        },
+        "throughput_last_1h": {
+          "p50": 9.5,
+          "p95": 12.549999999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "nebius | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1024000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "discount": 0
+        },
+        "provider_name": "nebius",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.3051,
+        "latency_last_1h": {
+          "p50": 873,
+          "p95": 1191.6999999999998
+        },
+        "throughput_last_1h": {
+          "p50": 493,
+          "p95": 501.55
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "parasail | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "parasail",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.8785,
+        "latency_last_1h": {
+          "p50": 499,
+          "p95": 4102.999999999998
+        },
+        "throughput_last_1h": {
+          "p50": 141.5,
+          "p95": 257.4
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "runware | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "runware",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9634,
+        "latency_last_1h": {
+          "p50": 1306,
+          "p95": 48840
+        },
+        "throughput_last_1h": {
+          "p50": 12,
+          "p95": 132.0499999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "togetherai | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "togetherai",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 97.5559,
+        "latency_last_1h": {
+          "p50": 514,
+          "p95": 963.3
+        },
+        "throughput_last_1h": {
+          "p50": 208.5,
+          "p95": 242.95
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "wafer | moonshotai/kimi-k3",
+        "model_name": "Kimi K3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000003",
+          "completion": "0.00001275",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000003",
+          "discount": 0
+        },
+        "provider_name": "wafer",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9488,
+        "latency_last_1h": {
+          "p50": 337,
+          "p95": 553.8
+        },
+        "throughput_last_1h": {
+          "p50": 68,
+          "p95": 87
+        },
+        "supports_implicit_caching": false
+      }
+    ]
+  },
+  "openai/gpt-5.4-mini": {
+    "id": "openai/gpt-5.4-mini",
+    "name": "GPT 5.4 Mini",
+    "created": 1755815280,
+    "released": 1773705600,
+    "description": "GPT-5.4 Mini brings the strengths of GPT-5.4 to a faster, more efficient model designed for high-volume workloads.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "mandatory": false,
+      "supported_efforts": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "azure | openai/gpt-5.4-mini",
+        "model_name": "GPT 5.4 Mini",
+        "context_length": 400000,
+        "pricing": {
+          "prompt": "0.00000075",
+          "completion": "0.0000045",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000075",
+          "input_cache_write": "0",
+          "discount": 0
+        },
+        "provider_name": "azure",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "file-input",
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "web-search"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9859,
+        "latency_last_1h": {
+          "p50": 1235,
+          "p95": 2808.499999999999
+        },
+        "throughput_last_1h": {
+          "p50": 174.5,
+          "p95": 278.7
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "openai | openai/gpt-5.4-mini",
+        "model_name": "GPT 5.4 Mini",
+        "context_length": 400000,
+        "pricing": {
+          "prompt": "0.00000075",
+          "completion": "0.0000045",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000075",
+          "service_tiers": {
+            "priority": {
+              "prompt": "0.0000015",
+              "completion": "0.000009",
+              "input_cache_read": "0.00000015"
+            },
+            "flex": {
+              "prompt": "0.000000375",
+              "completion": "0.00000225",
+              "input_cache_read": "0.0000000375"
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "openai",
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "vision",
+          "file-input",
+          "implicit-caching",
+          "web-search",
+          "websocket-realtime",
+          "fast"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.000000825",
+              "completion": "0.00000495",
+              "input_cache_read": "0.0000000825"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9957,
+        "latency_last_1h": {
+          "p50": 523,
+          "p95": 1034.1
+        },
+        "throughput_last_1h": {
+          "p50": 64,
+          "p95": 64
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "openai/gpt-5.5": {
+    "id": "openai/gpt-5.5",
+    "name": "GPT 5.5",
+    "created": 1755815280,
+    "released": 1776988800,
+    "description": "",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "mandatory": false,
+      "supported_efforts": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "azure | openai/gpt-5.5",
+        "model_name": "GPT 5.5",
+        "context_length": 272000,
+        "pricing": {
+          "prompt": "0.000005",
+          "prompt_tiers": [
+            {
+              "cost": "0.000005",
+              "min": 0,
+              "max": 272000
+            },
+            {
+              "cost": "0.00001",
+              "min": 272000
+            }
+          ],
+          "completion": "0.00003",
+          "completion_tiers": [
+            {
+              "cost": "0.00003",
+              "min": 0,
+              "max": 272000
+            },
+            {
+              "cost": "0.000045",
+              "min": 272000
+            }
+          ],
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000005",
+          "input_cache_read_tiers": [
+            {
+              "cost": "0.0000005",
+              "min": 0,
+              "max": 272000
+            },
+            {
+              "cost": "0.000001",
+              "min": 272000
+            }
+          ],
+          "discount": 0
+        },
+        "provider_name": "azure",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "file-input",
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "web-search"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 272000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9163,
+        "latency_last_1h": {
+          "p50": 862,
+          "p95": 1631.5499999999997
+        },
+        "throughput_last_1h": {
+          "p50": 147,
+          "p95": 157.25
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "bedrock | openai/gpt-5.5",
+        "model_name": "GPT 5.5",
+        "context_length": 272000,
+        "pricing": {
+          "prompt": "0.0000055",
+          "completion": "0.000033",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000055",
+          "discount": 0
+        },
+        "provider_name": "bedrock",
+        "has_zdr": false,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "web-search",
+          "implicit-caching",
+          "file-input",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 272000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1339,
+          "p95": 6091.5999999999985
+        },
+        "throughput_last_1h": {
+          "p50": 169,
+          "p95": 180.5
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "openai | openai/gpt-5.5",
+        "model_name": "GPT 5.5",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.000005",
+          "prompt_tiers": [
+            {
+              "cost": "0.000005",
+              "min": 0,
+              "max": 272000
+            },
+            {
+              "cost": "0.00001",
+              "min": 272000
+            }
+          ],
+          "completion": "0.00003",
+          "completion_tiers": [
+            {
+              "cost": "0.00003",
+              "min": 0,
+              "max": 272000
+            },
+            {
+              "cost": "0.000045",
+              "min": 272000
+            }
+          ],
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000005",
+          "input_cache_read_tiers": [
+            {
+              "cost": "0.0000005",
+              "min": 0,
+              "max": 272000
+            },
+            {
+              "cost": "0.000001",
+              "min": 272000
+            }
+          ],
+          "service_tiers": {
+            "priority": {
+              "prompt": "0.0000125",
+              "completion": "0.000075",
+              "input_cache_read": "0.00000125"
+            },
+            "flex": {
+              "prompt": "0.0000025",
+              "completion": "0.000015",
+              "input_cache_read": "0.00000025",
+              "long_context": {
+                "threshold": 272000,
+                "prompt": "0.000005",
+                "completion": "0.0000225",
+                "input_cache_read": "0.0000005"
+              }
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "openai",
+        "has_no_training": true,
+        "tags": [
+          "file-input",
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "web-search",
+          "websocket-realtime",
+          "fast"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000055",
+              "prompt_tiers": [
+                {
+                  "cost": "0.0000055",
+                  "min": 0,
+                  "max": 272000
+                },
+                {
+                  "cost": "0.000011",
+                  "min": 272000
+                }
+              ],
+              "completion": "0.000033",
+              "completion_tiers": [
+                {
+                  "cost": "0.000033",
+                  "min": 0,
+                  "max": 272000
+                },
+                {
+                  "cost": "0.0000495",
+                  "min": 272000
+                }
+              ],
+              "input_cache_read": "0.00000055",
+              "input_cache_read_tiers": [
+                {
+                  "cost": "0.00000055",
+                  "min": 0,
+                  "max": 272000
+                },
+                {
+                  "cost": "0.0000011",
+                  "min": 272000
+                }
+              ]
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9925,
+        "latency_last_1h": {
+          "p50": 636,
+          "p95": 708.5
+        },
+        "throughput_last_1h": null,
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "openai/gpt-6-astra": {
+    "id": "openai/gpt-6-astra",
+    "name": "GPT-6 Astra",
+    "created": 1755815280,
+    "released": 1788480000,
+    "description": "GPT-6 Astra is OpenAI's most capable model for complex reasoning, coding, computer use, research, and document creation.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image+file\u2192text",
+      "input_modalities": [
+        "text",
+        "image",
+        "file"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "supported_efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "azure | openai/gpt-6-astra",
+        "model_name": "GPT-6 Astra",
+        "context_length": 1050000,
+        "pricing": {
+          "prompt": "0.00001",
+          "prompt_tiers": [
+            {
+              "cost": "0.00001",
+              "max": 272001
+            },
+            {
+              "cost": "0.00002",
+              "min": 272001
+            }
+          ],
+          "completion": "0.00005",
+          "completion_tiers": [
+            {
+              "cost": "0.00005",
+              "max": 272001
+            },
+            {
+              "cost": "0.000075",
+              "min": 272001
+            }
+          ],
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000001",
+          "input_cache_read_tiers": [
+            {
+              "cost": "0.000001",
+              "max": 272001
+            },
+            {
+              "cost": "0.000002",
+              "min": 272001
+            }
+          ],
+          "input_cache_write": "0.0000125",
+          "input_cache_write_tiers": [
+            {
+              "cost": "0.0000125",
+              "max": 272001
+            },
+            {
+              "cost": "0.000025",
+              "min": 272001
+            }
+          ],
+          "discount": 0
+        },
+        "provider_name": "azure",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "file-input",
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "web-search",
+          "websocket-realtime",
+          "explicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9683,
+        "latency_last_1h": {
+          "p50": 5291,
+          "p95": 9934.55
+        },
+        "throughput_last_1h": {
+          "p50": 72,
+          "p95": 145
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "openai | openai/gpt-6-astra",
+        "model_name": "GPT-6 Astra",
+        "context_length": 1050000,
+        "pricing": {
+          "prompt": "0.00001",
+          "prompt_tiers": [
+            {
+              "cost": "0.00001",
+              "max": 272001
+            },
+            {
+              "cost": "0.00002",
+              "min": 272001
+            }
+          ],
+          "completion": "0.00005",
+          "completion_tiers": [
+            {
+              "cost": "0.00005",
+              "max": 272001
+            },
+            {
+              "cost": "0.000075",
+              "min": 272001
+            }
+          ],
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000001",
+          "input_cache_read_tiers": [
+            {
+              "cost": "0.000001",
+              "max": 272001
+            },
+            {
+              "cost": "0.000002",
+              "min": 272001
+            }
+          ],
+          "input_cache_write": "0.0000125",
+          "input_cache_write_tiers": [
+            {
+              "cost": "0.0000125",
+              "max": 272001
+            },
+            {
+              "cost": "0.000025",
+              "min": 272001
+            }
+          ],
+          "service_tiers": {
+            "flex": {
+              "prompt": "0.000005",
+              "completion": "0.000025",
+              "input_cache_read": "0.0000005",
+              "long_context": {
+                "threshold": 272001,
+                "prompt": "0.00001",
+                "completion": "0.0000375",
+                "input_cache_read": "0.000001"
+              }
+            },
+            "priority": {
+              "prompt": "0.00002",
+              "completion": "0.0001",
+              "input_cache_read": "0.000002",
+              "long_context": {
+                "threshold": 272001,
+                "prompt": "0.00004",
+                "completion": "0.00015",
+                "input_cache_read": "0.000004"
+              }
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "openai",
+        "has_no_training": true,
+        "tags": [
+          "fast",
+          "file-input",
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision",
+          "web-search",
+          "websocket-realtime",
+          "explicit-caching"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.000011",
+              "prompt_tiers": [
+                {
+                  "cost": "0.000011",
+                  "max": 272001
+                },
+                {
+                  "cost": "0.000022",
+                  "min": 272001
+                }
+              ],
+              "completion": "0.000055",
+              "completion_tiers": [
+                {
+                  "cost": "0.000055",
+                  "max": 272001
+                },
+                {
+                  "cost": "0.0000825",
+                  "min": 272001
+                }
+              ],
+              "input_cache_read": "0.0000011",
+              "input_cache_read_tiers": [
+                {
+                  "cost": "0.0000011",
+                  "max": 272001
+                },
+                {
+                  "cost": "0.0000022",
+                  "min": 272001
+                }
+              ],
+              "input_cache_write": "0.00001375",
+              "input_cache_write_tiers": [
+                {
+                  "cost": "0.00001375",
+                  "max": 272001
+                },
+                {
+                  "cost": "0.0000275",
+                  "min": 272001
+                }
+              ]
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 99.9524,
+        "uptime_last_1d": 99.9205,
+        "latency_last_1h": {
+          "p50": 3478,
+          "p95": 9511.95
+        },
+        "throughput_last_1h": {
+          "p50": 91.5,
+          "p95": 209
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "spacexai/grok-4.6": {
+    "id": "spacexai/grok-4.6",
+    "name": "Grok 4.6",
+    "created": 1755815280,
+    "released": 1786492800,
+    "description": "Grok 4.6 builds on Grok 4.5 with a particular focus on long-running agents and more ambitious interactive and visual work. It stays with complex tasks across many steps, whether researching a topic, analyzing information, working across a codebase, or turning an idea into a polished application or work artifact.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image\u2192text",
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "xai | spacexai/grok-4.6",
+        "model_name": "Grok 4.6",
+        "context_length": 500000,
+        "pricing": {
+          "prompt": "0.000002",
+          "prompt_tiers": [
+            {
+              "cost": "0.000002",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.000004",
+              "min": 200001
+            }
+          ],
+          "completion": "0.000006",
+          "completion_tiers": [
+            {
+              "cost": "0.000006",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.000012",
+              "min": 200001
+            }
+          ],
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000005",
+          "input_cache_read_tiers": [
+            {
+              "cost": "0.0000005",
+              "min": 0,
+              "max": 200001
+            },
+            {
+              "cost": "0.000001",
+              "min": 200001
+            }
+          ],
+          "service_tiers": {
+            "priority": {
+              "prompt": "0.000004",
+              "completion": "0.000012",
+              "input_cache_read": "0.000001",
+              "long_context": {
+                "threshold": 200001,
+                "prompt": "0.000008",
+                "completion": "0.000024",
+                "input_cache_read": "0.000002"
+              }
+            }
+          },
+          "discount": 0
+        },
+        "provider_name": "xai",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 500000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.6839,
+        "uptime_last_1h": 99.6342,
+        "uptime_last_1d": 99.1332,
+        "latency_last_1h": null,
+        "throughput_last_1h": null,
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "zai/glm-5.3-flash": {
+    "id": "zai/glm-5.3-flash",
+    "name": "GLM 5.3 Flash",
+    "created": 1755815280,
+    "released": 1787702400,
+    "description": "GLM-5.3-Flash is Z.ai\u2019s native multimodal coding model, featuring 320B total parameters, 18B activated parameters, and a 1M-token context window. Its efficient hybrid attention architecture supports visual coding, tool use, and end-to-end professional workflows across code, browsers, documents, and graphical interfaces.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text+image\u2192text",
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "supported_efforts": [
+        "low",
+        "high",
+        "max"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "baseten | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "baseten",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.00000015",
+              "completion": "0.0000005",
+              "input_cache_read": "0.00000003"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 99.9961,
+        "uptime_last_1d": 99.9712,
+        "latency_last_1h": {
+          "p50": 946.5,
+          "p95": 4169.999999999996
+        },
+        "throughput_last_1h": {
+          "p50": 90,
+          "p95": 92.7
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "boundless | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000012",
+          "completion": "0.0000004",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000024",
+          "discount": 0
+        },
+        "provider_name": "boundless",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.847,
+        "latency_last_1h": {
+          "p50": 831,
+          "p95": 2168.7
+        },
+        "throughput_last_1h": {
+          "p50": 130.5,
+          "p95": 145.75
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "deepinfra | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.000000075",
+          "completion": "0.00000025",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000015",
+          "discount": 0
+        },
+        "provider_name": "deepinfra",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.9435,
+        "uptime_last_1h": 99.9813,
+        "uptime_last_1d": 99.7561,
+        "latency_last_1h": {
+          "p50": 4664.5,
+          "p95": 17822.49999999998
+        },
+        "throughput_last_1h": {
+          "p50": 19,
+          "p95": 29.649999999999995
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "digitalocean | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "digitalocean",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1034.5,
+          "p95": 2251.7999999999993
+        },
+        "throughput_last_1h": {
+          "p50": 27,
+          "p95": 49.9
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "fireworks | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "fireworks",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.000000225",
+              "completion": "0.00000075",
+              "input_cache_read": "0.000000045"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9971,
+        "latency_last_1h": {
+          "p50": 1472.5,
+          "p95": 6289.049999999998
+        },
+        "throughput_last_1h": {
+          "p50": 132,
+          "p95": 165
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "friendli | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "friendli",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9983,
+        "latency_last_1h": {
+          "p50": 1803,
+          "p95": 7093
+        },
+        "throughput_last_1h": {
+          "p50": 107.5,
+          "p95": 114.4
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "gmicloud | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000001125",
+          "completion": "0.000000375",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000000225",
+          "discount": 0
+        },
+        "provider_name": "gmicloud",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.5025,
+        "uptime_last_1h": 97.5941,
+        "uptime_last_1d": 97.1375,
+        "latency_last_1h": {
+          "p50": 5981,
+          "p95": 9598.4
+        },
+        "throughput_last_1h": {
+          "p50": 44,
+          "p95": 74
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "inference-net | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000009",
+          "completion": "0.00000028",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000002",
+          "discount": 0
+        },
+        "provider_name": "inference-net",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 98.7203,
+        "latency_last_1h": {
+          "p50": 1879,
+          "p95": 4434.700000000001
+        },
+        "throughput_last_1h": {
+          "p50": 11.5,
+          "p95": 18.799999999999997
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "modal | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000045",
+          "completion": "0.0000015",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000009",
+          "discount": 0
+        },
+        "provider_name": "modal",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.8793,
+        "latency_last_1h": {
+          "p50": 366,
+          "p95": 810.0499999999979
+        },
+        "throughput_last_1h": {
+          "p50": 54,
+          "p95": 56
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "morph | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000001",
+          "completion": "0.00000035",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000002",
+          "discount": 0
+        },
+        "provider_name": "morph",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1183,
+          "p95": 2694.1499999999996
+        },
+        "throughput_last_1h": {
+          "p50": 269.5,
+          "p95": 360.9499999999998
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "novita | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "novita",
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 2243,
+          "p95": 4629.9499999999925
+        },
+        "throughput_last_1h": {
+          "p50": 149,
+          "p95": 166.8
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "parasail | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "parasail",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9597,
+        "latency_last_1h": {
+          "p50": 2182,
+          "p95": 9065.799999999997
+        },
+        "throughput_last_1h": {
+          "p50": 80,
+          "p95": 156.5
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "particle | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000001",
+          "completion": "0.0000004",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "particle",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.4692,
+        "latency_last_1h": {
+          "p50": 560,
+          "p95": 1383.9999999999995
+        },
+        "throughput_last_1h": {
+          "p50": 81,
+          "p95": 129.6
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "relace | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000001",
+          "completion": "0.0000003333",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000002",
+          "discount": 0
+        },
+        "provider_name": "relace",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 95.7983,
+        "latency_last_1h": {
+          "p50": 538,
+          "p95": 1133.7999999999997
+        },
+        "throughput_last_1h": {
+          "p50": 61,
+          "p95": 81.15
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "runinfra | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000001",
+          "completion": "0.0000004",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000001",
+          "discount": 0
+        },
+        "provider_name": "runinfra",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 0,
+        "uptime_last_1h": 0,
+        "uptime_last_1d": 0,
+        "latency_last_1h": null,
+        "throughput_last_1h": null,
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "runware | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 131072,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "runware",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9813,
+        "latency_last_1h": {
+          "p50": 6061,
+          "p95": 29828
+        },
+        "throughput_last_1h": {
+          "p50": 50,
+          "p95": 91.14999999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "streamlake | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1024000,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "streamlake",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.8297,
+        "latency_last_1h": {
+          "p50": 1546,
+          "p95": 3296.7
+        },
+        "throughput_last_1h": {
+          "p50": 142.5,
+          "p95": 148.1
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "togetherai | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "togetherai",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 99.8855,
+        "uptime_last_1h": 99.9564,
+        "uptime_last_1d": 99.8204,
+        "latency_last_1h": {
+          "p50": 732,
+          "p95": 4387.399999999989
+        },
+        "throughput_last_1h": {
+          "p50": 94,
+          "p95": 145
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "wafer | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000001",
+          "completion": "0.00000035",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000002",
+          "discount": 0
+        },
+        "provider_name": "wafer",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9769,
+        "latency_last_1h": {
+          "p50": 3006,
+          "p95": 8004.699999999999
+        },
+        "throughput_last_1h": {
+          "p50": 24,
+          "p95": 56.74999999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "zai | zai/glm-5.3-flash",
+        "model_name": "GLM 5.3 Flash",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000015",
+          "completion": "0.0000005",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000003",
+          "discount": 0
+        },
+        "provider_name": "zai",
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching",
+          "vision"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 99.9315,
+        "uptime_last_1d": 99.9046,
+        "latency_last_1h": {
+          "p50": 6612.5,
+          "p95": 16691.1
+        },
+        "throughput_last_1h": {
+          "p50": 49,
+          "p95": 96
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  },
+  "zai/glm-5.3": {
+    "id": "zai/glm-5.3",
+    "name": "GLM 5.3",
+    "created": 1755815280,
+    "released": 1787011200,
+    "description": "GLM 5.3 delivers comprehensive advancements in complex software engineering and agent capabilities. It uses the same base model as GLM-5.2, with all improvements driven by post-training.",
+    "architecture": {
+      "tokenizer": null,
+      "instruct_type": null,
+      "modality": "text\u2192text",
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ]
+    },
+    "reasoning": {
+      "supported_efforts": [
+        "low",
+        "high",
+        "max"
+      ]
+    },
+    "endpoints": [
+      {
+        "name": "alibaba | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000028",
+          "discount": 0
+        },
+        "provider_name": "alibaba",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1220.5,
+          "p95": 24316.25
+        },
+        "throughput_last_1h": {
+          "p50": 141,
+          "p95": 163.09999999999997
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "baseten | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000014",
+          "discount": 0
+        },
+        "provider_name": "baseten",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000014",
+              "completion": "0.0000044",
+              "input_cache_read": "0.00000014"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.7518,
+        "latency_last_1h": {
+          "p50": 1424,
+          "p95": 4081.199999999996
+        },
+        "throughput_last_1h": {
+          "p50": 111,
+          "p95": 132.4
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "blackbox | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000007",
+          "completion": "0.0000022",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000013",
+          "discount": 0
+        },
+        "provider_name": "blackbox",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 262144,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 0,
+        "uptime_last_1h": 0,
+        "uptime_last_1d": 0,
+        "latency_last_1h": null,
+        "throughput_last_1h": null,
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "crusoe | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "crusoe",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9476,
+        "latency_last_1h": {
+          "p50": 532.5,
+          "p95": 613.6499999999999
+        },
+        "throughput_last_1h": {
+          "p50": 492,
+          "p95": 500.09999999999997
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "deepinfra | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000012",
+          "completion": "0.000004",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000012",
+          "discount": 0
+        },
+        "provider_name": "deepinfra",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 60.0222,
+        "latency_last_1h": {
+          "p50": 278,
+          "p95": 1067.0999999999997
+        },
+        "throughput_last_1h": {
+          "p50": 266,
+          "p95": 331.2
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "digitalocean | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "digitalocean",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.7351,
+        "latency_last_1h": {
+          "p50": 1367,
+          "p95": 2823
+        },
+        "throughput_last_1h": {
+          "p50": 29,
+          "p95": 65
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "fireworks | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "fireworks",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "inference_regions": [
+          {
+            "scope": "zone",
+            "geo_region": "us",
+            "pricing": {
+              "prompt": "0.0000021",
+              "completion": "0.0000066",
+              "input_cache_read": "0.00000039"
+            }
+          }
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.8473,
+        "latency_last_1h": {
+          "p50": 1857.5,
+          "p95": 3470.949999999999
+        },
+        "throughput_last_1h": {
+          "p50": 92,
+          "p95": 112
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "friendli | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000126",
+          "completion": "0.00000396",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000234",
+          "discount": 0
+        },
+        "provider_name": "friendli",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 118,
+          "p95": 180.69999999999996
+        },
+        "throughput_last_1h": {
+          "p50": 220.5,
+          "p95": 245.25
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "gmicloud | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000112",
+          "completion": "0.00000352",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000208",
+          "discount": 0
+        },
+        "provider_name": "gmicloud",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 892.5,
+          "p95": 1923.199999999999
+        },
+        "throughput_last_1h": {
+          "p50": 121,
+          "p95": 127.94999999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "inceptron | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000125",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "inceptron",
+        "has_zdr": false,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9334,
+        "latency_last_1h": {
+          "p50": 606,
+          "p95": 742.4499999999999
+        },
+        "throughput_last_1h": {
+          "p50": 121,
+          "p95": 121
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "inference-net | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000009",
+          "completion": "0.000003",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000015",
+          "discount": 0
+        },
+        "provider_name": "inference-net",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 131072,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9764,
+        "latency_last_1h": {
+          "p50": 1021,
+          "p95": 1664.9499999999998
+        },
+        "throughput_last_1h": {
+          "p50": 288.5,
+          "p95": 299.2
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "modal | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "modal",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 396,
+          "p95": 655.9999999999999
+        },
+        "throughput_last_1h": {
+          "p50": 256,
+          "p95": 273.3
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "morph | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.000001",
+          "completion": "0.00000341",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "discount": 0
+        },
+        "provider_name": "morph",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.8076,
+        "latency_last_1h": {
+          "p50": 678,
+          "p95": 3743
+        },
+        "throughput_last_1h": {
+          "p50": 134.5,
+          "p95": 200.64999999999998
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "novita | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.00000091",
+          "completion": "0.00000286",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.000000169",
+          "discount": 0
+        },
+        "provider_name": "novita",
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 2393,
+          "p95": 3318.7999999999993
+        },
+        "throughput_last_1h": {
+          "p50": 71.5,
+          "p95": 132.25
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "parasail | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "parasail",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.9551,
+        "latency_last_1h": {
+          "p50": 735,
+          "p95": 1457
+        },
+        "throughput_last_1h": {
+          "p50": 248,
+          "p95": 301.4
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "runware | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.0000012",
+          "completion": "0.000004",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.0000002",
+          "discount": 0
+        },
+        "provider_name": "runware",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 602,
+          "p95": 1265
+        },
+        "throughput_last_1h": {
+          "p50": 325.5,
+          "p95": 356.34999999999997
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "streamlake | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1024000,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "streamlake",
+        "has_zdr": false,
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 1382,
+          "p95": 4415
+        },
+        "throughput_last_1h": {
+          "p50": 90.5,
+          "p95": 126.69999999999999
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "togetherai | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "togetherai",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1000000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 97.4482,
+        "latency_last_1h": {
+          "p50": 109,
+          "p95": 256
+        },
+        "throughput_last_1h": {
+          "p50": 507,
+          "p95": 624.8
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "wafer | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.00000119",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "wafer",
+        "has_zdr": true,
+        "has_no_training": true,
+        "tags": [
+          "implicit-caching",
+          "reasoning",
+          "tool-use"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 1048576,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 100,
+        "latency_last_1h": {
+          "p50": 363,
+          "p95": 1650.999999999999
+        },
+        "throughput_last_1h": {
+          "p50": 229,
+          "p95": 229
+        },
+        "supports_implicit_caching": true
+      },
+      {
+        "name": "zai | zai/glm-5.3",
+        "model_name": "GLM 5.3",
+        "context_length": 1000000,
+        "pricing": {
+          "prompt": "0.0000014",
+          "completion": "0.0000044",
+          "request": "0",
+          "image": "0",
+          "image_output": "0",
+          "web_search": "0",
+          "internal_reasoning": "0",
+          "input_cache_read": "0.00000026",
+          "discount": 0
+        },
+        "provider_name": "zai",
+        "has_no_training": false,
+        "tags": [
+          "reasoning",
+          "tool-use",
+          "implicit-caching"
+        ],
+        "quantization": null,
+        "max_completion_tokens": 128000,
+        "max_prompt_tokens": null,
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "stop",
+          "tools",
+          "tool_choice",
+          "reasoning",
+          "include_reasoning"
+        ],
+        "status": 0,
+        "uptime_last_15m": 100,
+        "uptime_last_1h": 100,
+        "uptime_last_1d": 99.7609,
+        "latency_last_1h": {
+          "p50": 4185,
+          "p95": 6946
+        },
+        "throughput_last_1h": {
+          "p50": 50,
+          "p95": 101.69999999999999
+        },
+        "supports_implicit_caching": true
+      }
+    ]
+  }
+}

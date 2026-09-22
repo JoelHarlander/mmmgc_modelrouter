@@ -1,0 +1,4 @@
+# Notion planning identity; does not authorize worker execution or model spending.
+version: 1
+key: RTR
+repository: modelrouter
