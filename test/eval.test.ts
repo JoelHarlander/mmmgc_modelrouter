@@ -14,11 +14,12 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { DEFAULT_CONFIG, mergeConfig, modelKey } from "../src/config.ts";
+import { DEFAULT_CONFIG, mergeConfig, modelKey, TIERS } from "../src/config.ts";
 import { auditAssumptions } from "../eval/assumptions.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
 import { bootstrapDifference, tasksNeededFor } from "../eval/bootstrap.ts";
 import { computeCalibration } from "../eval/calibration.ts";
+import { type Classify, loadPhrasingPack, renderPhrasing, runPhrasingProbe } from "../eval/phrasing.ts";
 import { runCoverage } from "../eval/coverage.ts";
 import { explainTask } from "../eval/explain.ts";
 import { recordAnswers } from "../eval/record.ts";
@@ -70,6 +71,7 @@ const PACK = join(ROOT, "eval", "tasks", "swe-router-v1.json");
 const LONG_PACK = join(ROOT, "eval", "tasks", "swe-router-long-v1.json");
 const PROBE_PACK = join(ROOT, "eval", "tasks", "judge-probe-v1.json");
 const DOCS = join(ROOT, "docs");
+const PHRASING_PACK = join(ROOT, "eval", "tasks", "phrasing-probe-v1.json");
 
 function pack(path = PACK): TaskPack {
 	return JSON.parse(readFileSync(path, "utf8")) as TaskPack;
@@ -1878,4 +1880,59 @@ test("a run that changes nothing leaves the baseline alone", async () => {
 	const moved = { ...metrics, listEquivalentUsd: metrics.listEquivalentUsd * 2 };
 	writeRun(root, { ...record, runId: "2026-01-03T00-00-00-churn-ccc3333", metrics: moved });
 	assert.equal(readRun(latestPath(root, "churn"))?.metrics.listEquivalentUsd, moved.listEquivalentUsd);
+});
+
+test("the phrasing probe detects a tier gap between wordings, and reports none when there is none", async () => {
+	const pack = loadPhrasingPack(PHRASING_PACK);
+
+	// A classifier that ignores phrasing must produce no gap, or the probe is inventing one.
+	const byDifficulty: Classify = async (prompt) => {
+		const pair = pack.pairs.find((p) => p.question === prompt || p.instruction === prompt)!;
+		return { tier: pair.difficulty, confidence: 0.9, needsTools: 0.5, stakes: 1, costUsd: 0 };
+	};
+	const flat = await runPhrasingProbe(byDifficulty, pack);
+	assert.equal(flat.meanTierGap, 0);
+	assert.equal(flat.agreement, 1);
+	assert.equal(flat.instructionHeavier, 0);
+	assert.equal(flat.questionHeavier, 0);
+	assert.equal(flat.questionAccuracy, 1);
+	assert.equal(flat.instructionAccuracy, 1);
+
+	// A classifier that keys on "does this need tools" reproduces round 35's hypothesis,
+	// which is what the probe exists to detect.
+	const byTools: Classify = async (prompt) => {
+		const isQuestion = prompt.trim().endsWith("?");
+		return { tier: isQuestion ? "light" : "heavy", confidence: 0.9, needsTools: isQuestion ? 0.05 : 0.9, stakes: 1, costUsd: 0 };
+	};
+	const gapped = await runPhrasingProbe(byTools, pack);
+	assert.equal(gapped.instructionHeavier, pack.pairs.length);
+	assert.equal(gapped.questionHeavier, 0);
+	assert.ok(gapped.meanTierGap >= 2);
+	assert.ok(gapped.meanToolsInstruction > gapped.meanToolsQuestion);
+	assert.equal(gapped.calls, pack.pairs.length * 2);
+
+	assert.match(renderPhrasing(gapped, "x"), /systematically rated heavier/);
+	assert.match(renderPhrasing(flat, "x"), /no systematic gap/);
+});
+
+test("each phrasing pair really is two wordings of one job", () => {
+	const pack = loadPhrasingPack(PHRASING_PACK);
+	assert.ok(pack.pairs.length >= 10, "too few pairs to read a direction from");
+	const ids = new Set<string>();
+	for (const pair of pack.pairs) {
+		assert.ok(!ids.has(pair.id), `duplicate pair id ${pair.id}`);
+		ids.add(pair.id);
+		assert.ok(TIERS.includes(pair.difficulty), `${pair.id}: ${pair.difficulty} is not a tier`);
+		assert.ok(pair.question.trim().endsWith("?"), `${pair.id}: the question is not phrased as one`);
+		assert.ok(!pair.instruction.trim().endsWith("?"), `${pair.id}: the instruction is phrased as a question`);
+		assert.notEqual(pair.question, pair.instruction);
+		// Both phrasings must name the same subject, or they are not the same job. Code
+		// spans count: a pair can share its subject as a snippet rather than as prose.
+		const tokens = (text: string) =>
+			new Set([...(text.toLowerCase().match(/[a-z_]{5,}/g) ?? []), ...(text.match(/`[^`]+`/g) ?? [])]);
+		const shared = [...tokens(pair.question)].filter((t) => tokens(pair.instruction).has(t));
+		assert.ok(shared.length >= 2, `${pair.id}: the two phrasings share only ${shared.length} significant tokens`);
+	}
+	// Every tier represented, so the result cannot be an artefact of one difficulty band.
+	for (const tier of TIERS) assert.ok(pack.pairs.some((p) => p.difficulty === tier), `no ${tier} pair`);
 });

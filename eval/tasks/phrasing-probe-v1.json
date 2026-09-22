@@ -1,0 +1,79 @@
+{
+	"version": 1,
+	"id": "phrasing-probe-v1",
+	"description": "A controlled test of one hypothesis from round 35: Jev under-routes question-shaped turns that sit on hard work, apparently reading `needs_tools: no` as `is easy`. Each pair describes the SAME underlying work twice - once as a question that can be answered in text, once as an instruction that requires editing files. The understanding required is identical; only the output differs. If the question is systematically classified lighter than its paired instruction, the framing is doing the work rather than the difficulty. `difficulty` is the tier the underlying work needs, on the same ladder as the task packs.",
+	"pairs": [
+		{
+			"id": "race-condition",
+			"difficulty": "heavy",
+			"question": "Why does FileBasedCache.has_key raise FileNotFoundError when a cull runs concurrently?",
+			"instruction": "Fix the race in FileBasedCache.has_key where a concurrent cull makes it raise FileNotFoundError."
+		},
+		{
+			"id": "rewrite-hook",
+			"difficulty": "heavy",
+			"question": "What are the consequences for plugins that install their own assertion-rewrite hooks if the docstring detection changes?",
+			"instruction": "Change the docstring detection in rewrite.py so it is correct for every module shape, keeping plugin rewrite hooks working."
+		},
+		{
+			"id": "smuggling",
+			"difficulty": "heavy",
+			"question": "Can dropping Content-Length from bodyless requests break request-smuggling assumptions downstream?",
+			"instruction": "Drop Content-Length from bodyless requests without breaking request-smuggling assumptions downstream."
+		},
+		{
+			"id": "column-rename",
+			"difficulty": "heavy",
+			"question": "Why does renaming a column in one migration break a continuously-deployed app mid-rollout?",
+			"instruction": "Roll out a column rename on a table a continuously-deployed app writes to, without breaking it mid-rollout."
+		},
+		{
+			"id": "swap-dims-alias",
+			"difficulty": "heavy",
+			"question": "Which variable does swap_dims share rather than copy, so that it mutates the original?",
+			"instruction": "Stop swap_dims mutating the original by copying the variable it currently shares."
+		},
+		{
+			"id": "token-storage",
+			"difficulty": "heavy",
+			"question": "What does storing a JWT in localStorage expose that an httpOnly cookie does not?",
+			"instruction": "Move the JWT out of localStorage into an httpOnly cookie and add the CSRF protection that needs."
+		},
+		{
+			"id": "callers-of-check-scalar",
+			"difficulty": "standard",
+			"question": "Which callers of check_scalar pass a user-supplied dtype?",
+			"instruction": "Find every caller of check_scalar that passes a user-supplied dtype and make them consistent."
+		},
+		{
+			"id": "deprecation-shim",
+			"difficulty": "standard",
+			"question": "Who else in the codebase calls the private _build_app_dict name?",
+			"instruction": "Update every caller of the private _build_app_dict name to the new public one."
+		},
+		{
+			"id": "offset-pagination",
+			"difficulty": "standard",
+			"question": "Why is page 900 of this listing endpoint slow when page 2 is instant?",
+			"instruction": "Make page 900 of this listing endpoint as fast as page 2."
+		},
+		{
+			"id": "n-plus-one",
+			"difficulty": "standard",
+			"question": "Why does this Django view issue one query per row?",
+			"instruction": "Stop this Django view issuing one query per row."
+		},
+		{
+			"id": "mutable-default",
+			"difficulty": "light",
+			"question": "Why does `def add(item, bucket=[])` return results from previous calls?",
+			"instruction": "Fix `def add(item, bucket=[])` so it stops returning results from previous calls."
+		},
+		{
+			"id": "float-equality",
+			"difficulty": "light",
+			"question": "Why does `assert 0.1 + 0.2 == 0.3` fail?",
+			"instruction": "Rewrite `assert 0.1 + 0.2 == 0.3` so it passes."
+		}
+	]
+}

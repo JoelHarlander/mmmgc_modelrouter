@@ -73,6 +73,59 @@ rate-limited.*
 
 ---
 
+## 0b. Jev classifies the *wording*, not the work — and it is confidently wrong
+
+`ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --probe-phrasing`, 24 calls, $0.00.
+
+Twelve pairs, each describing the **same work twice** — once as a question answerable in
+text, once as an instruction that edits files. The understanding required is identical;
+only the output differs.
+
+| | result |
+| --- | ---: |
+| instruction rated **heavier** than its question | **6 of 12** |
+| question rated heavier than its instruction | **0 of 12** |
+| mean tier gap (instruction minus question) | **+0.83 tiers** |
+| mean `needs_tools`, question | **0.14** |
+| mean `needs_tools`, instruction | **0.61** |
+| reached the correct tier: **question** | **33.3%** |
+| reached the correct tier: **instruction** | **66.7%** |
+
+**On heavy work asked as a question, Jev says *light* 4 times out of 6 — at a mean
+confidence of 0.87.**
+
+```
+rewrite-hook     question: light @ 0.77 (needs_tools 0.07)   instruction: heavy @ 0.59
+column-rename    question: light @ 0.75 (needs_tools 0.04)   instruction: heavy @ 0.94
+swap-dims-alias  question: light @ 0.99 (needs_tools 0.04)   instruction: standard @ 0.66
+token-storage    question: light @ 0.98 (needs_tools 0.02)   instruction: heavy @ 0.96
+```
+
+`src/state.ts` asks Jev `needs_tools` - *"will fulfilling `request` require the agent to
+edit files or run commands, rather than only answering in text?"* - and the tier criteria
+never tell it that a question can still be hard. **The classifier appears to be reading
+*needs no tools* as *is easy*.** For a terminal coding agent that is an expensive place
+to be wrong: *"why is this deadlocking?"* is among the most common and most demanding
+things a user asks, and it is routed to the cheapest model in the fleet with 98%
+confidence.
+
+**Why no confidence bar can fix this.** The errors come with *high* confidence, so §4's
+bar cannot see them - the same shape as round 8's biased judge. This needs the question
+set changed, not the threshold.
+
+**Honest caveat.** Part of the gap is legitimate: producing a change *is* more work than
+explaining one. What is not legitimate is the **direction and the confidence** - a
+question about a race condition needs the same understanding as fixing it, and
+33.3%-versus-66.7% tier accuracy for the same underlying difficulty is not explained by
+output format. Twelve pairs is a small sample, but 6-0 with no counter-example is a clear
+direction. Re-run it; it costs nothing.
+
+**Recommendation.** Either drop `needs_tools` from the tier decision, or add a criterion
+telling Jev explicitly that explaining something can be as hard as doing it.
+`src/state.ts` is owned by another task; this section is the evidence for it.
+
+---
+
 ## 1. Fix the tier table before anything else
 
 `npm run eval -- --audit-config` — published list prices from

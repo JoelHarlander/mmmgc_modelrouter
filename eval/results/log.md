@@ -39,6 +39,7 @@ Jump to the round that established each claim, and what it rests on.
 | ~~The shipped routing confidence bar (0.50) is nearly inert~~ | 12 | **REFUTED in r35.** That was my handwriting. Against Jev's own confidences it suppresses **30% of routed turns, 56% of them correct**. |
 | **Jev is systematically under-confident by 13.1pp**, so a bar set on its raw confidence sits ~13 points too high — `minConfidence` should be **lowered**, not raised | **35** | live, 160 routed turns |
 | **Jev under-routes "why / who else / walk me through" questions** that sit on hard work — it reads *needs no tools* as *is easy* | **35** | live, long pack |
+| **Confirmed by controlled experiment: the same work worded as a question is rated ~0.83 tiers lighter**, 6–0 with no counter-example. Heavy work asked as a question is called *light* 4 times in 6, at mean confidence **0.87** | **36** | live, 12 paired prompts |
 | Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
 | *(cost: resolved; quality: under-powered)* **Fan-out as *exploration* is ~20× more cost-effective than fanning out every turn**: +21.3pp for $0.81/solve vs $16.03 | **13** | 5 seeds |
@@ -2161,3 +2162,72 @@ expectations, and where they differ the difference is now visible rather than as
 question is *causing* the under-routing of questions. `src/state.ts` is out of bounds for
 this task, but a probe pack of question-shaped prompts with known difficulty would
 measure it for $0.00.
+
+---
+
+## Round 36 — 2026-09-23 — the controlled version of round 35's hypothesis
+
+**Measured.** Round 35 noticed that Jev's under-routes were overwhelmingly *questions*
+sitting on hard work, and guessed at the mechanism: `src/state.ts` asks `needs_tools`, and
+those turns all answer *no*. A pattern in 21 turns is a hypothesis, not a finding. This
+is the controlled version.
+
+**Changed.** `--probe-phrasing` and `eval/tasks/phrasing-probe-v1.json`: twelve pairs,
+each describing the **same work twice** — once as a question answerable in text, once as
+an instruction that edits files. Same subject, same understanding required, different
+output. Every tier is represented so the result cannot be an artefact of one difficulty
+band, and a test checks the pairs really are two wordings of one job (shared significant
+tokens, including code spans; one phrased as a question, one not).
+
+It runs the **real `routingQuestions()`** against a state shaped like `buildRoutingState`
+produces, so what is measured is the shipped prompt. 24 calls, **$0.00** — credits
+unchanged at $5.00 across the whole session.
+
+**What the numbers did.**
+
+| | |
+| --- | ---: |
+| instruction rated **heavier** than its question | **6 of 12** |
+| question rated heavier than its instruction | **0 of 12** |
+| **mean tier gap** (instruction − question) | **+0.83 tiers** |
+| mean `needs_tools`: question / instruction | **0.14 / 0.61** |
+| reached the correct tier: question / instruction | **33.3% / 66.7%** |
+
+**Perfectly one-directional, and it halves the classifier's accuracy.** The mechanism is
+visible in the `needs_tools` column — 0.14 against 0.61 for identical work — which is
+exactly the hypothesis.
+
+**And it is confidently wrong, which is the part that matters.** On the six heavy pairs,
+asked as a question, Jev said **light four times, at a mean confidence of 0.87**:
+
+```
+token-storage    question: light @ 0.98 (needs_tools 0.02)   instruction: heavy @ 0.96
+swap-dims-alias  question: light @ 0.99 (needs_tools 0.04)   instruction: standard @ 0.66
+column-rename    question: light @ 0.75 (needs_tools 0.04)   instruction: heavy @ 0.94
+rewrite-hook     question: light @ 0.77 (needs_tools 0.07)   instruction: heavy @ 0.59
+```
+
+Two tiers wrong at 98% confidence. **No confidence bar can catch this** — the same shape
+as round 8's biased judge, where the errors arrive with high confidence and the gate is
+blind to exactly the cases it exists for. It needs the question set changed, not the
+threshold.
+
+For a terminal coding agent this is an expensive place to be wrong: *"why is this
+deadlocking?"* is among the most common and most demanding things a user asks, and it
+routes to the cheapest model in the fleet.
+
+**The honest caveat, stated rather than buried.** Part of the gap is legitimate —
+producing a change *is* more work than explaining one, and `difficulty` is my
+declaration. What that does not explain is the **direction** (6–0, no counter-example),
+the **confidence** (0.87 while two tiers wrong), or the **halving of tier accuracy** for
+work whose difficulty is unchanged. Twelve pairs is a small sample; the probe costs
+nothing to re-run, and now exists to be re-run.
+
+**Where it leaves things.** This is §0b of the findings brief, beside the §0 routing bug,
+because it is the same class of thing: not a tuning question but a defect in how the
+decision is framed. Both are reported, neither is fixed — `src/` belongs to another task.
+
+**Next.** Everything the judge and classifier can be asked offline has been asked, and
+the two live probes now exist to be re-run for free whenever the model changes. The
+open work is the same as round 22's: quality differences need real task execution, not a
+bigger fixture.

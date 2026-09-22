@@ -25,6 +25,7 @@ import { auditConfig, renderAudit } from "./audit.ts";
 import { bootstrap, renderBootstrap } from "./bootstrap.ts";
 import { computeCalibration, renderCalibration } from "./calibration.ts";
 import { explainTask } from "./explain.ts";
+import { jevClassifier, loadPhrasingPack, renderPhrasing, runPhrasingProbe } from "./phrasing.ts";
 import { loadProbePack, renderProbe, runProbe } from "./probe.ts";
 import { recordAnswers, renderRecord } from "./record.ts";
 import { loadFleet } from "./fleet.ts";
@@ -124,6 +125,8 @@ interface Args {
 	contextSensitivity?: number;
 	callsPerTurn?: number;
 	probe: boolean;
+	probePhrasing: boolean;
+	phrasingPack: string;
 	probePack: string;
 	liveJudge: boolean;
 	judgeBias: number;
@@ -153,6 +156,8 @@ function parseArgs(argv: string[]): Args {
 		gateTolerance: 1,
 		judgeBias: 0,
 		probe: false,
+		probePhrasing: false,
+		phrasingPack: join(ROOT, "eval", "tasks", "phrasing-probe-v1.json"),
 		probePack: join(ROOT, "eval", "tasks", "judge-probe-v1.json"),
 		liveJudge: false,
 		help: false,
@@ -198,6 +203,12 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--probe":
 				args.probe = true;
+				break;
+			case "--probe-phrasing":
+				args.probePhrasing = true;
+				break;
+			case "--phrasing-pack":
+				args.phrasingPack = abs(next());
 				break;
 			case "--probe-pack":
 				args.probePack = abs(next());
@@ -395,6 +406,9 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --probe                measure a judge's presentation bias on paired responses and exit
   --probe-pack <file>    probe pack (default eval/tasks/judge-probe-v1.json)
   --live-judge           run the probe against real Jev instead of the offline judge
+  --probe-phrasing       does wording the same work as a question change its tier?
+                         (needs --classifier live; 2 calls per pair, no model inference)
+  --phrasing-pack <file> phrasing pack (default eval/tasks/phrasing-probe-v1.json)
   --seed <s>             deterministic seed for the offline judge
   --start-model <key>    model each task session starts on
   --no-auth <key>        mark a fleet model unauthed (repeatable)
@@ -480,7 +494,8 @@ async function main(): Promise<number> {
 			process.stderr.write(`live mode needs a Jev credential: ${client.describe()}\n`);
 			return 2;
 		}
-		process.stderr.write(`LIVE: up to ${pack.tasks.reduce((n, t) => n + t.turns.length, 0)} classifier calls via ${client.describe()}\n`);
+		const calls = args.probePhrasing ? loadPhrasingPack(args.phrasingPack).pairs.length * 2 : pack.tasks.reduce((n, t) => n + t.turns.length, 0);
+		process.stderr.write(`LIVE: up to ${calls} classifier calls via ${client.describe()}\n`);
 	}
 
 	if (args.sweep) {
@@ -598,6 +613,24 @@ async function main(): Promise<number> {
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
 	});
 	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+
+	if (args.probePhrasing) {
+		if (args.classifier !== "live") {
+			process.stderr.write("--probe-phrasing needs --classifier live: it measures a real classifier's reading of a prompt\n");
+			return 2;
+		}
+		const phrasingPack = loadPhrasingPack(args.phrasingPack);
+		const report = await runPhrasingProbe(jevClassifier(jev!), phrasingPack);
+		if (args.json) process.stdout.write(`${JSON.stringify(report, null, "\t")}\n`);
+		else process.stdout.write(renderPhrasing(report, `${phrasingPack.id}, live Jev`));
+		if (!args.noWrite) {
+			const path = join(resultsDir(ROOT), "probe-phrasing.json");
+			ensureDirFor(path);
+			writeFileSync(path, `${JSON.stringify({ pack: phrasingPack.id, at: new Date().toISOString(), git: shortGit(), ...report }, null, "\t")}\n`);
+			process.stderr.write(`wrote ${path.replace(`${ROOT}/`, "")}\n`);
+		}
+		return 0;
+	}
 
 	if (args.record) {
 		if (args.classifier !== "live") {

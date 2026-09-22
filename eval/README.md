@@ -24,6 +24,7 @@ npm run eval -- --sweep axis                  # does a candidate set's bias-immu
 npm run eval -- --bootstrap 2000              # what a single number from this pack is worth
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
+npm run eval -- --classifier live --probe-phrasing   # does wording change the tier? (live, free)
 npm run eval -- --explain <task id>           # the turn-by-turn trace behind one task's score
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
 npm run eval -- --audit-config                # price the SHIPPED tiers from docs/data and check both ladders
@@ -366,6 +367,21 @@ candidates absorbs a bad starting point and a wrong guess about who is good at w
 and replaces both with a bet on the judge, which is the one thing that cannot be
 measured offline.
 
+## `--probe-phrasing`: is the classifier reading the work or the wording?
+
+Twelve pairs, each describing the **same work twice** — once as a question answerable in
+text, once as an instruction that edits files — run through the real `routingQuestions()`
+from `src/state.ts`. A systematic tier gap means the phrasing is doing the classifying.
+
+Run live against Jev it found one: the instruction is rated heavier in **6 of 12 pairs
+and lighter in 0**, a mean gap of **+0.83 tiers**, with `needs_tools` at 0.14 for
+questions against 0.61 for instructions. Heavy work asked as a question is called *light*
+four times in six, at mean confidence **0.87**. See §0b of the findings brief.
+
+Offline it takes any `Classify` function, which is how the probe itself is tested: a
+phrasing-blind classifier must report no gap, and a tools-keyed one must report the full
+gap.
+
 ## Ground truth and `--validate`
 
 `requiredSkill` is the only hand-declared claim about a turn: how hard it is, on the
@@ -399,6 +415,7 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `coverage.ts` | `--sweep coverage`: invariants across ~400 configurations |
 | `record.ts` | writing a live classifier's answers back into a pack |
 | `probe.ts` | the judge bias probe and its calibration |
+| `phrasing.ts` | `--probe-phrasing`: does wording the same work differently change its tier? |
 | `calibration.ts` | is the classifier's confidence worth anything? |
 | `audit.ts` | the shipped config priced from `docs/data` |
 | `run-all.ts` | `npm run eval:all` |
