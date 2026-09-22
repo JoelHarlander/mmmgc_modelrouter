@@ -86,12 +86,12 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 
 	// A cooldown or a spent model-scoped window excludes the route whatever the basis is.
 	if (quota.cooldown) {
-		return excluded(billing, freshness, `${quota.cooldown.reason} until ${new Date(quota.cooldown.until).toLocaleTimeString()}`, evidence, uncertainty);
+		return excluded(labelBasis(billing), billing, freshness, `${quota.cooldown.reason} until ${new Date(quota.cooldown.until).toLocaleTimeString()}`, evidence, uncertainty);
 	}
 	if (quota.exhaustedScoped.length > 0) {
 		const w = quota.exhaustedScoped[0]!;
 		evidence.push(`model-scoped window ${w.reason}`);
-		return excluded(billing, freshness, `model-scoped quota exhausted (${w.reason}); ${model.provider} stays usable for other models`, evidence, uncertainty);
+		return excluded(labelBasis(billing), billing, freshness, `model-scoped quota exhausted (${w.reason}); ${model.provider} stays usable for other models`, evidence, uncertainty);
 	}
 
 	if (billing === "free") return assessFree(model, key, cfg, fromConfig, evidence, uncertainty);
@@ -180,10 +180,10 @@ function assessSubscription(
 	else uncertainty.push("no quota or entitlement evidence seen for this provider yet");
 
 	if (denied) {
-		return excluded("plan", freshness, `paid fallback denied for ${key} and its subscription backing is not verified`, evidence, uncertainty);
+		return excluded("subscription", "plan", freshness, `paid fallback denied for ${key} and its subscription backing is not verified`, evidence, uncertainty);
 	}
 	if (!cfg.billing.allowUnverifiedSubscription) {
-		return excluded("plan", freshness, "subscription backing is not verified and billing.allowUnverifiedSubscription is false", evidence, uncertainty);
+		return excluded("subscription", "plan", freshness, "subscription backing is not verified and billing.allowUnverifiedSubscription is false", evidence, uncertainty);
 	}
 	return {
 		basis: "subscription",
@@ -212,22 +212,23 @@ function assessExtraCredits(
 	if (quota.overage?.status) evidence.push(`overage window ${quota.overage.status}`);
 
 	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
-		return excluded("plan", freshness, `subscription exhausted (${spent}) and paid fallback is denied for ${key}`, evidence, uncertainty);
+		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and paid fallback is denied for ${key}`, evidence, uncertainty);
 	}
 	if (!anyGlobMatch(cfg.billing.allowExtraBilled, key)) {
-		return excluded("plan", freshness, `subscription exhausted (${spent}); ${key} is not in billing.allowExtraBilled`, evidence, uncertainty);
+		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}); ${key} is not in billing.allowExtraBilled`, evidence, uncertainty);
 	}
 	if (credits?.disabledReason) {
-		return excluded("plan", freshness, `subscription exhausted (${spent}) and extra usage is off on the account`, evidence, uncertainty);
+		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and extra usage is off on the account`, evidence, uncertainty);
 	}
 	if (quota.overage && quota.overage.status === "rejected") {
-		return excluded("plan", freshness, `subscription exhausted (${spent}) and the extra-usage window is rejected`, evidence, uncertainty);
+		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and the extra-usage window is rejected`, evidence, uncertainty);
 	}
 	const creditsFresh = credits !== undefined && now - credits.lastSeen <= cfg.billing.evidenceMaxAgeMinutes * 60_000;
 	const haveCredits = credits?.unlimited === true || credits?.hasCredits === true;
 	if (cfg.billing.requireVerifiedExtraBilled && !(creditsFresh && haveCredits)) {
 		uncertainty.push(credits ? "credit evidence is stale or says no credits" : "no live credit evidence for this account");
 		return excluded(
+			"extra-credits",
 			"plan",
 			freshness,
 			`subscription exhausted (${spent}); extra billed usage needs verified credits (billing.requireVerifiedExtraBilled)`,
@@ -251,10 +252,10 @@ function assessExtraCredits(
 
 function assessPayPerToken(key: string, cfg: RouterConfig, evidence: string[], uncertainty: string[]): BillingAssessment {
 	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
-		return excluded("on-demand", "verified", `paid inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
+		return excluded("pay-per-token", "on-demand", "verified", `paid inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
 	}
 	if (!anyGlobMatch(cfg.billing.allowPayPerToken, key)) {
-		return excluded("on-demand", "verified", `${key} is not in billing.allowPayPerToken`, evidence, uncertainty);
+		return excluded("pay-per-token", "on-demand", "verified", `${key} is not in billing.allowPayPerToken`, evidence, uncertainty);
 	}
 	evidence.push("billed per token at catalog list price");
 	uncertainty.push("list-price estimate, not a charge receipt");
@@ -270,8 +271,21 @@ function assessPayPerToken(key: string, cfg: RouterConfig, evidence: string[], u
 	};
 }
 
-function excluded(billing: Billing, verification: Verification, reason: string, evidence: string[], uncertainty: string[]): BillingAssessment {
-	return { basis: billing === "plan" ? "subscription" : billing === "free" ? "free" : "pay-per-token", verification, eligibility: "excluded", reason, evidence, uncertainty, billing, rank: RANK.excluded };
+/** An excluded verdict still reports the basis it was excluded *on*, so the reason stays legible. */
+function excluded(
+	basis: BillingBasis,
+	billing: Billing,
+	verification: Verification,
+	reason: string,
+	evidence: string[],
+	uncertainty: string[],
+): BillingAssessment {
+	return { basis, verification, eligibility: "excluded", reason, evidence, uncertainty, billing, rank: RANK.excluded };
+}
+
+/** The basis a coarse label implies, for verdicts reached before the basis is resolved. */
+function labelBasis(billing: Billing): BillingBasis {
+	return billing === "plan" ? "subscription" : billing === "free" ? "free" : "pay-per-token";
 }
 
 /** How fresh the provider's quota evidence is, in verification terms. */

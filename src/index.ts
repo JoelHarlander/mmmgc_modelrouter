@@ -15,7 +15,7 @@ import { assessBilling, describeBasis } from "./billing.ts";
 import { loadConfig, modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
 import { refreshEntitlements } from "./entitlement.ts";
 import { type JevChoiceAnswer, JevClient, type JevNoulAnswer, type JevScoreAnswer } from "./jev.ts";
-import { Ledger } from "./ledger.ts";
+import { Ledger, ledgerPath } from "./ledger.ts";
 import { PARALLEL_ENTRY_TYPE, type ParallelEntryData, renderParallelEntry, runParallel } from "./parallel.ts";
 import { chooseModel, type Decision, heuristicTier } from "./router.ts";
 import { buildRoutingState, routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "./state.ts";
@@ -25,7 +25,8 @@ const STATUS_KEY = "modelrouter";
 export default function modelRouter(pi: ExtensionAPI) {
 	let cfg: RouterConfig = loadConfig(process.cwd()).config;
 	let jev = new JevClient(cfg.jev);
-	const ledger = new Ledger(join(getAgentDir(), "modelrouter", "usage.json"));
+	// Shared with every other pi session on this agent dir; Ledger.save() locks and merges.
+	const ledger = new Ledger(ledgerPath(join(getAgentDir(), "modelrouter")));
 
 	let turn = 0;
 	let pinnedUntilTurn = 0;

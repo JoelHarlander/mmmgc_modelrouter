@@ -546,7 +546,7 @@ function sleepSync(ms: number): void {
 	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-/** Only used by tests and tooling that need a scratch ledger path. */
+/** The shared usage file inside a ledger directory. */
 export function ledgerPath(dir: string): string {
 	return join(dir, "usage.json");
 }
