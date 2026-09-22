@@ -109,7 +109,10 @@ npm run eval -- --audit-config          # price the shipped tiers from docs/data
 npm run eval -- --classifier live       # real Jev; also needs ROUTER_EVAL_LIVE=1
 ```
 
-The harness measures the shipped router; it does not change how it routes or how `/duo` adopts an answer.
+**What it found, distilled into a decision brief:** [`docs/research/router-eval-findings.md`](docs/research/router-eval-findings.md)
+— what the eval establishes about the tier table, cheapest-in-tier, switching cost, the two mis-set knobs and the
+fan-out, what each claim rests on, and the one measurement that has not been taken. It is input to a decision, not
+a decision: the harness measures the shipped router and does not change how it routes or how `/duo` adopts an answer.
 What it declares rather than measures, how the cost model is derived, and how to read each metric are in
 [`eval/README.md`](eval/README.md). Every finding so far, with what each one rests on, is in the findings index
 at the top of [`eval/results/log.md`](eval/results/log.md).

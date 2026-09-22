@@ -2,6 +2,7 @@
 
 One entry per round: what it measured, what it changed, what the numbers did.
 Runs are reproduced with `npm run eval -- <flags>`; the JSON for each is in this directory.
+**For the distilled version, read [`docs/research/router-eval-findings.md`](../../docs/research/router-eval-findings.md).**
 
 ## Findings index
 
@@ -1453,3 +1454,45 @@ than absolute, and says why.
 
 **Next.** `--probe --live-judge`, and — round 22's own conclusion — a live task path, if
 quality is ever to be more than directional here.
+
+---
+
+## Round 23 — 2026-09-23 — write down what it all means
+
+**Measured.** Nothing new. Twenty-two rounds produced a log that is honest and long, and
+a log is not a decision. This round measured whether the work is *usable* by the person
+who has to act on it — the separately-owned task that changes how the router selects and
+adopts a model — and the answer was no, not without reading 900 lines first.
+
+**Changed.** [`docs/research/router-eval-findings.md`](../../docs/research/router-eval-findings.md):
+a decision brief, six sections, each with the command that reproduces it.
+
+1. **Fix the tier table first** — the shipped `standard` tier is *dominated* on published
+   prices, and that single fact is upstream of both the unpenalised escalation and the
+   fan-out's fragility.
+2. **Cheapest-in-tier is the switcher's own weakness** — the strongest model is never
+   chosen, and quality tracks the user's billing rather than their work.
+3. **Switching is expensive** — $73.43 across 90 switches, 49% of routed-turn spend, 98%
+   of it invisible to the ledger. The load-bearing result.
+4. **Two knobs are set wrong** — `minConfidence` 0.5 → 0.6 is free; `manualPinTurns`
+   3 → 1 recovers quality a pin costs, including compactions it forces.
+5. **The fan-out idea is good and its implementation is the worst of five** — `tier-top`
+   is better, 2.5× cheaper and bias-immune; explore-then-commit is cheaper again; and
+   the confidence gate is not a defence.
+6. **The measurement that decides §5 has not been taken** — one command, under a cent.
+
+It opens with what the harness can and cannot settle, because that has to be the first
+thing a reader sees: cost claims are measured, quality claims are directional.
+
+**And a test that keeps it honest.** A document full of numbers that silently goes stale
+is worse than no document. `the findings brief still agrees with what the harness
+measures` re-measures the load-bearing figures — the tier table from `docs/data`, the
+cold-start premium, the switch count, the judge's captured headroom — and fails if the
+brief no longer quotes them. It earned its place immediately: it caught a figure split
+across a line break on the first run.
+
+**What is deliberately not in it.** Any change to `src/`. The brief recommends; another
+task decides and implements. Round 23 is the handover, not the hand.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`, which §6 exists to
+make someone run.

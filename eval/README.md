@@ -46,6 +46,10 @@ The pack id is part of the results profile, so a long run is never compared agai
 short one. On the long pack `taskResolveRate` saturates at 0 (no 10-turn session is
 flawless), so `medianTaskTurnSuccess` and `turnSuccessRate` carry the quality signal.
 
+The findings, distilled for whoever acts on them, are in
+[`docs/research/router-eval-findings.md`](../docs/research/router-eval-findings.md); a test re-measures its
+load-bearing numbers and fails if the brief and the harness disagree.
+
 Every run writes `eval/results/<timestamp>-<profile>-<git>.json` plus a
 `latest-<profile>.json` the next run automatically compares against, and prints the
 deltas. `--note "..."` appends a round line to [`results/log.md`](results/log.md), whose

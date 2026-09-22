@@ -1405,3 +1405,33 @@ test("the judge's raw lift depends on how much room there is; the share it captu
 		`headroom captured moved from ${weak.judgeHeadroomCaptured} to ${strong.judgeHeadroomCaptured} across a 6x change in headroom`,
 	);
 });
+
+test("the findings brief still agrees with what the harness measures", async () => {
+	// A decision document full of numbers that silently goes stale is worse than none.
+	// This re-measures the load-bearing ones and requires the brief to quote them.
+	const brief = readFileSync(join(ROOT, "docs", "research", "router-eval-findings.md"), "utf8");
+	const quotes = (needle: string, why: string) => assert.ok(brief.includes(needle), `the brief no longer says "${needle}" — ${why}`);
+
+	// §1: the shipped tier table, priced from docs/data. Nothing simulated.
+	const audit = auditConfig(DEFAULT_CONFIG, DOCS);
+	assert.equal(audit.dominatedTiers.length, 1);
+	const [light, standard, heavy] = audit.tiers.map((t) => t.preferred!);
+	quotes(`$${standard!.warmTurnUsd!.toFixed(4)}`, "the standard tier's price changed");
+	quotes(`$${heavy!.warmTurnUsd!.toFixed(4)}`, "the heavy tier's price changed");
+	quotes(String(light!.intelligence), "the light tier's capability score changed");
+	assert.ok(brief.includes("standard` tier is dominated") || brief.includes("standard tier is dominated"));
+
+	// §3: the load-bearing cost figures.
+	const long = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	quotes(`$${long.coldPremiumUsd.toFixed(2)}`, "the cold-start premium changed");
+	quotes(`${long.switches} switches`, "the switch count changed");
+
+	// §5: the shipped fan-out set against the alternative, and the durable framing.
+	const shipped = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), candidateN: 3, judgeMinConfidence: 0 }))).candidate!;
+	assert.ok(shipped.judgeHeadroomCaptured > 0.7);
+	quotes("fraction of available headroom", "the brief must not quote quality effects in bare points");
+
+	// The honest limits, which are the first thing a reader must see.
+	quotes("0 of 5 quality differences do", "the resolution claim changed");
+	quotes("5 of 5 cost differences resolve", "the resolution claim changed");
+});
