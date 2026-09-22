@@ -34,7 +34,7 @@ npm run eval -- --help
 | Pack | Shape | What it is for |
 | --- | --- | --- |
 | `swe-router-v1` | 15 tasks, 31 turns, 1–3 turns each, 9k–80k context | classification quality, eligibility, quota, pins — fast to run and read |
-| `swe-router-long-v1` | 6 tasks, 60 turns, 8–12 turns each, 80k–256k context | **cache and spend**, which only bite at the context sizes real sessions reach |
+| `swe-router-long-v1` | 20 tasks, 175 turns, 8–12 turns each, 80k–256k context | **cache and spend**, which only bite at the context sizes real sessions reach |
 
 The short pack under-weights the cache badly: at 20k of context a cold start is
 rounding error; at 200k it is the largest line in the turn. The long pack's contexts
@@ -269,11 +269,17 @@ The long pack is six tasks; the short one is fifteen. `--bootstrap` resamples th
 for the *differences* the findings actually rest on — paired, because every claim is
 "A beats B on the same tasks", which cancels the shared task-difficulty variance.
 
-The result is worth knowing before reading any number here: **5 of 5 cost differences
-resolve at 95% and 1 of 5 quality differences does.** Resolving a 5pp quality difference
-would need about 113 tasks of this shape and 2pp about 705 — SWE-bench Verified is 500,
-which is not a coincidence. Quality findings in the round log are labelled
-*under-powered* where the pack cannot resolve them.
+The result is worth knowing before reading any number here: on the 20-task long pack,
+**5 of 5 cost differences resolve at 95% and 0 of 5 quality differences do.** Resolving
+a 5pp quality difference would need about 211 tasks of this shape and 2pp about 1300.
+
+This harness measures money well and quality poorly, and growing the pack does not fix
+the second — round 22 tripled it and the quality intervals still straddle zero. Quality
+findings in the round log are **directional**: they agree across sweeps and were arrived
+at honestly, but they are not resolved. Where a quality effect is real, state it as a
+**fraction of the available headroom** rather than in points — the judge captures
+~83–97% of the headroom between the routed model and the best candidate, and that
+survives a 6× change in how much headroom there is, while the raw lift moves 7×.
 
 ## What the answer rests on
 

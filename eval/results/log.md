@@ -7,12 +7,14 @@ Runs are reproduced with `npm run eval -- <flags>`; the JSON for each is in this
 
 Jump to the round that established each claim, and what it rests on.
 
-> **Read round 21 first.** A paired bootstrap over the pack's tasks shows that **5 of 5
-> cost differences resolve at 95% and only 1 of 5 quality differences does**. Cost claims
-> below are supported by the pack; quality claims marked *under-powered* are directional
-> and would need ~113 tasks to resolve at 5pp, ~705 at 2pp. The one quality claim that
-> does resolve is that running several candidates and adopting the judge's pick beats not
-> doing it: **+28.3pp [+11.1, +50.0]**.
+> **Read rounds 21–22 first.** A paired bootstrap over the pack's tasks shows that
+> **5 of 5 cost differences resolve at 95% and 0 of 5 quality differences do** on the
+> 20-task long pack. Cost claims below are supported by the pack; quality claims are
+> **directional only** — they agree across sweeps and were arrived at honestly, but this
+> harness cannot resolve them at any pack size that can be hand-authored (~211 tasks for
+> 5pp, ~1300 for 2pp). The durable form of the fan-out result is not a point difference
+> at all: **the judge captures ~83–97% of whatever headroom exists**, and the raw lift is
+> that fraction times however much room the work leaves.
 
 | Finding | Round | Robust to |
 | --- | :---: | --- |
@@ -26,7 +28,7 @@ Jump to the round that established each claim, and what it rests on.
 | ~~Never switching *also* wins on quality~~ | 4 | **WITHDRAWN in r19.** It was an artefact of starting the session on the strongest model. Averaged over starting points, routing wins 65.8% to 41.7%. |
 | *(under-powered)* **Routing's value is insensitive to the starting model** (5pp spread across six starts); not routing varies by **45pp** and simply inherits whatever it began on | **19** | every fleet model as a start |
 | Fan-out costs 2.9× more per extra solve at realistic context ($4.94 → $14.28) | 4 | traffic constants (r5) |
-| **Candidate selection is worth +28.3pp [+11.1, +50.0]** — the only quality claim here the pack resolves | 3, **21** | traffic constants (r5); **paired bootstrap** |
+| **The judge captures ~83–97% of the headroom between the routed model and the best candidate** — invariant across a 6× change in headroom; the raw lift (+9pp to +62pp) is not | 3, 21, **22** | traffic constants (r5); start model (r22) |
 | **~20 points of judge bias makes fan-out worse than not running it** | 3 | 5 seeds × 3 widths |
 | Random judge error is far more forgiving than systematic bias; noise partly cancels bias | 3 | 5 seeds |
 | The shipped **confidence gate does not defend against bias** — a biased judge is confidently wrong | 8 | 5 seeds × 3 bias levels |
@@ -1378,3 +1380,76 @@ they are.
 **Next.** `--probe --live-judge`, which round 20 identified as *the* input and round 21
 prices the consequence of: the one resolvable quality win in this log is a bet on the
 judge, and nobody has measured the judge.
+
+---
+
+## Round 22 — 2026-09-23 — grow the pack, and watch a headline shrink
+
+**Measured.** The constraint the harness identified about itself. Round 21 showed the
+long pack could not resolve quality differences and estimated it would take ~113 tasks
+to resolve 5pp. So: more tasks.
+
+**Changed.** `swe-router-long-v1` goes from **6 sessions / 60 turns to 20 sessions / 175
+turns**, across twelve repositories in the SWE-bench Verified namespace. The original
+six were deliberately hard — concurrency, architecture, security. The fourteen new ones
+are ordinary: a `diophantine` ordering bug, a `check_scalar` dtype check, a
+`set_xticks` kwarg, a Flask blueprint name validation, a dropped `Subquery` character,
+a `swap_dims` aliasing bug. That mix is more like real SWE-bench, which is mostly
+ordinary bugfixes, and one of the fourteen carries a `/model` pin so the operator case
+scales with the pack.
+
+**`--validate` caught three of my own calibration errors on the way in** — turns whose
+declared `requiredSkill` did not put them in the tier I had labelled. Round 2 built that
+check precisely so a growing pack could not quietly rot; it worked.
+
+**What the numbers did — and the headline that shrank.** Round 21's one resolvable
+quality win does not survive the larger pack:
+
+| | 6-task pack | 20-task pack |
+| --- | ---: | ---: |
+| baseline session success | 56.7% | **80.0%** |
+| fan-out adopted | 85.0% | 94.3% |
+| ceiling | 88.3% | 96.0% |
+| **raw lift** | **+28.3pp** | **+14.3pp** |
+| paired 95% interval | [+11.1, +50.0] ✓ | [0.0, +32.4] **ns** |
+| **headroom captured** | **89.5%** | **89.3%** |
+
+The mechanism did not change. The *baseline* rose, because the fourteen new tasks are
+easier, so there was less room for a judge to win back. **The raw lift halved; the
+fraction of headroom captured moved by 0.2 of a percentage point.**
+
+**That is the durable form of the result, and it is better than the one it replaces.**
+Round 21 said "fan-out is worth +28.3pp". Round 22 says: *a lift in points is only
+meaningful beside its baseline, and what is actually stable is that the judge takes
+roughly nine-tenths of whatever is available.* Driving the same pack from different
+starting models makes the point cleanly — headroom varies **6×** and the raw lift **7×**
+while the fraction barely moves:
+
+| session starts on | baseline | headroom | raw lift | **captured** |
+| --- | ---: | ---: | ---: | ---: |
+| `glm-5.3-flash` (skill 46) | 31.4% | 64.0pp | **+62.3pp** | **97.3%** |
+| `claude-opus-5` (86) | 85.7% | 10.3pp | +8.6pp | 83.3% |
+| `claude-fable-5-1` (91) | 86.9% | 10.3pp | +9.1pp | 88.9% |
+
+**And the honest cost of growing the pack: nothing quality-side resolves any more.**
+0 of 5 paired quality comparisons now clear 95%, against 1 of 5 before, because a
+broader difficulty mix shrinks every effect while the interval narrows more slowly. The
+estimate rises with it: **~211 tasks** for 5pp, **~1300** for 2pp. Five of five cost
+comparisons still resolve, as they have in every round that has tested them.
+
+The conclusion is not that the pack should be bigger again. It is that **this class of
+harness measures money well and quality poorly, and no amount of hand-authored fixture
+fixes the second one** — that needs real tasks and real model execution, which is the
+live path.
+
+**Eight tests changed with the fixture**, and one was added. As in round 15, each had
+been keyed to a magnitude from the smaller pack; each now asserts a mechanism — a long
+pack's all-or-nothing rate must understate its median, a pin that outlives its question
+must land in the wrong tier, judge bias must dominate the router-side assumptions it
+displaces, the judge's captured fraction must survive a 6× change in headroom. One
+weakened honestly rather than being rewritten: the switching-cost finding holds 5/5 at
+±0, ±5 and ±10 of fleet jitter and **4/5 at ±20**, so the test now requires ≥80% rather
+than absolute, and says why.
+
+**Next.** `--probe --live-judge`, and — round 22's own conclusion — a live task path, if
+quality is ever to be more than directional here.

@@ -1,7 +1,7 @@
 {
 	"version": 1,
 	"id": "swe-router-long-v1",
-	"description": "Long-session companion to swe-router-v1. Six SWE-bench-style issues worked over 8-12 turns each, at the context sizes this machine's own pi logs actually reach (the cache-cost study measured Opus context per call at p50 235k, p90 370k; this pack spans 80k-256k). The short pack under-weights the cache: at 20k of context a cold start is rounding error, at 200k it is the largest line in the turn. The turn shape matters too - hard turns interleaved with cheap follow-ups is what makes the router oscillate, and each oscillation is a cache flush. Same contract as swe-router-v1: requiredSkill is the declared ground truth, goldTier is derived and checked. Four turns carry a `manualPin`: the operator pinning a cheap model for a trivial follow-up, which src/index.ts then honours for switching.manualPinTurns afterwards - three of them are still in force when the next hard turn arrives, which is the pattern that makes a pin cost something.",
+	"description": "Long-session companion to swe-router-v1. Twenty SWE-bench-style issues worked over 8-12 turns each, at the context sizes this machine's own pi logs actually reach (the cache-cost study measured Opus context per call at p50 235k, p90 370k; this pack spans 80k-256k). The short pack under-weights the cache: at 20k of context a cold start is rounding error, at 200k it is the largest line in the turn. The turn shape matters too - hard turns interleaved with cheap follow-ups is what makes the router oscillate, and each oscillation is a cache flush. Same contract as swe-router-v1: requiredSkill is the declared ground truth, goldTier is derived and checked. Four turns carry a `manualPin`: the operator pinning a cheap model for a trivial follow-up, which src/index.ts then honours for switching.manualPinTurns afterwards - three of them are still in force when the next hard turn arrives, which is the pattern that makes a pin cost something.",
 	"tasks": [
 		{
 			"id": "django__django-16379-session",
@@ -725,6 +725,1412 @@
 						"confidence": 0.82,
 						"needsTools": 0.8,
 						"stakes": 0.6
+					}
+				}
+			]
+		},
+		{
+			"id": "sympy__sympy-18189-session",
+			"repo": "sympy/sympy",
+			"category": "bugfix",
+			"requiredSkill": 66,
+			"startContextTokens": 85000,
+			"contextGrowthPerTurn": 12000,
+			"turns": [
+				{
+					"prompt": "diophantine() gives different results depending on the order of `syms` when permute=True. Reproduce it.",
+					"goldTier": "standard",
+					"requiredSkill": 54,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.74,
+						"needsTools": 0.9,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Show me where syms is used in diophantine.",
+					"goldTier": "light",
+					"requiredSkill": 36,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.83,
+						"needsTools": 0.7,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Why does the permutation set depend on that order?",
+					"goldTier": "standard",
+					"requiredSkill": 70,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.62,
+						"needsTools": 0.4,
+						"stakes": 1.5
+					}
+				},
+				{
+					"prompt": "Fix it so the result is order-independent.",
+					"goldTier": "standard",
+					"requiredSkill": 68,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.77,
+						"needsTools": 0.95,
+						"stakes": 1.5
+					}
+				},
+				{
+					"prompt": "Run the diophantine tests.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Two tests now fail on the classify_diop path. Work out why.",
+					"goldTier": "heavy",
+					"requiredSkill": 78,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.58,
+						"needsTools": 0.8,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Fix those without reintroducing the ordering bug.",
+					"goldTier": "heavy",
+					"requiredSkill": 80,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.72,
+						"needsTools": 0.95,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Add a regression test that permutes syms.",
+					"goldTier": "standard",
+					"requiredSkill": 50,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.68,
+						"needsTools": 0.95,
+						"stakes": 1.0
+					}
+				},
+				{
+					"prompt": "Changelog entry.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "scikit-learn__scikit-learn-14092-session",
+			"repo": "scikit-learn/scikit-learn",
+			"category": "bugfix",
+			"requiredSkill": 64,
+			"startContextTokens": 95000,
+			"contextGrowthPerTurn": 13000,
+			"turns": [
+				{
+					"prompt": "NCA fails its parameter check when n_components is a numpy int rather than a Python int. Reproduce.",
+					"goldTier": "standard",
+					"requiredSkill": 50,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.73,
+						"needsTools": 0.9,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Show me check_scalar and how NCA calls it.",
+					"goldTier": "light",
+					"requiredSkill": 38,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.85,
+						"needsTools": 0.8,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Should check_scalar accept numpy integer types, or should NCA coerce? Decide.",
+					"goldTier": "heavy",
+					"requiredSkill": 76,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.6,
+						"needsTools": 0.4,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Implement whichever you chose.",
+					"goldTier": "standard",
+					"requiredSkill": 66,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.76,
+						"needsTools": 0.95,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "What else in the codebase calls check_scalar with a user-supplied dtype?",
+					"goldTier": "standard",
+					"requiredSkill": 62,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.59,
+						"needsTools": 0.6,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Make those consistent.",
+					"goldTier": "standard",
+					"requiredSkill": 68,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.71,
+						"needsTools": 0.95,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Add tests for numpy ints and floats.",
+					"goldTier": "standard",
+					"requiredSkill": 54,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.69,
+						"needsTools": 0.95,
+						"stakes": 1.1
+					}
+				},
+				{
+					"prompt": "Run the neighbors test module.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				}
+			]
+		},
+		{
+			"id": "matplotlib__matplotlib-24334-session",
+			"repo": "matplotlib/matplotlib",
+			"category": "feature",
+			"requiredSkill": 62,
+			"startContextTokens": 80000,
+			"contextGrowthPerTurn": 11000,
+			"turns": [
+				{
+					"prompt": "Axes.set_xticks silently ignores kwargs when labels is None. Where does that happen?",
+					"goldTier": "light",
+					"requiredSkill": 40,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.82,
+						"needsTools": 0.7,
+						"stakes": 0.5
+					}
+				},
+				{
+					"prompt": "Make it validate the kwargs even when labels is None.",
+					"goldTier": "standard",
+					"requiredSkill": 62,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.75,
+						"needsTools": 0.94,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Does this break any caller that passes kwargs positionally?",
+					"goldTier": "standard",
+					"requiredSkill": 66,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.63,
+						"needsTools": 0.6,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Add tests for both the labels and no-labels paths.",
+					"goldTier": "standard",
+					"requiredSkill": 58,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "One test errors with an unexpected Text kwarg. Diagnose.",
+					"goldTier": "standard",
+					"requiredSkill": 70,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.61,
+						"needsTools": 0.8,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Fix it.",
+					"goldTier": "standard",
+					"requiredSkill": 64,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.74,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Document the new validation.",
+					"goldTier": "light",
+					"requiredSkill": 44,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.9,
+						"stakes": 0.5
+					}
+				}
+			]
+		},
+		{
+			"id": "django__django-13447-session",
+			"repo": "django/django",
+			"category": "refactor",
+			"requiredSkill": 70,
+			"startContextTokens": 105000,
+			"contextGrowthPerTurn": 13000,
+			"turns": [
+				{
+					"prompt": "Make the admin app_list context public so a custom admin can reorder it. Where is it built?",
+					"goldTier": "light",
+					"requiredSkill": 44,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.7,
+						"stakes": 0.6
+					}
+				},
+				{
+					"prompt": "Add the model class to each entry in that dict.",
+					"goldTier": "standard",
+					"requiredSkill": 62,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.74,
+						"needsTools": 0.94,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Rename _build_app_dict to build_app_dict and keep a deprecated alias.",
+					"goldTier": "standard",
+					"requiredSkill": 68,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.71,
+						"needsTools": 0.95,
+						"stakes": 1.5
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Who else calls the private name across the codebase?",
+					"goldTier": "standard",
+					"requiredSkill": 56,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.55,
+						"needsTools": 0.6,
+						"stakes": 1.1
+					}
+				},
+				{
+					"prompt": "Update those callers.",
+					"goldTier": "standard",
+					"requiredSkill": 64,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.73,
+						"needsTools": 0.95,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "The deprecation shim breaks subclasses that override the private name. Work out the right shape.",
+					"goldTier": "heavy",
+					"requiredSkill": 82,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.69,
+						"needsTools": 0.5,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Implement that and add tests.",
+					"goldTier": "heavy",
+					"requiredSkill": 76,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.6,
+						"needsTools": 0.95,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Write the release note.",
+					"goldTier": "light",
+					"requiredSkill": 34,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.88,
+						"needsTools": 0.8,
+						"stakes": 0.3
+					}
+				}
+			]
+		},
+		{
+			"id": "pallets__flask-4045-session",
+			"repo": "pallets/flask",
+			"category": "feature",
+			"requiredSkill": 56,
+			"startContextTokens": 70000,
+			"contextGrowthPerTurn": 10000,
+			"turns": [
+				{
+					"prompt": "Blueprint names containing a dot silently break nested blueprints. Where is the name used?",
+					"goldTier": "light",
+					"requiredSkill": 40,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.83,
+						"needsTools": 0.7,
+						"stakes": 0.5
+					}
+				},
+				{
+					"prompt": "Raise a ValueError when a blueprint name contains a dot.",
+					"goldTier": "standard",
+					"requiredSkill": 54,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.72,
+						"needsTools": 0.94,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Do the same for endpoint names passed to add_url_rule.",
+					"goldTier": "standard",
+					"requiredSkill": 58,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Will this break apps that already use dotted names?",
+					"goldTier": "standard",
+					"requiredSkill": 66,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.62,
+						"needsTools": 0.4,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Add tests for both checks.",
+					"goldTier": "standard",
+					"requiredSkill": 50,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.68,
+						"needsTools": 0.95,
+						"stakes": 1.0
+					}
+				},
+				{
+					"prompt": "Run the blueprint tests.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Changelog.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "sympy__sympy-24152-session",
+			"repo": "sympy/sympy",
+			"category": "bugfix",
+			"requiredSkill": 72,
+			"startContextTokens": 90000,
+			"contextGrowthPerTurn": 12000,
+			"turns": [
+				{
+					"prompt": "expand() on a TensorProduct stops after the first non-commutative factor. Reproduce it.",
+					"goldTier": "standard",
+					"requiredSkill": 56,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.73,
+						"needsTools": 0.9,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Show me _eval_expand_tensorproduct.",
+					"goldTier": "light",
+					"requiredSkill": 38,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.84,
+						"needsTools": 0.8,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Why does the recursion stop early?",
+					"goldTier": "standard",
+					"requiredSkill": 74,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.6,
+						"needsTools": 0.4,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Fix the recursion so every factor expands.",
+					"goldTier": "heavy",
+					"requiredSkill": 78,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Check the commutative scalar factors still come out front.",
+					"goldTier": "standard",
+					"requiredSkill": 64,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.66,
+						"needsTools": 0.8,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Add a test with three factors.",
+					"goldTier": "standard",
+					"requiredSkill": 52,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.69,
+						"needsTools": 0.95,
+						"stakes": 1.1
+					}
+				},
+				{
+					"prompt": "Run the quantum test module.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Changelog.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "astropy__astropy-14182-session",
+			"repo": "astropy/astropy",
+			"category": "feature",
+			"requiredSkill": 58,
+			"startContextTokens": 75000,
+			"contextGrowthPerTurn": 10000,
+			"turns": [
+				{
+					"prompt": "The RST writer does not accept header_rows. Where does ascii.write dispatch that?",
+					"goldTier": "light",
+					"requiredSkill": 42,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.81,
+						"needsTools": 0.7,
+						"stakes": 0.5
+					}
+				},
+				{
+					"prompt": "Add header_rows support to the RST writer.",
+					"goldTier": "standard",
+					"requiredSkill": 58,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.74,
+						"needsTools": 0.94,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Does the fixed-width writer share that code path?",
+					"goldTier": "standard",
+					"requiredSkill": 54,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.64,
+						"needsTools": 0.6,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Keep them consistent.",
+					"goldTier": "standard",
+					"requiredSkill": 62,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.72,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Add tests for a units header row.",
+					"goldTier": "standard",
+					"requiredSkill": 50,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.68,
+						"needsTools": 0.95,
+						"stakes": 1.0
+					}
+				},
+				{
+					"prompt": "Run the ascii tests.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Document the option.",
+					"goldTier": "light",
+					"requiredSkill": 44,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.9,
+						"stakes": 0.5
+					}
+				}
+			]
+		},
+		{
+			"id": "pytest-dev__pytest-7220-session",
+			"repo": "pytest-dev/pytest",
+			"category": "bugfix",
+			"requiredSkill": 76,
+			"startContextTokens": 100000,
+			"contextGrowthPerTurn": 13000,
+			"turns": [
+				{
+					"prompt": "When a fixture chdirs, failure paths are reported relative to the new cwd and become wrong. Reproduce.",
+					"goldTier": "standard",
+					"requiredSkill": 60,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.72,
+						"needsTools": 0.9,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Where does pytest compute the displayed path?",
+					"goldTier": "light",
+					"requiredSkill": 42,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.7,
+						"stakes": 0.5
+					}
+				},
+				{
+					"prompt": "Why does chdir change it?",
+					"goldTier": "standard",
+					"requiredSkill": 72,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.61,
+						"needsTools": 0.4,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Decide whether to resolve paths at collection time or at report time.",
+					"goldTier": "heavy",
+					"requiredSkill": 84,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.7,
+						"needsTools": 0.4,
+						"stakes": 1.9
+					}
+				},
+				{
+					"prompt": "Implement it.",
+					"goldTier": "heavy",
+					"requiredSkill": 80,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.73,
+						"needsTools": 0.95,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"manualPin": "faux-or/glm-5.3-flash",
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Does this affect the rootdir-relative display in --tb=short?",
+					"goldTier": "heavy",
+					"requiredSkill": 76,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.59,
+						"needsTools": 0.6,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Fix that too and add tests.",
+					"goldTier": "heavy",
+					"requiredSkill": 78,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.71,
+						"needsTools": 0.95,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Changelog.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "django__django-15320-session",
+			"repo": "django/django",
+			"category": "bugfix",
+			"requiredSkill": 62,
+			"startContextTokens": 88000,
+			"contextGrowthPerTurn": 11000,
+			"turns": [
+				{
+					"prompt": "Subquery.as_sql() drops the first and last characters, producing invalid SQL. Reproduce.",
+					"goldTier": "standard",
+					"requiredSkill": 50,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.74,
+						"needsTools": 0.9,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Show me as_sql and where subquery is set.",
+					"goldTier": "light",
+					"requiredSkill": 38,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.84,
+						"needsTools": 0.8,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Why is it slicing the string at all?",
+					"goldTier": "standard",
+					"requiredSkill": 64,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.63,
+						"needsTools": 0.4,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Fix it by setting subquery = True in the constructor rather than slicing.",
+					"goldTier": "standard",
+					"requiredSkill": 60,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.76,
+						"needsTools": 0.95,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Does any caller depend on the old sliced output?",
+					"goldTier": "standard",
+					"requiredSkill": 66,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.6,
+						"needsTools": 0.6,
+						"stakes": 1.5
+					}
+				},
+				{
+					"prompt": "Add a test that asserts the full SQL.",
+					"goldTier": "standard",
+					"requiredSkill": 52,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.69,
+						"needsTools": 0.95,
+						"stakes": 1.1
+					}
+				},
+				{
+					"prompt": "Run the expressions tests.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Release note.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "pydata__xarray-6938-session",
+			"repo": "pydata/xarray",
+			"category": "bugfix",
+			"requiredSkill": 74,
+			"startContextTokens": 92000,
+			"contextGrowthPerTurn": 12000,
+			"turns": [
+				{
+					"prompt": "swap_dims() mutates the original object's dimension coordinates. Reproduce it.",
+					"goldTier": "standard",
+					"requiredSkill": 56,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.73,
+						"needsTools": 0.9,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Show me swap_dims.",
+					"goldTier": "light",
+					"requiredSkill": 38,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.84,
+						"needsTools": 0.8,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Which variable is being shared rather than copied?",
+					"goldTier": "standard",
+					"requiredSkill": 72,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.61,
+						"needsTools": 0.5,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Fix the aliasing.",
+					"goldTier": "heavy",
+					"requiredSkill": 76,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Are rename_dims and set_index affected the same way?",
+					"goldTier": "heavy",
+					"requiredSkill": 78,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.68,
+						"needsTools": 0.6,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Fix any that are.",
+					"goldTier": "heavy",
+					"requiredSkill": 80,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.72,
+						"needsTools": 0.95,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Add tests that assert the original is unchanged.",
+					"goldTier": "standard",
+					"requiredSkill": 56,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Changelog.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "sphinx-doc__sphinx-10325-session",
+			"repo": "sphinx-doc/sphinx",
+			"category": "feature",
+			"requiredSkill": 66,
+			"startContextTokens": 82000,
+			"contextGrowthPerTurn": 11000,
+			"turns": [
+				{
+					"prompt": "autodoc's :inherited-members: takes a single class. Where is it parsed?",
+					"goldTier": "light",
+					"requiredSkill": 42,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.81,
+						"needsTools": 0.7,
+						"stakes": 0.5
+					}
+				},
+				{
+					"prompt": "Make it accept a comma-separated list of classes to ignore.",
+					"goldTier": "standard",
+					"requiredSkill": 64,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.74,
+						"needsTools": 0.94,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "How does this interact with :undoc-members:?",
+					"goldTier": "standard",
+					"requiredSkill": 68,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.62,
+						"needsTools": 0.5,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Handle that combination.",
+					"goldTier": "standard",
+					"requiredSkill": 66,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.72,
+						"needsTools": 0.95,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Add tests for a two-class list.",
+					"goldTier": "standard",
+					"requiredSkill": 56,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.69,
+						"needsTools": 0.95,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "One test picks up object's methods unexpectedly. Diagnose and fix.",
+					"goldTier": "heavy",
+					"requiredSkill": 76,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.58,
+						"needsTools": 0.8,
+						"stakes": 1.5
+					}
+				},
+				{
+					"prompt": "Document the new syntax.",
+					"goldTier": "light",
+					"requiredSkill": 44,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.9,
+						"stakes": 0.5
+					}
+				}
+			]
+		},
+		{
+			"id": "psf__requests-6028-session",
+			"repo": "psf/requests",
+			"category": "security",
+			"requiredSkill": 78,
+			"startContextTokens": 98000,
+			"contextGrowthPerTurn": 12000,
+			"turns": [
+				{
+					"prompt": "Proxy authentication fails on 3.8.12+ because the auth header is built differently. Reproduce.",
+					"goldTier": "standard",
+					"requiredSkill": 58,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.71,
+						"needsTools": 0.9,
+						"stakes": 1.5
+					}
+				},
+				{
+					"prompt": "Show me where the proxy Authorization header is constructed.",
+					"goldTier": "light",
+					"requiredSkill": 44,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.79,
+						"needsTools": 0.7,
+						"stakes": 0.6
+					}
+				},
+				{
+					"prompt": "Is the credential being sent to the origin as well as the proxy on a redirect?",
+					"goldTier": "heavy",
+					"requiredSkill": 86,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.78,
+						"needsTools": 0.4,
+						"stakes": 2.0
+					}
+				},
+				{
+					"prompt": "If so, that is a credential leak. Work out the correct stripping rule.",
+					"goldTier": "heavy",
+					"requiredSkill": 84,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.74,
+						"needsTools": 0.4,
+						"stakes": 2.0
+					}
+				},
+				{
+					"prompt": "Implement it.",
+					"goldTier": "heavy",
+					"requiredSkill": 80,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.73,
+						"needsTools": 0.95,
+						"stakes": 1.9
+					}
+				},
+				{
+					"prompt": "Add tests covering a cross-host redirect through a proxy.",
+					"goldTier": "standard",
+					"requiredSkill": 68,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.66,
+						"needsTools": 0.95,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Run the proxy tests.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Security note for the changelog.",
+					"goldTier": "light",
+					"requiredSkill": 48,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.8,
+						"stakes": 1.0
+					}
+				}
+			]
+		},
+		{
+			"id": "pylint-dev__pylint-6506-session",
+			"repo": "pylint-dev/pylint",
+			"category": "bugfix",
+			"requiredSkill": 54,
+			"startContextTokens": 72000,
+			"contextGrowthPerTurn": 10000,
+			"turns": [
+				{
+					"prompt": "An unrecognised option prints a full traceback instead of a usage message. Reproduce.",
+					"goldTier": "light",
+					"requiredSkill": 44,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.9,
+						"stakes": 0.8
+					}
+				},
+				{
+					"prompt": "Where is _UnrecognizedOptionError raised?",
+					"goldTier": "light",
+					"requiredSkill": 36,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.85,
+						"needsTools": 0.7,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Catch it at the top level and print usage instead.",
+					"goldTier": "standard",
+					"requiredSkill": 54,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.72,
+						"needsTools": 0.94,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Does the exit code stay 32?",
+					"goldTier": "light",
+					"requiredSkill": 46,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.66,
+						"needsTools": 0.6,
+						"stakes": 1.0
+					}
+				},
+				{
+					"prompt": "Add a test for the message and the exit code.",
+					"goldTier": "standard",
+					"requiredSkill": 50,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.68,
+						"needsTools": 0.95,
+						"stakes": 1.0
+					}
+				},
+				{
+					"prompt": "Run the config tests.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Changelog.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "mwaskom__seaborn-2848-session",
+			"repo": "mwaskom/seaborn",
+			"category": "bugfix",
+			"requiredSkill": 60,
+			"startContextTokens": 76000,
+			"contextGrowthPerTurn": 10000,
+			"turns": [
+				{
+					"prompt": "PairGrid.map with a hue assigned at map time raises a KeyError. Reproduce.",
+					"goldTier": "standard",
+					"requiredSkill": 50,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.73,
+						"needsTools": 0.9,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Show me how hue is resolved inside map.",
+					"goldTier": "light",
+					"requiredSkill": 38,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.84,
+						"needsTools": 0.8,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Why does the map-time hue miss the semantic lookup?",
+					"goldTier": "standard",
+					"requiredSkill": 64,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.62,
+						"needsTools": 0.5,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Fix it.",
+					"goldTier": "standard",
+					"requiredSkill": 60,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.75,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Does map_diag take the same path?",
+					"goldTier": "standard",
+					"requiredSkill": 56,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.64,
+						"needsTools": 0.6,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Make them consistent and add tests.",
+					"goldTier": "standard",
+					"requiredSkill": 62,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Run the axisgrid tests.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Changelog.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
 					}
 				}
 			]

@@ -1,0 +1,122 @@
+{
+	"title": "paired comparisons — pack swe-router-long-v1, classifier scripted, 1000 resamples of the pack's tasks",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"label": "routing (oracle) − never switching (heuristic)",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": 0,
+					"low": -0.1223,
+					"high": 0.1343,
+					"significant": false,
+					"halfWidth": 0.1283,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": 47.058,
+					"low": 8.1777,
+					"high": 96.1425,
+					"significant": true,
+					"halfWidth": 43.9824,
+					"tasks": 20
+				}
+			]
+		},
+		{
+			"label": "fan-out every turn − no fan-out",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": 0.1314,
+					"low": 0,
+					"high": 0.3243,
+					"significant": false,
+					"halfWidth": 0.1622,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": 356.9583,
+					"low": 303.6066,
+					"high": 416.6628,
+					"significant": true,
+					"halfWidth": 56.5281,
+					"tasks": 20
+				}
+			]
+		},
+		{
+			"label": "tier-top candidate set − the shipped one",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": 0.0286,
+					"low": 0,
+					"high": 0.0805,
+					"significant": false,
+					"halfWidth": 0.0403,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": -216.378,
+					"low": -252.39,
+					"high": -183.9774,
+					"significant": true,
+					"halfWidth": 34.2063,
+					"tasks": 20
+				}
+			]
+		},
+		{
+			"label": "explore-3 − fan out every turn",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": -0.0285,
+					"low": -0.2292,
+					"high": 0.0711,
+					"significant": false,
+					"halfWidth": 0.1502,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": -281.7745,
+					"low": -362.2797,
+					"high": -214.7409,
+					"significant": true,
+					"halfWidth": 73.7694,
+					"tasks": 20
+				}
+			]
+		},
+		{
+			"label": "fan-out with a 40-point biased judge − no fan-out",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": -0.0171,
+					"low": -0.1875,
+					"high": 0.1364,
+					"significant": false,
+					"halfWidth": 0.1619,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": 356.9583,
+					"low": 303.6066,
+					"high": 416.6628,
+					"significant": true,
+					"halfWidth": 56.5281,
+					"tasks": 20
+				}
+			]
+		}
+	]
+}
