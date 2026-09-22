@@ -97,6 +97,29 @@ test("a stale lock left by a crashed session is broken instead of blocking forev
 	clearLedgerLock(file);
 });
 
+test("a v2 ledger file is upgraded rather than discarded", () => {
+	// A file a concurrent session may still be writing: dropping it would erase that session's
+	// totals and every quota window it has learned.
+	const file = scratch();
+	mkdirSync(join(file, ".."), { recursive: true });
+	writeFileSync(
+		file,
+		JSON.stringify({
+			version: 2,
+			totals: { "p/m": { calls: 3, input: 30, output: 3, cacheRead: 0, cacheWrite: 0, costUsd: 1 } },
+			providers: { p: { windows: { "5h": { utilization: 0.4, source: "header", lastSeen: 1 } }, cooldownUntil: 99, lastSeen: 1 } },
+		}),
+	);
+	const l = new Ledger(file);
+	l.record("p", "m", usage(1));
+	l.save();
+
+	const after = readFile(file);
+	assert.equal(JSON.parse(readFileSync(file, "utf8")).version, 3);
+	assert.equal(after.totals["p/m"]!.calls, 4, "totals survive");
+	assert.equal(after.providers.p!.windows["5h"]!.utilization, 0.4, "and so does the quota state");
+});
+
 test("a v1 ledger file is read and upgraded without losing totals", () => {
 	const file = scratch();
 	mkdirSync(join(file, ".."), { recursive: true });

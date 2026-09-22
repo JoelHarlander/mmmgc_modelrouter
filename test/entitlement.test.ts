@@ -21,6 +21,11 @@ function registryWithToken(token: string | undefined): ModelRegistry {
 	return { getApiKeyForProvider: async () => token } as unknown as ModelRegistry;
 }
 
+/** A machine where each provider id resolves to a credential of its own. */
+function registryWithTokens(tokens: Record<string, string>): ModelRegistry {
+	return { getApiKeyForProvider: async (p: string) => tokens[p] } as unknown as ModelRegistry;
+}
+
 const cfg: RouterConfig = mergeConfig(DEFAULT_CONFIG, {
 	tiers: { light: ["claude-bridge/claude-opus-5"], standard: ["claude-bridge/claude-opus-5"], heavy: ["claude-bridge/claude-opus-5"] },
 });
@@ -148,7 +153,8 @@ test("a missing credential is recorded without inventing an entitlement", async 
 	}) as unknown as typeof fetch;
 	await refreshEntitlements({ cfg, registry: registryWithToken(undefined), ledger: l, fetchImpl });
 	assert.equal(called, false);
-	assert.match(l.peekProvider("anthropic")!.probeError ?? "", /no anthropic credential/);
+	// Nothing resolved, so nothing is shared either: the routed id probes for itself and says so.
+	assert.match(l.peekProvider("claude-bridge")!.probeError ?? "", /no claude-bridge credential/);
 });
 
 test("probing is skipped entirely when billing.probe.enabled is false", async () => {
@@ -227,7 +233,8 @@ test("a stated limit_reached is recorded even when no window carries a utilizati
 });
 
 test("provider ids that share one credential are probed once, not once each", async () => {
-	// `claude-bridge` declares `authProvider: "anthropic"`: one account, one authenticated GET.
+	// `claude-bridge` declares `authProvider: "anthropic"` and pi hands out the same credential
+	// for both: one account, one authenticated GET.
 	const both = mergeConfig(DEFAULT_CONFIG, {
 		tiers: {
 			light: ["claude-bridge/claude-opus-5"],
@@ -249,4 +256,36 @@ test("provider ids that share one credential are probed once, not once each", as
 
 	await refreshEntitlements({ cfg: both, registry: registryWithToken("oauth"), ledger: l, fetchImpl });
 	assert.equal(requested.length, 1, "and the interval is per credential too");
+});
+
+test("provider ids pi resolves to different credentials are two accounts, not one", async () => {
+	// The config declares the bridge routes on `anthropic`'s credential, but pi hands out a
+	// different one for each id. Believing the declaration would let a subscription exclude a route
+	// billed on a credential it never pays for, so each keeps its own probe and its own windows.
+	const both = mergeConfig(DEFAULT_CONFIG, {
+		tiers: {
+			light: ["claude-bridge/claude-opus-5"],
+			standard: ["anthropic/claude-opus-5"],
+			heavy: ["claude-bridge/claude-opus-5", "anthropic/claude-opus-5"],
+		},
+	});
+	const requested: string[] = [];
+	const fetchImpl = (async (url: string | URL) => {
+		requested.push(String(url));
+		return new Response(JSON.stringify({ rate_limits: { five_hour: { utilization: 10 } } }), { status: 200 });
+	}) as unknown as typeof fetch;
+
+	const l = ledger();
+	await refreshEntitlements({ cfg: both, registry: registryWithTokens({ anthropic: "key-a", "claude-bridge": "oauth-b" }), ledger: l, fetchImpl });
+
+	assert.equal(requested.length, 2, "one probe each");
+	assert.equal(l.accountOf("claude-bridge"), "claude-bridge", "the declaration alone shares nothing");
+	assert.equal(l.peekProvider("claude-bridge")?.windows["5h"]?.utilization, 0.1);
+	assert.equal(l.peekProvider("anthropic")?.windows["5h"]?.utilization, 0.1);
+
+	// An identity pi cannot resolve at all is never assumed either.
+	const unresolved = ledger();
+	await refreshEntitlements({ cfg: both, registry: registryWithTokens({ anthropic: "key-a" }), ledger: unresolved, fetchImpl });
+	assert.equal(unresolved.accountOf("claude-bridge"), "claude-bridge");
+	assert.match(unresolved.peekProvider("claude-bridge")?.probeError ?? "", /no claude-bridge credential/);
 });

@@ -20,13 +20,14 @@ must live, since a project file may not state them) and the user's real global c
 - `src/billing.ts` keeps three questions separate and every explanation should too: the **basis** (what pays), the
   **verification** (how well that is established), and the **eligibility** (what the config permits). Only a
   verified subscription route is `preferred`. Never let a config label stand in for evidence.
-- Quota state is keyed by *credential*, not provider id, but only where that is proven: `credentialOf()` is what
-  the config declares (it keys `cfg.scopes` and the once-per-interval probe in `refreshEntitlements`), while
-  `quotaAccountOf()` files the numbers, and it aliases two ids only when pi's own auth evidence
-  (`ModelRegistry.getProviderAuthStatus`, threaded in as `AuthLookup`) says they present the same credential. Missing
-  or differing evidence means separate quota, never shared - a declaration is intent, not proof, and an API-key
-  route must never be excluded by a subscription it does not bill. Ids that do share must never grow a second copy
-  of the same account's windows.
+- Quota state is keyed by *credential*, not provider id, but only where that is proven. `credentialOf()` is what
+  the config declares - it keys `cfg.scopes` and names the pair worth testing - while `refreshEntitlements`
+  resolves both ids' credentials through pi, compares them in memory (never logged, persisted or put in the
+  ledger) and hands `Ledger.linkAccounts` the links it proved; `Ledger.accountOf` files and reads quota by that.
+  Auth *type* or a config declaration is not proof: anything unresolved or different stays its own account, both
+  for quota and for the probe, since a wrong alias removes the paid overflow at the moment it is needed while a
+  missed one costs only a second probe. Ids that do share must never grow a second copy of the same account's
+  windows.
 - Quota window ids are the provider's own wire names (`5h`, `7d`, `7d_oi`, `primary`); a per-model meter is keyed
   `<model>:<role>` from the limit name the provider reports, which is what lets `scopeGlobs` match it with no config.
   A scoped or overage window governs its own models only. A 429/402 is attributed to the windows *that response*
@@ -46,7 +47,7 @@ must live, since a project file may not state them) and the user's real global c
 
 ## Sharp edges
 
-- `~/.pi/agent/modelrouter/usage.json` (version 3) is shared by every concurrent pi session. `Ledger.save()` merges token
+- `~/.pi/agent/modelrouter/usage.json` (version 3; `readLedgerFile` upgrades 1 and 2) is shared by every concurrent pi session. `Ledger.save()` merges token
   totals as deltas against the last disk sync under a directory lock; adding a field means teaching
   `mergeLedgers` how it settles. A reader for an older file version must upgrade rather than discard, or a running
   session on the old version will erase the new one's data.

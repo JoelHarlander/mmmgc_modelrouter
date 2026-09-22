@@ -117,12 +117,13 @@ meter that names no route your config can reach, the router neither ignores it n
 spent — it carries it as uncertainty on every route of that provider and stops calling those verdicts `verified`.
 
 Quota is a fact about a credential, not about a provider id. `entitlement.<provider>.authProvider` names the
-credential a provider id routes on — `claude-bridge` routes on `anthropic`'s — and one account is worth one
-read-only probe per interval, not one per id. Sharing the *quota* takes more than the declaration: the two ids
-must also present the same credential in pi's own auth evidence. When they do, one set of windows serves both and
-a refusal seen through either excludes the routes of both; when the evidence differs or pi knows of no credential
-for one of them, the provider keeps its own quota, so a spent subscription never excludes a route billed on a
-different credential — which is exactly when the paid overflow is needed.
+credential a provider id *claims* to route on — `claude-bridge` claims `anthropic`'s — and that claim is only
+ever a question. The answer is pi's: the two ids are one account when pi hands out the same credential for both,
+which the router asks once a turn and compares in memory, never storing or reporting it. Where that holds, the
+account is worth one read-only probe per interval rather than one per id, one set of windows serves both, and a
+refusal seen through either excludes the routes of both. Where it does not hold, or cannot be answered, each id
+keeps its own probe and its own quota — so a spent subscription never excludes a route billed on a different
+credential, which is exactly when the paid overflow is needed.
 
 `entitlement` maps a provider to its read-only usage endpoint. The shipped entries are Anthropic's
 `/api/oauth/usage`, Codex's `/wham/usage`, OpenRouter's `/api/v1/key` and the Vercel gateway credit balance. A probe

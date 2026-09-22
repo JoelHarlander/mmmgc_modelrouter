@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { assessBilling, authOf, describeBasis } from "../src/billing.ts";
+import { assessBilling, describeBasis } from "../src/billing.ts";
 import { DEFAULT_CONFIG, mergeConfig, modelKey, type RouterConfig } from "../src/config.ts";
 import { parseEntitlement } from "../src/entitlement.ts";
 import { Ledger, ledgerPath } from "../src/ledger.ts";
@@ -36,13 +36,6 @@ function fakeRegistry(models: Model<Api>[], oauth: string[] = [], unauthed: stri
 		find: (p: string, id: string) => models.find((m) => m.provider === p && m.id === id),
 		hasConfiguredAuth: (m: Model<Api>) => !unauthed.includes(m.provider),
 		isUsingOAuth: (m: Model<Api>) => oauth.includes(m.provider),
-		// What pi reports about the credential behind a provider id, as the real registry does.
-		getProviderAuthStatus: (p: string) =>
-			unauthed.includes(p)
-				? { configured: false }
-				: oauth.includes(p)
-					? { configured: true, source: "stored", label: "OAuth" }
-					: { configured: true, source: "environment", label: `${p.toUpperCase()}_API_KEY` },
 	} as unknown as ModelRegistry;
 }
 
@@ -819,14 +812,14 @@ test("a cleared refusal stays cleared through a save and merge cycle", () => {
 });
 
 test("quota seen through one provider id is quota for every id on that credential", () => {
-	// `claude-bridge` routes on `anthropic`'s credential and pi's auth evidence agrees, so a
-	// refusal seen through one is a fact about the account: routing must not escalate onto the
-	// sibling id and burn another turn.
-	const oneAccount = fakeRegistry(ALL, ["claude-bridge", "anthropic"]);
+	// pi resolved the same credential for `claude-bridge` and `anthropic`, so a refusal seen
+	// through one is a fact about the account: routing must not escalate onto the sibling id and
+	// burn another turn.
 	const l = ledger();
-	l.observeResponse("claude-bridge", 429, { "retry-after": "600" }, cfg, Date.now(), authOf(oneAccount));
+	l.linkAccounts(new Map([["claude-bridge", "anthropic"]]));
+	l.observeResponse("claude-bridge", 429, { "retry-after": "600" }, cfg);
 
-	const sibling = assessBilling({ model: claudeApi, cfg, registry: oneAccount, ledger: l });
+	const sibling = assessBilling({ model: claudeApi, cfg, registry: fakeRegistry(ALL, ["claude-bridge", "anthropic"]), ledger: l });
 	assert.equal(sibling.eligibility, "excluded", "anthropic/* is the same subscription that just refused");
 	assert.match(sibling.reason, /rate limited \(429\)/);
 });
@@ -897,19 +890,25 @@ test("a 429 whose only spent meter is one nothing can place still cools the cred
 
 test("a subscription refusal on the bridge does not exclude a separately authenticated Anthropic route", () => {
 	// `claude-bridge` declares it routes on `anthropic`'s credential, but a declaration is not
-	// proof: here pi reports the bridge on OAuth and `anthropic` on an API key, which are two
-	// accounts. A spent subscription must not take the paid overflow down with it - that is the
-	// moment the overflow exists for.
-	const l = ledger();
+	// proof, and nothing proved these two are one account. A spent subscription must not take the
+	// paid overflow down with it - that is the moment the overflow exists for.
 	const spent = {
 		"anthropic-ratelimit-unified-7d-utilization": "1",
 		"anthropic-ratelimit-unified-7d-status": "rejected",
 	};
-	l.observeResponse("claude-bridge", 200, spent, cfg, Date.now(), authOf(fakeRegistry(ALL, ["claude-bridge", "openai-codex", "xai"])));
+	const l = ledger();
+	l.observeResponse("claude-bridge", 200, spent, cfg);
 
 	assert.equal(assess(opus, l).eligibility, "excluded", "the subscription itself is spent");
 	const paid = assess(claudeApi, l);
 	assert.equal(paid.basis, "pay-per-token");
 	assert.equal(paid.eligibility, "allowed", "the API key bills a credential the subscription says nothing about");
 	assert.ok(paid.rank > assess(codex, l).rank, "still ranked behind included usage, but reachable");
+
+	// And that is the fallback, not the only answer: the same evidence excludes it once pi has
+	// resolved one credential for both ids.
+	const proven = ledger();
+	proven.linkAccounts(new Map([["claude-bridge", "anthropic"]]));
+	proven.observeResponse("claude-bridge", 200, spent, cfg);
+	assert.equal(assess(claudeApi, proven).eligibility, "excluded", "one proven account is one quota");
 });

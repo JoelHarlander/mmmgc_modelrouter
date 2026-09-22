@@ -19,7 +19,7 @@
  */
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { anyGlobMatch, type AuthLookup, type Billing, modelKey, overrideFor, type RouterConfig } from "./config.ts";
+import { anyGlobMatch, type Billing, modelKey, overrideFor, type RouterConfig } from "./config.ts";
 import { type CreditState, describeCredits, type Ledger, type QuotaAssessment, windowExhausted } from "./ledger.ts";
 
 /** What pays for this turn. */
@@ -70,11 +70,6 @@ export interface AssessArgs {
  * does the catalog price decide, because a catalog zero also means "price not published" — it is
  * never taken as proof that a route somebody labelled billed is free.
  */
-/** pi's own auth evidence, which is what decides whether two provider ids share one account's quota. */
-export function authOf(registry: ModelRegistry): AuthLookup {
-	return (provider) => registry.getProviderAuthStatus(provider);
-}
-
 export function billingLabel(model: Model<Api>, cfg: RouterConfig, registry: ModelRegistry): { billing: Billing; fromConfig: boolean } {
 	const override = overrideFor(cfg, modelKey(model)).billing;
 	if (override) return { billing: override, fromConfig: true };
@@ -91,7 +86,7 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 	const { model, cfg, registry, ledger } = args;
 	const now = args.now ?? Date.now();
 	const key = modelKey(model);
-	const quota = ledger.assess(model.provider, key, cfg, now, authOf(registry));
+	const quota = ledger.assess(model.provider, key, cfg, now);
 	return withUnattributed(assessRoute(args, key, quota, now), quota, model.provider);
 }
 

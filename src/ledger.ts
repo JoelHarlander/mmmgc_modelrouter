@@ -15,7 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Usage } from "@earendil-works/pi-ai";
-import { anyGlobMatch, type AuthLookup, credentialOf, globMatch, quotaAccountOf, routableModels, type RouterConfig } from "./config.ts";
+import { anyGlobMatch, credentialOf, globMatch, routableModels, type RouterConfig } from "./config.ts";
 
 export interface ModelTotals {
 	calls: number;
@@ -124,6 +124,13 @@ export interface WindowScope {
 export class Ledger {
 	readonly session: Record<string, ModelTotals> = {};
 	private data: LedgerFile = { version: 3, totals: {}, providers: {} };
+	/**
+	 * Provider ids pi resolved to one and the same credential, as `refreshEntitlements` proved
+	 * them. Only these share an account's quota; anything unproven keeps its own, because a route
+	 * billed on a different credential must never be excluded by a subscription it does not pay
+	 * for. In memory only: it is evidence about now, and it is never written to the ledger file.
+	 */
+	private accounts: ReadonlyMap<string, string> = new Map();
 	/** `data.totals` as of the last disk sync; the delta against it is what a merged save applies. */
 	private baseline: Record<string, ModelTotals> = {};
 	private saveTimer: NodeJS.Timeout | undefined;
@@ -164,8 +171,8 @@ export class Ledger {
 	}
 
 	/** Called from after_provider_response. Headers are lower-cased by pi. */
-	observeResponse(provider: string, status: number, headers: Record<string, string>, cfg: RouterConfig, now = Date.now(), auth?: AuthLookup): void {
-		const account = quotaAccountOf(cfg, provider, auth);
+	observeResponse(provider: string, status: number, headers: Record<string, string>, cfg: RouterConfig, now = Date.now()): void {
+		const account = this.accountOf(provider);
 		// Which models a window governs is a fact about the provider's windows, not about which
 		// account bucket the numbers are filed in, so scopes are read in the terms the config
 		// states them: the declared credential, whether or not its quota is shared.
@@ -233,9 +240,9 @@ export class Ledger {
 	 * Everything routing needs about one provider/model pair. Model-scoped windows are matched
 	 * against `modelKey` through `cfg.scopes`, so an exhausted scoped quota excludes only its models.
 	 */
-	assess(provider: string, modelKey: string | undefined, cfg: RouterConfig, now = Date.now(), auth?: AuthLookup): QuotaAssessment {
+	assess(provider: string, modelKey: string | undefined, cfg: RouterConfig, now = Date.now()): QuotaAssessment {
 		const out: QuotaAssessment = { exhaustedAccount: [], exhaustedScoped: [], refused: [], unattributed: [], accountWindows: [], sources: [] };
-		const account = quotaAccountOf(cfg, provider, auth);
+		const account = this.accountOf(provider);
 		const scoped = credentialOf(cfg, provider);
 		const state = this.data.providers[account];
 		if (!state) return out;
@@ -283,6 +290,16 @@ export class Ledger {
 		out.lastEvidenceAt = newest;
 		out.sources = [...sources];
 		return out;
+	}
+
+	/** Record which provider ids pi resolved to one credential. Proven links only. */
+	linkAccounts(accounts: ReadonlyMap<string, string>): void {
+		this.accounts = accounts;
+	}
+
+	/** The account a provider's quota is filed under: its own id unless identity was proven. */
+	accountOf(provider: string): string {
+		return this.accounts.get(provider) ?? provider;
 	}
 
 	providerState(provider: string, now = Date.now()): ProviderState {
@@ -509,6 +526,10 @@ function readLedgerFile(file: string): LedgerFile | undefined {
 	try {
 		const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<LedgerFile> & { version?: number; plans?: Record<string, unknown> };
 		if (parsed?.version === 3) return { version: 3, totals: parsed.totals ?? {}, providers: parsed.providers ?? {} };
+		// v2 differs only by a provider-level cooldown nothing reads any more: the windows and the
+		// totals come across as they are, because discarding a file a live session may still be
+		// writing would erase its work.
+		if (parsed?.version === 2) return { version: 3, totals: parsed.totals ?? {}, providers: parsed.providers ?? {} };
 		if (parsed?.version === 1) return { version: 3, totals: (parsed.totals as Record<string, ModelTotals>) ?? {}, providers: {} };
 	} catch {
 		// corrupt ledger: start fresh, keep the old file until the next save replaces it

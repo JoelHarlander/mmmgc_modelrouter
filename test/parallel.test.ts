@@ -50,7 +50,6 @@ function fakeCtx(current: Model<Api> | undefined, notices: Notice[] = []): Exten
 		find: (p: string, id: string) => ALL.find((m) => m.provider === p && m.id === id),
 		hasConfiguredAuth: () => true,
 		isUsingOAuth: (m: Model<Api>) => m.provider !== "openrouter",
-		getProviderAuthStatus: (p: string) => ({ configured: true, source: p === "openrouter" ? "environment" : "stored", label: p }),
 	} as unknown as ModelRegistry;
 	return {
 		model: current,
@@ -212,7 +211,6 @@ test("quota a fan-out response reports reaches the ledger", async () => {
 		find: (p: string, id: string) => [...ALL, codex].find((m) => m.provider === p && m.id === id),
 		hasConfiguredAuth: () => true,
 		isUsingOAuth: (m: Model<Api>) => m.provider !== "openrouter",
-		getProviderAuthStatus: (p: string) => ({ configured: true, source: p === "openrouter" ? "environment" : "stored", label: p }),
 		complete: async (m: Model<Api>, _context: unknown, options: { onResponse?: (r: { status: number; headers: Record<string, string> }, m: Model<Api>) => void }) => {
 			if (m.provider === "openai-codex") {
 				options.onResponse?.({ status: 429, headers: { "x-codex-primary-used-percent": "100", "retry-after": "120" } }, m);

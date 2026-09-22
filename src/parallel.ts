@@ -10,7 +10,7 @@ import { uuidv7 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import { convertToLlm } from "@earendil-works/pi-coding-agent";
 import { Container, matchesKey, Text } from "@earendil-works/pi-tui";
-import { authOf, assessBilling, describeBasis } from "./billing.ts";
+import { assessBilling, describeBasis } from "./billing.ts";
 import { modelKey, type RouterConfig, TIERS } from "./config.ts";
 import type { JevChoiceAnswer, JevClient, JsonValue } from "./jev.ts";
 import type { Ledger } from "./ledger.ts";
@@ -182,7 +182,7 @@ export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryD
 					// A fan-out spends the same quota a routed turn does, so what the provider says
 					// about that quota has to reach the ledger the same way.
 					onResponse: (res: { status: number; headers: Record<string, string> }) =>
-						ledger.observeResponse(model.provider, res.status, res.headers ?? {}, cfg, Date.now(), authOf(ctx.modelRegistry)),
+						ledger.observeResponse(model.provider, res.status, res.headers ?? {}, cfg),
 				} as Parameters<typeof ctx.modelRegistry.complete>[2]);
 				r.ms = Date.now() - started;
 				r.usage = response.usage;

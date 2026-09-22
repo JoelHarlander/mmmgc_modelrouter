@@ -27,8 +27,9 @@ export interface EntitlementSource {
 	/** Read-only usage/entitlement endpoint. Never an inference endpoint. */
 	url: string;
 	/**
-	 * pi provider whose credential this one routes on, when it differs. It is the same account:
-	 * one probe covers both, and quota evidence seen through either id belongs to both.
+	 * pi provider whose credential this one claims to route on, when it differs. A claim worth
+	 * testing, not a fact: only where pi resolves the same credential for both does one probe
+	 * cover them and quota evidence seen through either id belong to both.
 	 */
 	authProvider?: string;
 	/** Extra request headers the endpoint requires (e.g. Anthropic's OAuth beta flag). */
@@ -139,9 +140,8 @@ export const DEFAULT_CONFIG: RouterConfig = {
 	models: {
 		// The OAuth-backed subscription routes. `anthropic/*` and `xai/*` carry no label: whether
 		// they are a plan or an API key is pi's own auth evidence to answer, not this file's - and
-		// the same evidence decides whether `anthropic` shares `claude-bridge`'s quota
-		// (`quotaAccountOf`) or keeps its own, so an API key there is never excluded by a
-		// subscription it does not bill.
+		// only pi resolving one and the same credential for `anthropic` and `claude-bridge` lets
+		// them share quota, so an API key there is never excluded by a subscription it does not bill.
 		"claude-bridge/*": { billing: "plan" },
 		"openai-codex/*": { billing: "plan" },
 		"openrouter/*": { billing: "on-demand" },
@@ -318,38 +318,14 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 
-/** What pi's own auth evidence says about a provider's credential. Identity only, never the secret. */
-export interface CredentialEvidence {
-	configured: boolean;
-	source?: string;
-	label?: string;
-}
-
-/** Reads that evidence for one provider id. Undefined where pi knows of no credential at all. */
-export type AuthLookup = (provider: string) => CredentialEvidence | undefined;
-
 /**
- * The credential a provider's entitlement is probed with, as the config declares it with
- * `entitlement.<id>.authProvider`. Several pi provider ids can front one subscription, and one
- * account is worth exactly one read-only probe.
+ * The credential a provider id claims to route on, as the config declares it with
+ * `entitlement.<id>.authProvider`. This is intent, never proof: it says which pair of ids is worth
+ * testing for identity (`refreshEntitlements`) and it is the name `cfg.scopes` keys are written
+ * in, but nothing shares an account on its word alone.
  */
 export function credentialOf(cfg: RouterConfig, provider: string): string {
 	return cfg.entitlement[provider]?.authProvider ?? provider;
-}
-
-/**
- * The account a provider's quota is kept under. The config declares which ids share a credential,
- * but only pi's own auth evidence can prove it, and a declaration is not proof: unless both ids
- * present the same credential, the provider keeps its own quota, so a subscription refusal never
- * excludes a route billed on a different credential.
- */
-export function quotaAccountOf(cfg: RouterConfig, provider: string, auth?: AuthLookup): string {
-	const declared = credentialOf(cfg, provider);
-	if (declared === provider || !auth) return provider;
-	const mine = auth(provider);
-	const theirs = auth(declared);
-	if (!mine?.configured || !theirs?.configured) return provider;
-	return mine.source === theirs.source && mine.label === theirs.label ? declared : provider;
 }
 
 /** Every model key the router can actually route to, from the tiers and the fan-out list. */

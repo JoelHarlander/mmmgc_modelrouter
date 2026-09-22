@@ -41,26 +41,54 @@ export function routableProviders(cfg: RouterConfig): string[] {
 }
 
 /**
- * Probe every credential the router can route on whose evidence is missing or older than the
- * configured interval. Provider ids that share one credential - `claude-bridge` routes on
- * `anthropic`'s - are one account and get one probe, not one each. Always resolves; individual
- * failures are recorded, not thrown.
+ * Establish which provider ids are one account, then probe each account whose evidence is missing
+ * or older than the configured interval. An account is one probe, not one per id. Always resolves;
+ * individual failures are recorded, not thrown.
  */
 export async function refreshEntitlements(opts: ProbeOptions): Promise<void> {
 	const { cfg, ledger } = opts;
-	if (!cfg.billing.probe.enabled) return;
 	const now = opts.now ?? Date.now();
 	const providers = opts.providers ?? routableProviders(cfg);
+	ledger.linkAccounts(await provenAccounts(providers, opts));
+	if (!cfg.billing.probe.enabled) return;
 	const sources = new Map<string, EntitlementSource>();
 	for (const provider of providers) {
 		const source = cfg.entitlement[provider];
 		if (!source) continue;
-		const account = credentialOf(cfg, provider);
+		const account = ledger.accountOf(provider);
 		// The credential's own entry describes the account best when the config carries one.
 		if (provider === account || !sources.has(account)) sources.set(account, cfg.entitlement[account] ?? source);
 	}
 	const due = [...sources].filter(([account]) => isDue(ledger, account, cfg, now));
 	await Promise.all(due.map(([account, source]) => probeProvider(account, source, opts, now)));
+}
+
+/**
+ * Which provider ids pi resolves to one and the same credential. `entitlement.<id>.authProvider`
+ * only says which pair is worth asking about; the answer is the credential pi hands out for each,
+ * compared here and discarded. Anything it cannot resolve, or resolves differently, stays its own
+ * account: two accounts treated as one would exclude a route on the strength of a subscription
+ * that does not bill it, while two halves of one account only cost a second probe.
+ */
+async function provenAccounts(providers: string[], opts: ProbeOptions): Promise<Map<string, string>> {
+	const { cfg, registry } = opts;
+	const links = new Map<string, string>();
+	for (const provider of providers) {
+		const declared = credentialOf(cfg, provider);
+		if (declared === provider) continue;
+		if (await sameCredential(registry, provider, declared)) links.set(provider, declared);
+	}
+	return links;
+}
+
+/** Compared in memory and dropped: no credential value is returned, stored, logged or reported. */
+async function sameCredential(registry: ModelRegistry, provider: string, other: string): Promise<boolean> {
+	try {
+		const [mine, theirs] = await Promise.all([registry.getApiKeyForProvider(provider), registry.getApiKeyForProvider(other)]);
+		return mine !== undefined && mine !== "" && mine === theirs;
+	} catch {
+		return false;
+	}
 }
 
 function isDue(ledger: Ledger, account: string, cfg: RouterConfig, now: number): boolean {
@@ -73,13 +101,13 @@ async function probeProvider(account: string, source: EntitlementSource, opts: P
 	const doFetch = opts.fetchImpl ?? fetch;
 	let token: string | undefined;
 	try {
-		token = await registry.getApiKeyForProvider(source.authProvider ?? account);
+		token = await registry.getApiKeyForProvider(account);
 	} catch (err) {
 		ledger.recordProbeError(account, `credential unavailable: ${redact(errText(err))}`, now);
 		return;
 	}
 	if (!token) {
-		ledger.recordProbeError(account, `no ${source.authProvider ?? account} credential to query entitlement with`, now);
+		ledger.recordProbeError(account, `no ${account} credential to query entitlement with`, now);
 		return;
 	}
 	try {
