@@ -18,8 +18,10 @@ import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { JevClient } from "../src/jev.ts";
 import { JevJudge, NoisyJudge } from "./candidates.ts";
+import { auditConfig, renderAudit } from "./audit.ts";
 import { loadProbePack, renderProbe, runProbe } from "./probe.ts";
 import { loadFleet } from "./fleet.ts";
+import { DEFAULT_CONFIG, loadConfig } from "../src/config.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
 import { DEFAULT_TRAFFIC } from "./simulate.ts";
@@ -65,6 +67,8 @@ interface Args {
 	note?: string;
 	noWrite: boolean;
 	validateOnly: boolean;
+	auditConfig: boolean;
+	auditLocal: boolean;
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
@@ -91,6 +95,8 @@ function parseArgs(argv: string[]): Args {
 		json: false,
 		noWrite: false,
 		validateOnly: false,
+		auditConfig: false,
+		auditLocal: false,
 		allowInconsistent: false,
 		gate: false,
 		gateTolerance: 1,
@@ -173,6 +179,13 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--validate":
 				args.validateOnly = true;
+				break;
+			case "--audit-config":
+				args.auditConfig = true;
+				break;
+			case "--audit-local":
+				args.auditConfig = true;
+				args.auditLocal = true;
 				break;
 			case "--allow-inconsistent":
 				args.allowInconsistent = true;
@@ -262,6 +275,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --no-write             do not write a results file
   --gate                 exit non-zero when a headline metric regressed past tolerance
   --gate-tolerance <x>   multiplier on the default tolerances (default 1)
+  --audit-config         price the shipped DEFAULT_CONFIG tiers and check both ladders
+  --audit-local          audit this machine's merged config instead (not reproducible)
   --validate             check the pack's ground truth against the fleet and exit
   --allow-inconsistent   run even when the pack fails that check
 
@@ -279,6 +294,20 @@ async function main(): Promise<number> {
 	if (live && process.env.ROUTER_EVAL_LIVE !== "1") {
 		process.stderr.write("refusing to run live: set ROUTER_EVAL_LIVE=1 to allow real, billed Jev calls\n");
 		return 2;
+	}
+
+	if (args.auditConfig) {
+		// DEFAULT_CONFIG by default, not the merged local one: the audit is a claim about
+		// what ships, and it has to give the same answer on every machine.
+		const loadedCfg = args.auditLocal ? loadConfig(process.cwd()) : { config: DEFAULT_CONFIG, sources: [] };
+		const label = args.auditLocal
+			? `this machine's merged config (${loadedCfg.sources.length ? loadedCfg.sources.join(", ") : "no overrides found"})`
+			: "shipped DEFAULT_CONFIG tiers";
+		const audit = auditConfig(loadedCfg.config, join(ROOT, "docs"), label);
+		if (args.json) process.stdout.write(`${JSON.stringify(audit, null, "\t")}\n`);
+		else process.stdout.write(renderAudit(audit));
+		const problems = audit.priceInversions.length + audit.capabilityInversions.length + audit.dominatedTiers.length + (audit.collapsedTiers ? 1 : 0);
+		return problems > 0 ? 4 : 0;
 	}
 
 	if (args.probe) return runProbeCommand(args);

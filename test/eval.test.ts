@@ -14,7 +14,8 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { DEFAULT_CONFIG, modelKey } from "../src/config.ts";
+import { DEFAULT_CONFIG, mergeConfig, modelKey } from "../src/config.ts";
+import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
 import { pickParallelModels } from "../src/parallel.ts";
 import { CANDIDATE_POLICIES, JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
 import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifier.ts";
@@ -43,6 +44,7 @@ const FLEET = join(ROOT, "eval", "tasks", "fleet.json");
 const PACK = join(ROOT, "eval", "tasks", "swe-router-v1.json");
 const LONG_PACK = join(ROOT, "eval", "tasks", "swe-router-long-v1.json");
 const PROBE_PACK = join(ROOT, "eval", "tasks", "judge-probe-v1.json");
+const DOCS = join(ROOT, "docs");
 
 function pack(path = PACK): TaskPack {
 	return JSON.parse(readFileSync(path, "utf8")) as TaskPack;
@@ -397,6 +399,56 @@ test("a judge that systematically prefers the flashy answer makes the fan-out wo
 	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
 });
 
+test("every model in the shipped tiers resolves to a published price", () => {
+	const audit = auditConfig(DEFAULT_CONFIG, DOCS);
+	assert.deepEqual(
+		audit.unresolved,
+		[],
+		`DEFAULT_CONFIG.tiers references models missing from ${audit.source.prices}; the config and the catalogue have drifted apart`,
+	);
+	for (const tier of audit.tiers) {
+		assert.ok(tier.models.length > 0, `tier ${tier.tier} is empty`);
+		assert.ok(tier.preferred, `tier ${tier.tier} has no usable model`);
+		for (const m of tier.models) {
+			assert.ok(m.warmTurnUsd! > 0);
+			assert.equal(m.marginalTurnUsd, m.billing === "on-demand" ? m.warmTurnUsd : 0, `${m.key}: marginal cost must follow its billing`);
+		}
+	}
+});
+
+test("catalogue ids resolve across the punctuation the three sources disagree on", () => {
+	const { entries } = loadCatalogue(DOCS);
+	const cases: [string, string][] = [
+		// pi key -> the catalogue model it must land on
+		["claude-bridge/claude-fable-5-1", "Claude Fable 5.1"],
+		["anthropic/claude-opus-5", "Claude Opus 5"],
+		["openrouter/z-ai/glm-5.3-flash", "GLM 5.3 Flash"],
+		["vercel-ai-gateway/deepseek/deepseek-v4.1-flash", "DeepSeek V4.1 Flash"],
+		["ds4/deepseek-v4-flash", "DeepSeek V4 Flash"],
+		["openai-codex/gpt-6-astra", "GPT-6 Astra"],
+		["xai/grok-4.6", "Grok 4.6"],
+	];
+	for (const [key, expected] of cases) assert.equal(resolveCatalogue(key, entries)?.model, expected, `${key} resolved wrong`);
+	assert.equal(resolveCatalogue("openrouter/not-a-real-model", entries), undefined);
+});
+
+test("the shipped standard tier is dominated by the heavy tier, on published prices", () => {
+	const audit = auditConfig(DEFAULT_CONFIG, DOCS);
+	// Not a claim about the eval fixture: these are list prices from
+	// docs/data/operational-stats.json and AA Intelligence Index from docs/data/benchmarks.json.
+	assert.equal(audit.priceInversions.length, 1, audit.priceInversions.join("; "));
+	assert.match(audit.priceInversions[0]!, /heavy's preferred .* is cheaper at list than standard's/);
+	assert.equal(audit.dominatedTiers.length, 1, audit.dominatedTiers.join("; "));
+	assert.match(audit.dominatedTiers[0]!, /^standard is dominated by heavy/);
+
+	const [light, standard, heavy] = audit.tiers.map((t) => t.preferred!);
+	assert.ok(heavy!.warmTurnUsd! < standard!.warmTurnUsd!, "the heavy tier's pick is the cheaper of the two");
+	assert.ok(heavy!.intelligence! >= standard!.intelligence!, "...and at least as capable");
+	// The capability ladder itself is monotone; it is the price ladder that is broken.
+	assert.ok(light!.intelligence! < standard!.intelligence!);
+	assert.equal(audit.capabilityInversions.length, 0);
+});
+
 test("the gate fails on a real regression and stays quiet on an improvement", async () => {
 	const outcome = await run();
 	const base = computeMetrics(outcome.turns, outcome.stateChars);
@@ -718,3 +770,13 @@ test("plan spend is also reported in weekly plan points", async () => {
 function unpack(outcome: Awaited<ReturnType<typeof run>>): [typeof outcome.turns, number[]] {
 	return [outcome.turns, outcome.stateChars];
 }
+
+test("a config whose tiers collapse onto one model is reported as such", () => {
+	const collapsed = mergeConfig(DEFAULT_CONFIG, {
+		tiers: { light: ["anthropic/claude-opus-5"], standard: ["anthropic/claude-opus-5"], heavy: ["anthropic/claude-opus-5"] },
+	});
+	const audit = auditConfig(collapsed, DOCS, "collapsed");
+	assert.match(audit.collapsedTiers ?? "", /routing can only change the thinking level/);
+	// The shipped defaults do not have this shape.
+	assert.equal(auditConfig(DEFAULT_CONFIG, DOCS).collapsedTiers, undefined);
+});

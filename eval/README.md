@@ -17,6 +17,7 @@ npm run eval -- --sweep policy                # what the inherited candidate set
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
+npm run eval -- --audit-config                # price the SHIPPED tiers from docs/data and check both ladders
 npm run eval -- --pack eval/tasks/swe-router-long-v1.json   # long sessions at realistic context
 npm run eval -- --help
 ```
@@ -51,6 +52,7 @@ deltas. `--note "..."` appends a round line to [`results/log.md`](results/log.md
 | `1` | `ineligibleChoices > 0` — the router picked an unauthed, blocked or unknown model. Always a bug, never a score. |
 | `2` | the pack's ground truth is inconsistent with the fleet, or live mode was asked for without `ROUTER_EVAL_LIVE=1` |
 | `3` | `--gate` only: a headline metric regressed past tolerance against the recorded baseline |
+| `4` | `--audit-config` only: the shipped tiers are not a cost ladder, not a capability ladder, or collapse onto one model |
 
 `--gate` watches a deliberately small set — `ineligibleChoices` (no tolerance),
 `turnSuccessRate` and `tierAccuracy` (±2pp), `listEquivalentUsd` and `coldPremiumUsd`
@@ -202,6 +204,20 @@ known bias and requires the probe to recover it within 8 points.
 `--probe --live-judge` points the same probe at **real Jev** (needs `ROUTER_EVAL_LIVE=1`).
 It costs 36 Jev calls and no model inference at all — a fraction of a cent — and is the
 one measurement that would settle what candidate selection is actually worth here.
+
+## `--audit-config`: is the shipped config sound?
+
+Everything else here is measured on a fixture. `--audit-config` is not: it takes
+`DEFAULT_CONFIG.tiers` exactly as it ships, prices each entry from
+`docs/data/operational-stats.json` (published list prices) and ranks it by the AA
+Intelligence Index in `docs/data/benchmarks.json` — the one benchmark in that set
+populated for all 17 models — then asks whether the tier ladder is a **cost** ladder and
+a **capability** ladder. Nothing is simulated, and anything it cannot resolve is
+reported as unresolved rather than guessed. A test fails if `DEFAULT_CONFIG` ever
+references a model the catalogue does not price.
+
+`--audit-local` audits this machine's merged config instead. That is useful and
+deliberately not the default, because its answer differs per machine.
 
 ## Ground truth and `--validate`
 

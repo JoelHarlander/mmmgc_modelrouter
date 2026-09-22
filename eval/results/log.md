@@ -11,7 +11,8 @@ Jump to the round that established each claim, and what it rests on.
 | --- | :---: | --- |
 | The router never picks an ineligible model — `ineligibleChoices` is 0 in every profile, including after a plan 429 | 1 | everything swept |
 | `planHiddenUsd` is ~98% of spend: almost all of it is invisible to the ledger it spends by | 1 | everything swept |
-| The default tiers are **not a cost ladder** — escalating a tier makes a turn *cheaper* | 2 | published prices |
+| The default tiers are **not a cost ladder** — escalating a tier makes a turn *cheaper* | 2, **11** | **published list prices, no simulation** |
+| The shipped **`standard` tier is dominated by `heavy`**: cheaper *and* more capable, so no request justifies it | **11** | published prices + AA Intelligence Index |
 | Cheapest-in-tier means the strongest model is never chosen, in any profile | 2 | — |
 | At realistic context, **switching costs ~half of a long session's spend** ($34.26, 34 switches in 60 turns) | 4 | ±20pt fleet jitter (r7), traffic constants (r5) |
 | A profile that never changes model still pays 14 cold starts, all `thinking-change` | 4 | — |
@@ -606,3 +607,67 @@ regresses.
 
 The one thing it cannot do offline is unchanged and is stated in the findings index:
 `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 11 — 2026-09-22 — audit the config that actually ships
+
+**Measured.** Whether the tier findings are about the product or about my fixture.
+Every claim about the tier ladder so far — including the price inversion that rounds 2
+and 9 both traced consequences to — was measured on `eval/tasks/fleet.json`, whose
+prices I typed in and whose competence I declared. That is fine for scoring routing
+policy and worthless as a statement about the shipped router.
+
+**Changed.** `--audit-config` takes `DEFAULT_CONFIG.tiers` exactly as it ships, prices
+each entry from `docs/data/operational-stats.json` (published list prices, retrieved
+2026-09-20) and ranks it by the AA Intelligence Index in `docs/data/benchmarks.json` —
+the one benchmark in that set populated for all 17 models. **Nothing is simulated.**
+Anything it cannot resolve is reported as unresolved rather than guessed, and a test
+fails if `DEFAULT_CONFIG` ever names a model the catalogue does not price. Exit code
+`4` when a ladder is broken. `--audit-local` audits this machine's merged config
+instead, deliberately not the default because its answer differs per machine.
+
+**What the numbers did** (`npm run eval -- --audit-config`, warm turn at 100k context):
+
+| tier | router prefers | billing | warm turn (list) | marginal | AA Index |
+| --- | --- | --- | ---: | ---: | ---: |
+| light | `ds4/deepseek-v4-flash` | free | $0.0040 | $0.0000 | 34.33 |
+| standard | `openai-codex/gpt-6-astra` | plan | **$0.6375** | $0.0000 | 52.67 |
+| heavy | `claude-bridge/claude-fable-5-1` | plan | **$0.2625** | $0.0000 | 53.35 |
+
+**The price inversion is real, and it is worse than an inversion.** The heavy tier's
+preferred model costs **$0.2625 per warm turn against standard's $0.6375** — heavier is
+**2.4× cheaper** — while scoring **53.35 against 52.67**. The capability ladder is
+monotone; it is the price ladder that runs backwards.
+
+Which means the shipped `standard` tier is **dominated**:
+
+```
+DOMINATED TIER  standard is dominated by heavy: claude-bridge/claude-fable-5-1 costs $0.2625
+                per warm turn against openai-codex/gpt-6-astra's $0.6375 and scores 53.35
+                against 52.67, so no request exists for which the lighter tier is the right choice
+```
+
+That is a stronger statement than any previous round could make. It is not "the fixture
+has an inversion" — it is that, on published prices and a published benchmark, there is
+no request for which routing to the shipped `standard` tier is the correct decision.
+Every downstream consequence the earlier rounds measured — over-routing going
+unpenalised (round 2), the fan-out's fragility to a biased judge (round 9) — now rests
+on catalogue data rather than on my fixture.
+
+**And `--audit-local` found the degenerate case the cache-cost study described.** On
+this machine the merged config collapses all three tiers onto one model:
+
+```
+COLLAPSED TIERS  3 tiers resolve to 1 distinct model(s) (claude-bridge/claude-opus-5):
+                 routing can only change the thinking level, which discards the prompt cache on its own
+```
+
+Round 4 measured what that costs (14 cold starts, all `thinking-change`, in a 60-turn
+run) without being able to detect the configuration that causes it. Now one command
+does, in under a second, on any machine.
+
+**Next.** Eleven rounds. The harness measures the router's decisions and their cost, the
+judge and its bias, the candidate set, its own assumptions, and now the shipped
+configuration against published data. The single remaining gap is the same one and is
+not closeable offline: `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
