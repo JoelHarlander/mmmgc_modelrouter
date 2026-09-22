@@ -3,6 +3,8 @@
 A repeatable, offline measurement of the model switcher on SWE-bench-style tasks.
 
 ```bash
+npm run eval:all                              # validate both packs, run every profile, one table
+npm run eval:all -- --gate                    # ...and exit non-zero on a regression
 npm run eval                                  # offline, deterministic, no network, no spend
 npm run eval -- --classifier heuristic        # score the no-credential fallback
 npm run eval -- --classifier oracle           # the routing ceiling
@@ -38,10 +40,23 @@ flawless), so `medianTaskTurnSuccess` and `turnSuccessRate` carry the quality si
 
 Every run writes `eval/results/<timestamp>-<profile>-<git>.json` plus a
 `latest-<profile>.json` the next run automatically compares against, and prints the
-deltas. `--note "..."` appends a round line to [`results/log.md`](results/log.md).
+deltas. `--note "..."` appends a round line to [`results/log.md`](results/log.md), whose
+**findings index** lists every claim made so far and what each one rests on.
 
-Exit code is `1` when `ineligibleChoices > 0` — the router choosing a model that was
-unauthed, blocked or outside the fleet is a bug, not a score.
+### Exit codes
+
+| Code | Meaning |
+| :---: | --- |
+| `0` | ran clean |
+| `1` | `ineligibleChoices > 0` — the router picked an unauthed, blocked or unknown model. Always a bug, never a score. |
+| `2` | the pack's ground truth is inconsistent with the fleet, or live mode was asked for without `ROUTER_EVAL_LIVE=1` |
+| `3` | `--gate` only: a headline metric regressed past tolerance against the recorded baseline |
+
+`--gate` watches a deliberately small set — `ineligibleChoices` (no tolerance),
+`turnSuccessRate` and `tierAccuracy` (±2pp), `listEquivalentUsd` and `coldPremiumUsd`
+(±5%), and `candidate.adoptedLift` (±2pp). It watches what a session **adopts**, not
+what the judge would have picked. `--gate-tolerance <x>` scales the band; improvements
+never fail, however large.
 
 ## What it measures, and what it does not
 

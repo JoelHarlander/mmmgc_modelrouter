@@ -3,6 +3,32 @@
 One entry per round: what it measured, what it changed, what the numbers did.
 Runs are reproduced with `npm run eval -- <flags>`; the JSON for each is in this directory.
 
+## Findings index
+
+Jump to the round that established each claim, and what it rests on.
+
+| Finding | Round | Robust to |
+| --- | :---: | --- |
+| The router never picks an ineligible model — `ineligibleChoices` is 0 in every profile, including after a plan 429 | 1 | everything swept |
+| `planHiddenUsd` is ~98% of spend: almost all of it is invisible to the ledger it spends by | 1 | everything swept |
+| The default tiers are **not a cost ladder** — escalating a tier makes a turn *cheaper* | 2 | published prices |
+| Cheapest-in-tier means the strongest model is never chosen, in any profile | 2 | — |
+| At realistic context, **switching costs ~half of a long session's spend** ($34.26, 34 switches in 60 turns) | 4 | ±20pt fleet jitter (r7), traffic constants (r5) |
+| A profile that never changes model still pays 14 cold starts, all `thinking-change` | 4 | — |
+| Never switching *also* wins on quality | 4 | **not robust** — 5/5 → 2/5 under ±20pt jitter (r7) |
+| Fan-out costs 2.9× more per extra solve at realistic context ($4.94 → $14.28) | 4 | traffic constants (r5) |
+| Candidate selection is worth **~+15pp** when the judge is good | 3 | traffic constants (r5) |
+| **~20 points of judge bias makes fan-out worse than not running it** | 3 | 5 seeds × 3 widths |
+| Random judge error is far more forgiving than systematic bias; noise partly cancels bias | 3 | 5 seeds |
+| The shipped **confidence gate does not defend against bias** — a biased judge is confidently wrong | 8 | 5 seeds × 3 bias levels |
+| The **shipped candidate set is the worst of five**: `tier-top` gets +21.7pp for 40% of the spend and is bias-immune | 9 | 5 seeds; bias-immunity is model-dependent |
+| The fan-out's fragility to bias is the **tier price inversion** (r2) propagating into `pickParallelModels` | 9 | fleet prices |
+
+**Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
+judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
+calls, no model inference, under a cent. Which of the three candidate-selection
+verdicts above applies depends entirely on that number.
+
 ---
 
 ## Round 1 — 2026-09-22 — first measurement
@@ -527,3 +553,56 @@ transfer. What does transfer regardless of the bias axis: `tier-top` gets more l
 model, the judge's error, the judge's bias, the adoption gate, the candidate set and
 its own competence assumption. The remaining gap is unchanged and is not something more
 offline rounds can close: `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 10 — 2026-09-22 — make it possible to fail
+
+**Measured.** Nothing new about the router. This round measured the harness's own
+usefulness and found the obvious hole: after nine rounds it could describe a change in
+enormous detail and could not *fail* on one. The brief asked for results a next run can
+be judged better or worse against; comparison deltas were printed, but nothing acted on
+them, so a regression could land green.
+
+**Changed.**
+
+1. **`--gate`.** Exits `3` when a headline metric moved the wrong way past tolerance
+   against the recorded baseline. The watched set is deliberately small —
+   `ineligibleChoices` (no tolerance at all), `turnSuccessRate` and `tierAccuracy`
+   (±2pp), `listEquivalentUsd` and `coldPremiumUsd` (±5%), `candidate.adoptedLift`
+   (±2pp). It watches what a session **adopts**, not what the judge would have picked,
+   which is the distinction round 8 had to introduce. Improvements never fail.
+2. **`npm run eval:all`.** Validates both packs, runs all eight profiles, prints one
+   table; `-- --gate` makes it a pre-merge check. Exit codes are now documented and
+   distinct: `1` routing bug, `2` inconsistent ground truth or unauthorised live mode,
+   `3` regression.
+3. **A findings index** at the top of this log: every claim made in nine rounds, the
+   round that established it, and what it rests on — including the two that are marked
+   *not robust*.
+4. **`AGENTS.md`**, carrying the four sharp edges a future session will otherwise
+   rediscover the hard way.
+
+**What the numbers did.** Unchanged by construction — no routing or scoring code moved.
+The gate was verified against a deliberate regression rather than asserted: re-running
+the same profile with `--calls-per-turn 20` trips it correctly.
+
+```
+--gate: 1 regression(s) against 2026-09-22T13-24-31-gatetest-f2830fc
+  listEquivalentUsd: 11.4842 -> 28.8881 (+17.40, tolerance relative 0.05)
+```
+
+and `npm run eval:all -- --gate` exits `0` against the committed baselines. Six unit
+tests cover the gate's behaviour directly: identical runs pass, 1pp and 3% moves are
+noise, 5pp and 20% moves fail, improvements never fail however large, a single
+ineligible route always fails, and the tolerance multiplier widens the band without
+changing direction.
+
+**Where this leaves the task.** Ten rounds: the harness measures the router's
+decisions, its eligibility and quota handling, the cache consequence of every switch,
+the traffic model those costs rest on, the judge's random error, the judge's systematic
+bias, the adoption gate, the candidate set, and its own competence assumption — and it
+now reports which conclusions survive each of those being wrong, and fails when one
+regresses.
+
+The one thing it cannot do offline is unchanged and is stated in the findings index:
+`ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

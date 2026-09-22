@@ -117,6 +117,50 @@ export function compareMetrics(previous: RunMetrics | undefined, current: RunMet
 	return out;
 }
 
+/**
+ * The small set of metrics a regression should actually fail on. Gating everything
+ * turns the gate into noise; these are the numbers a routing change is trying to move.
+ *
+ * `kind` says how the tolerance is read: `rate` in absolute points, `relative` as a
+ * fraction of the baseline, `absolute` as a raw count.
+ */
+export const GATED_METRICS: { key: string; kind: "rate" | "relative" | "absolute"; tolerance: number }[] = [
+	{ key: "ineligibleChoices", kind: "absolute", tolerance: 0 },
+	{ key: "turnSuccessRate", kind: "rate", tolerance: 0.02 },
+	{ key: "tierAccuracy", kind: "rate", tolerance: 0.02 },
+	{ key: "listEquivalentUsd", kind: "relative", tolerance: 0.05 },
+	{ key: "coldPremiumUsd", kind: "relative", tolerance: 0.05 },
+	{ key: "candidate.adoptedLift", kind: "rate", tolerance: 0.02 },
+];
+
+export interface GateFailure {
+	key: string;
+	previous: number;
+	current: number;
+	delta: number;
+	tolerance: number;
+	kind: string;
+}
+
+/**
+ * Which gated metrics moved the wrong way by more than their tolerance. An empty list
+ * means the run is no worse than the one it was compared against.
+ */
+export function gateRegressions(deltas: MetricDelta[], scale = 1): GateFailure[] {
+	const byKey = new Map(deltas.map((d) => [d.key, d]));
+	const failures: GateFailure[] = [];
+	for (const gate of GATED_METRICS) {
+		const delta = byKey.get(gate.key);
+		if (!delta || delta.direction !== "worse") continue;
+		const tolerance = gate.tolerance * scale;
+		const magnitude = gate.kind === "relative" ? Math.abs(delta.delta) / Math.max(1e-9, Math.abs(delta.previous)) : Math.abs(delta.delta);
+		if (magnitude > tolerance) {
+			failures.push({ key: gate.key, previous: delta.previous, current: delta.current, delta: delta.delta, tolerance, kind: gate.kind });
+		}
+	}
+	return failures;
+}
+
 export function appendLog(root: string, line: string): string {
 	const dir = resultsDir(root);
 	mkdirSync(dir, { recursive: true });

@@ -21,7 +21,7 @@ import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifi
 import { loadFleet } from "../eval/fleet.ts";
 import { runEval } from "../eval/harness.ts";
 import { computeMetrics, PLAN_POINT_USD } from "../eval/metrics.ts";
-import { compareMetrics, readRun, type RunRecord, writeRun } from "../eval/results.ts";
+import { compareMetrics, GATED_METRICS, gateRegressions, readRun, type RunRecord, writeRun } from "../eval/results.ts";
 import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
 import { buildFleet } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
@@ -395,6 +395,45 @@ test("a judge that systematically prefers the flashy answer makes the fan-out wo
 	assert.ok(unbiased.judgeLift > 0, "the unbiased judge should still help");
 	assert.ok(biased.judgeLift < 0, "a strong flagship bias should cost more turns than it wins");
 	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
+});
+
+test("the gate fails on a real regression and stays quiet on an improvement", async () => {
+	const outcome = await run();
+	const base = computeMetrics(outcome.turns, outcome.stateChars);
+
+	assert.deepEqual(gateRegressions(compareMetrics(base, base)), [], "an identical run must not trip the gate");
+
+	// Inside tolerance: 1pp of turn success and 3% of spend are noise, not a regression.
+	const noise = { ...base, turnSuccessRate: base.turnSuccessRate - 0.01, listEquivalentUsd: base.listEquivalentUsd * 1.03 };
+	assert.deepEqual(gateRegressions(compareMetrics(base, noise)), []);
+
+	// Past tolerance, in both directions of "worse".
+	const worse = { ...base, turnSuccessRate: base.turnSuccessRate - 0.05, listEquivalentUsd: base.listEquivalentUsd * 1.2 };
+	const failures = gateRegressions(compareMetrics(base, worse));
+	assert.deepEqual(failures.map((f) => f.key).sort(), ["listEquivalentUsd", "turnSuccessRate"]);
+
+	// Improvements never fail, however large.
+	const better = { ...base, turnSuccessRate: 1, listEquivalentUsd: 0.01, coldPremiumUsd: 0 };
+	assert.deepEqual(gateRegressions(compareMetrics(base, better)), []);
+
+	// Any ineligible route at all is a regression: this one has no tolerance.
+	const bug = { ...base, ineligibleChoices: base.ineligibleChoices + 1 };
+	assert.deepEqual(gateRegressions(compareMetrics(base, bug)).map((f) => f.key), ["ineligibleChoices"]);
+
+	// And the tolerance multiplier widens the band rather than changing direction.
+	assert.deepEqual(gateRegressions(compareMetrics(base, worse), 10), []);
+});
+
+test("the candidate lift is gated on the adopted outcome, not the raw pick", async () => {
+	const outcome = await run({ candidateN: 3 });
+	const base = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.ok(base.candidate);
+	const worse = { ...base, candidate: { ...base.candidate, adoptedLift: base.candidate.adoptedLift - 0.1 } };
+	assert.deepEqual(gateRegressions(compareMetrics(base, worse)).map((f) => f.key), ["candidate.adoptedLift"]);
+	assert.ok(
+		GATED_METRICS.every((g) => g.key !== "candidate.judgeLift"),
+		"the gate must watch what a session adopts, not what the judge would have picked",
+	);
 });
 
 test("no candidate policy is allowed to read the oracle's skill numbers", () => {

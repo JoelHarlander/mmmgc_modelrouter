@@ -81,6 +81,7 @@ npm run check   # tsc
 npm test        # node --test (router, ledger, config, eval harness)
 npm run smoke   # end-to-end on pi's faux provider: no tokens spent
 npm run eval    # SWE-bench-style router eval: offline, deterministic, no tokens spent
+npm run eval:all -- --gate   # every eval profile, failing on a regression
 ```
 
 Verified on pi 0.85.1: `pi.setModel()` inside `before_agent_start` applies to the same turn, so the switch
@@ -99,6 +100,7 @@ tier accuracy, task resolve rate, ledger cost vs list-equivalent cost (subscript
 $0 but still consume a plan), and the cache consequence of every switch.
 
 ```bash
+npm run eval:all -- --gate              # every profile, failing on a regression
 npm run eval                            # scripted classifier, single routed model per turn
 npm run eval -- --classifier heuristic  # score the no-credential fallback
 npm run eval -- --candidates 3          # 2+ responses per turn, judge picks the best
@@ -107,4 +109,5 @@ npm run eval -- --classifier live       # real Jev; also needs ROUTER_EVAL_LIVE=
 
 The harness measures the shipped router; it does not change how it routes or how `/duo` adopts an answer.
 What it declares rather than measures, how the cost model is derived, and how to read each metric are in
-[`eval/README.md`](eval/README.md). Round-by-round results are in [`eval/results/log.md`](eval/results/log.md).
+[`eval/README.md`](eval/README.md). Every finding so far, with what each one rests on, is in the findings index
+at the top of [`eval/results/log.md`](eval/results/log.md).

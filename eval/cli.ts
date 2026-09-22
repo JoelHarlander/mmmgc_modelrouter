@@ -23,7 +23,17 @@ import { loadFleet } from "./fleet.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
 import { DEFAULT_TRAFFIC } from "./simulate.ts";
-import { appendLog, compareMetrics, ensureDirFor, latestPath, readRun, resultsDir, type RunRecord, writeRun } from "./results.ts";
+import {
+	appendLog,
+	compareMetrics,
+	ensureDirFor,
+	gateRegressions,
+	latestPath,
+	readRun,
+	resultsDir,
+	type RunRecord,
+	writeRun,
+} from "./results.ts";
 import {
 	renderGateSweep,
 	renderOracleSweep,
@@ -56,6 +66,8 @@ interface Args {
 	noWrite: boolean;
 	validateOnly: boolean;
 	allowInconsistent: boolean;
+	gate: boolean;
+	gateTolerance: number;
 	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy";
 	candidatePolicy?: string;
 	judgeMinConfidence?: number;
@@ -80,6 +92,8 @@ function parseArgs(argv: string[]): Args {
 		noWrite: false,
 		validateOnly: false,
 		allowInconsistent: false,
+		gate: false,
+		gateTolerance: 1,
 		judgeBias: 0,
 		probe: false,
 		probePack: join(ROOT, "eval", "tasks", "judge-probe-v1.json"),
@@ -163,6 +177,12 @@ function parseArgs(argv: string[]): Args {
 			case "--allow-inconsistent":
 				args.allowInconsistent = true;
 				break;
+			case "--gate":
+				args.gate = true;
+				break;
+			case "--gate-tolerance":
+				args.gateTolerance = Number(next());
+				break;
 			case "-h":
 			case "--help":
 				args.help = true;
@@ -240,6 +260,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --note <text>          one-line round note appended to eval/results/log.md
   --json                 print the run record as JSON instead of a table
   --no-write             do not write a results file
+  --gate                 exit non-zero when a headline metric regressed past tolerance
+  --gate-tolerance <x>   multiplier on the default tolerances (default 1)
   --validate             check the pack's ground truth against the fleet and exit
   --allow-inconsistent   run even when the pack fails that check
 
@@ -385,12 +407,33 @@ async function main(): Promise<number> {
 		}
 	}
 
+	const failures = args.gate ? gateRegressions(deltas, args.gateTolerance) : [];
+
 	if (args.json) {
-		process.stdout.write(`${JSON.stringify({ ...record, deltas }, (_k, v) => (v === Number.POSITIVE_INFINITY ? "Infinity" : v), "\t")}\n`);
+		process.stdout.write(
+			`${JSON.stringify({ ...record, deltas, gateFailures: failures }, (_k, v) => (v === Number.POSITIVE_INFINITY ? "Infinity" : v), "\t")}\n`,
+		);
 	} else {
 		process.stdout.write(renderTable(record, metrics, baseline?.runId, deltas));
 	}
-	return metrics.ineligibleChoices > 0 ? 1 : 0;
+
+	// A routing bug is always a failure; a regression is only one when asked for.
+	if (metrics.ineligibleChoices > 0) {
+		process.stderr.write(`${metrics.ineligibleChoices} turn(s) routed to an ineligible model\n`);
+		return 1;
+	}
+	if (args.gate && !baseline) {
+		process.stderr.write(`--gate: no baseline for profile "${profile}"; recording this run as the baseline\n`);
+		return 0;
+	}
+	if (failures.length > 0) {
+		process.stderr.write(`\n--gate: ${failures.length} regression(s) against ${baseline?.runId}\n`);
+		for (const f of failures) {
+			process.stderr.write(`  ${f.key}: ${fmtNum(f.previous)} -> ${fmtNum(f.current)} (${fmtDelta(f.delta)}, tolerance ${f.kind} ${f.tolerance})\n`);
+		}
+		return 3;
+	}
+	return 0;
 }
 
 /** The pack is part of the profile: a long-session run must not be compared to a short one. */
@@ -494,6 +537,10 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 
 function pct(n: number): string {
 	return `${(n * 100).toFixed(1)}%`;
+}
+
+function fmtNum(n: number): string {
+	return Number.isInteger(n) ? String(n) : n.toFixed(4);
 }
 
 function usd(n: number, digits = 4): string {
