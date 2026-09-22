@@ -19,6 +19,7 @@ import { execFileSync } from "node:child_process";
 import { JevClient } from "../src/jev.ts";
 import { JevJudge, NoisyJudge } from "./candidates.ts";
 import { auditConfig, renderAudit } from "./audit.ts";
+import { computeCalibration, renderCalibration } from "./calibration.ts";
 import { loadProbePack, renderProbe, runProbe } from "./probe.ts";
 import { loadFleet } from "./fleet.ts";
 import { DEFAULT_CONFIG, loadConfig } from "../src/config.ts";
@@ -37,11 +38,13 @@ import {
 	writeRun,
 } from "./results.ts";
 import {
+	renderConfidenceSweep,
 	renderGateSweep,
 	renderOracleSweep,
 	renderPolicySweep,
 	renderSweep,
 	renderTrafficSweep,
+	runConfidenceSweep,
 	runJudgeSweep,
 	runOracleSweep,
 	runPolicySweep,
@@ -72,7 +75,8 @@ interface Args {
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence";
+	calibration: boolean;
 	candidatePolicy?: string;
 	judgeMinConfidence?: number;
 	callsPerTurn?: number;
@@ -96,6 +100,7 @@ function parseArgs(argv: string[]): Args {
 		noWrite: false,
 		validateOnly: false,
 		auditConfig: false,
+		calibration: false,
 		auditLocal: false,
 		allowInconsistent: false,
 		gate: false,
@@ -180,6 +185,9 @@ function parseArgs(argv: string[]): Args {
 			case "--validate":
 				args.validateOnly = true;
 				break;
+			case "--calibration":
+				args.calibration = true;
+				break;
 			case "--audit-config":
 				args.auditConfig = true;
 				break;
@@ -259,6 +267,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep oracle         jitter the declared model skills and see which findings survive
   --sweep gate           sweep the confidence bar src/parallel.ts auto-adopts above
   --sweep policy         compare the shipped candidate set against alternatives
+  --sweep confidence     sweep switching.minConfidence, the routing bar
+  --calibration          is the classifier's confidence worth anything?
   --candidate-policy <p> shipped | strongest | cheapest | spread | tier-top
   --judge-min-confidence <c>  that bar (default: switching.minConfidence)
   --calls-per-turn <n>   provider calls per user turn (default 5, the measured median)
@@ -352,6 +362,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "confidence") {
+			title = `confidence sweep — pack ${pack.id}, classifier ${args.classifier}`;
+			const c = await runConfidenceSweep(base);
+			cells = c;
+			rendered = renderConfidenceSweep(c, title);
 		} else if (args.sweep === "policy") {
 			title = `policy sweep — pack ${pack.id}, classifier ${args.classifier}, n=${args.candidates || 3}, mean of 5 seeds per cell`;
 			const c = await runPolicySweep({ ...base, candidateN: args.candidates || 3 });
@@ -405,6 +420,13 @@ async function main(): Promise<number> {
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
 	});
 	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+
+	if (args.calibration) {
+		const report = computeCalibration(outcome.turns, loaded.config.switching.minConfidence);
+		if (args.json) process.stdout.write(`${JSON.stringify(report, null, "\t")}\n`);
+		else process.stdout.write(renderCalibration(report, `${pack.id}, classifier ${args.classifier}`));
+		return 0;
+	}
 
 	const at = new Date();
 	const record: RunRecord = {
@@ -509,7 +531,8 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 	row("  median task turn rate", "medianTaskTurnSuccess", pct(m.medianTaskTurnSuccess));
 	row("  worst task turn rate", "worstTaskTurnSuccess", pct(m.worstTaskTurnSuccess));
 	row("turn success rate", "turnSuccessRate", pct(m.turnSuccessRate));
-	row("tier accuracy", "tierAccuracy", pct(m.tierAccuracy));
+	row("tier accuracy (landed)", "tierAccuracy", pct(m.tierAccuracy));
+	row("  classifier accuracy", "classifierAccuracy", pct(m.classifierAccuracy));
 	row("under-routed", "underRouteRate", pct(m.underRouteRate));
 	row("over-routed", "overRouteRate", pct(m.overRouteRate));
 	row("under-route failures", "underRouteFailures", String(m.underRouteFailures));

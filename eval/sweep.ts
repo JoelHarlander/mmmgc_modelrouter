@@ -12,6 +12,8 @@
  */
 import { CANDIDATE_POLICIES, NoisyJudge } from "./candidates.ts";
 import { buildFleet, type LoadedFleet } from "./fleet.ts";
+import { mergeConfig } from "../src/config.ts";
+import { computeCalibration } from "./calibration.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics } from "./metrics.ts";
 import { DEFAULT_TRAFFIC, hashUnit, type TrafficProfile } from "./simulate.ts";
@@ -296,6 +298,69 @@ export function renderPolicySweep(cells: PolicyCell[], title: string): string {
 			`  ${c.policy.padEnd(11)} ${String(c.bias).padStart(4)}   ${pct(c.baselineSuccessRate).padStart(8)}  ${pct(c.oracleSuccessRate).padStart(8)}   ` +
 				`${pct(c.judgeSuccessRate).padStart(8)}  ${pct(c.adoptedSuccessRate).padStart(8)}   ${signedPct(c.adoptedLift).padStart(13)}   ${c.judgeRegressions.toFixed(1).padStart(7)}   ` +
 				`${usd(c.fanoutListEquivalentUsd).padStart(9)}  ${usd(c.listUsdPerExtraSolve).padStart(9)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
+export interface ConfidenceCell {
+	minConfidence: number;
+	turns: number;
+	tierAccuracy: number;
+	classifierAccuracy: number;
+	turnSuccessRate: number;
+	switches: number;
+	coldTurns: number;
+	listEquivalentUsd: number;
+	coldPremiumUsd: number;
+	/** Turns the bar suppressed, and how many of those the classifier had right. */
+	suppressed: number;
+	suppressedCorrect: number;
+}
+
+/**
+ * What the routing confidence bar buys. `switching.minConfidence` keeps the current
+ * model whenever the classifier is unsure; it is a shipped knob and, until this sweep,
+ * an unmeasured one. Raising it trades routing accuracy for fewer switches - which is
+ * only a good trade if switches are expensive, and rounds 4-7 established that they are.
+ */
+export async function runConfidenceSweep(options: SweepOptions & { bars?: number[] }): Promise<ConfidenceCell[]> {
+	const bars = options.bars ?? [0, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.01];
+	const cells: ConfidenceCell[] = [];
+	for (const minConfidence of bars) {
+		const loaded: LoadedFleet = {
+			...options.loaded,
+			config: mergeConfig(options.loaded.config, { switching: { ...options.loaded.config.switching, minConfidence } }),
+		};
+		const outcome = await runEval({ pack: options.pack, loaded, classifier: options.classifier, startModel: options.startModel });
+		const m = computeMetrics(outcome.turns, outcome.stateChars);
+		const cal = computeCalibration(outcome.turns, minConfidence);
+		cells.push({
+			minConfidence,
+			turns: m.turns,
+			tierAccuracy: m.tierAccuracy,
+			classifierAccuracy: m.classifierAccuracy,
+			turnSuccessRate: m.turnSuccessRate,
+			switches: m.switches,
+			coldTurns: m.coldTurns,
+			listEquivalentUsd: m.listEquivalentUsd,
+			coldPremiumUsd: m.coldPremiumUsd,
+			suppressed: cal.suppressed,
+			suppressedCorrect: cal.suppressedCorrect,
+		});
+	}
+	return cells;
+}
+
+export function renderConfidenceSweep(cells: ConfidenceCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  minConf   landed   classifier   turn ok   switches   cold      list $   cold prem   suppressed (correct)");
+	for (const c of cells) {
+		out.push(
+			`  ${c.minConfidence.toFixed(2).padStart(7)}   ${pct(c.tierAccuracy).padStart(6)}   ${pct(c.classifierAccuracy).padStart(10)}   ${pct(c.turnSuccessRate).padStart(7)}   ` +
+				`${String(c.switches).padStart(8)}   ${`${c.coldTurns}/${c.turns}`.padStart(5)}   ${usd(c.listEquivalentUsd).padStart(9)}   ${usd(c.coldPremiumUsd).padStart(9)}   ` +
+				`${`${c.suppressed} (${c.suppressedCorrect})`.padStart(20)}`,
 		);
 	}
 	out.push("");

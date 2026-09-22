@@ -68,6 +68,7 @@ const HIGHER_IS_BETTER = new Set([
 	"worstTaskTurnSuccess",
 	"turnSuccessRate",
 	"tierAccuracy",
+	"classifierAccuracy",
 	"baselineSuccessRate",
 	"judgeSuccessRate",
 	"oracleSuccessRate",

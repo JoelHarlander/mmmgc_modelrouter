@@ -1,0 +1,51 @@
+{
+	"turns": 29,
+	"buckets": [
+		{
+			"lower": 0,
+			"upper": 0.5,
+			"turns": 2,
+			"meanConfidence": 0.395,
+			"accuracy": 1,
+			"belowBar": true
+		},
+		{
+			"lower": 0.5,
+			"upper": 0.6,
+			"turns": 4,
+			"meanConfidence": 0.56,
+			"accuracy": 0.25,
+			"belowBar": false
+		},
+		{
+			"lower": 0.6,
+			"upper": 0.7,
+			"turns": 7,
+			"meanConfidence": 0.6543,
+			"accuracy": 0.7143,
+			"belowBar": false
+		},
+		{
+			"lower": 0.7,
+			"upper": 0.8,
+			"turns": 12,
+			"meanConfidence": 0.7417,
+			"accuracy": 1,
+			"belowBar": false
+		},
+		{
+			"lower": 0.8,
+			"upper": 0.9,
+			"turns": 4,
+			"meanConfidence": 0.83,
+			"accuracy": 1,
+			"belowBar": false
+		}
+	],
+	"ece": 0.2293,
+	"bias": -0.1438,
+	"discrimination": 0.3846,
+	"minConfidence": 0.5,
+	"suppressed": 2,
+	"suppressedCorrect": 2
+}

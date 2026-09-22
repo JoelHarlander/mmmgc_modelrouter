@@ -88,8 +88,17 @@ export interface TurnRecord {
 	taskId: string;
 	turn: number;
 	goldTier: Tier;
+	/** What the classifier asked for, after the stakes override. Measures the classifier. */
 	requestedTier: Tier;
+	/** What src/router.ts's Decision reports as its tier. */
 	chosenTier: Tier;
+	/**
+	 * The tier the router actually *landed* in: the tier list containing the model it
+	 * selected. These diverge when confidence falls below the bar - src/router.ts returns
+	 * the requested tier while keeping the current model - and it is this one that decides
+	 * the outcome, so it is what tierAccuracy is measured on.
+	 */
+	effectiveTier: Tier;
 	confidence: number;
 	/** "heuristic" means the classifier failed and src/router.ts#heuristicTier routed instead. */
 	classifierSource: "jev" | "heuristic" | "oracle" | "pinned";

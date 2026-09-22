@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, mergeConfig, modelKey } from "../src/config.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
+import { computeCalibration } from "../eval/calibration.ts";
 import { pickParallelModels } from "../src/parallel.ts";
 import { CANDIDATE_POLICIES, JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
 import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifier.ts";
@@ -27,9 +28,11 @@ import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simu
 import { buildFleet } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
 import {
+	type ConfidenceCell,
 	type OracleCell,
 	perturbFleet,
 	runJudgeSweep,
+	runConfidenceSweep,
 	runOracleSweep,
 	runPolicySweep,
 	runTrafficSweep,
@@ -177,13 +180,24 @@ test("the heuristic classifier routes the whole pack without help, and scores wo
 	assert.equal(heuristic.classifierCostUsd, 0);
 });
 
-test("the oracle classifier is the routing ceiling: perfect tiers, no worse outcome", async () => {
+test("a perfect classifier does not give a perfect router: a manual pin outlives its turn", async () => {
 	const scripted = computeMetrics(...unpack(await run()));
-	const oracle = computeMetrics(...unpack(await run({ classifier: "oracle" })));
-	assert.equal(oracle.tierAccuracy, 1);
-	assert.equal(oracle.underRouteRate, 0);
+	const outcome = await run({ classifier: "oracle" });
+	const oracle = computeMetrics(outcome.turns, outcome.stateChars);
+
+	assert.equal(oracle.classifierAccuracy, 1, "the oracle classifier is right by construction");
 	assert.equal(oracle.overRouteRate, 0);
 	assert.ok(oracle.turnSuccessRate >= scripted.turnSuccessRate);
+
+	// ...and yet the router still lands in the wrong tier, because `switching.manualPinTurns`
+	// holds a /model pin across turns the operator did not choose it for.
+	const missed = outcome.turns.filter((t) => t.effectiveTier !== t.goldTier);
+	assert.ok(oracle.tierAccuracy < 1, "landing accuracy must be able to fall below classifier accuracy");
+	assert.ok(missed.length > 0);
+	for (const turn of missed) {
+		assert.equal(turn.pinned, true, `${turn.taskId} t${turn.turn} landed wrong without being pinned`);
+		assert.equal(turn.requestedTier, turn.goldTier, "the classifier was right; the pin overrode it");
+	}
 });
 
 test("candidate metrics bracket correctly: baseline <= judge <= oracle, and lift is priced", async () => {
@@ -779,4 +793,73 @@ test("a config whose tiers collapse onto one model is reported as such", () => {
 	assert.match(audit.collapsedTiers ?? "", /routing can only change the thinking level/);
 	// The shipped defaults do not have this shape.
 	assert.equal(auditConfig(DEFAULT_CONFIG, DOCS).collapsedTiers, undefined);
+});
+
+test("tier accuracy measures where the router landed, not what the classifier asked for", async () => {
+	const bar = async (minConfidence: number) => {
+		const base = loadFleet(FLEET);
+		const loaded = { ...base, config: mergeConfig(base.config, { switching: { ...base.config.switching, minConfidence } }) };
+		const outcome = await runEval({ pack: pack(LONG_PACK), loaded, classifier: "scripted", ledgerFile: tmpLedger() });
+		return { metrics: computeMetrics(outcome.turns, outcome.stateChars), turns: outcome.turns };
+	};
+	const open = await bar(0);
+	const high = await bar(0.9);
+
+	// src/router.ts reports the *requested* tier even when low confidence makes it keep
+	// the current model, so the two must be measured separately.
+	assert.equal(open.metrics.classifierAccuracy, high.metrics.classifierAccuracy, "the bar cannot change what the classifier said");
+	assert.ok(high.metrics.tierAccuracy < open.metrics.tierAccuracy, "...but it very much changes where the router ends up");
+
+	// The divergence happens only on turns the bar suppressed.
+	for (const turn of high.turns) {
+		if (turn.pinned) continue;
+		if (turn.effectiveTier !== turn.chosenTier) assert.ok(turn.confidence < 0.9, `${turn.taskId} t${turn.turn} diverged above the bar`);
+	}
+});
+
+test("the routing confidence bar is a stickiness mechanism, not a safety one", async () => {
+	const cells = await runConfidenceSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		bars: [0.5, 0.6, 0.8, 1.01],
+	});
+	const [shipped, slightly, high, never] = cells as [ConfidenceCell, ConfidenceCell, ConfidenceCell, ConfidenceCell];
+
+	// The shipped bar barely engages: almost nothing is below it.
+	assert.ok(shipped.suppressed <= 2, `the 0.5 bar suppressed ${shipped.suppressed} turns; it is nearly inert`);
+	// Raising it only ever reduces switching.
+	assert.ok(slightly.switches < shipped.switches);
+	assert.ok(high.switches < slightly.switches);
+	assert.equal(never.switches, 0);
+	// And it increasingly discards classifications that were correct.
+	assert.ok(high.suppressedCorrect > slightly.suppressedCorrect);
+	// A mid-height bar is the worst of both worlds: it freezes the session on whatever
+	// model it happened to be on, so outcome is non-monotone in the bar.
+	assert.ok(high.turnSuccessRate < shipped.turnSuccessRate, "a high-but-not-total bar should hurt");
+	assert.ok(never.turnSuccessRate > high.turnSuccessRate, "...more than never routing at all does");
+});
+
+test("calibration reads the classifier's own claims and ignores pinned turns", async () => {
+	const outcome = await run();
+	const report = computeCalibration(outcome.turns, DEFAULT_CONFIG.switching.minConfidence);
+	assert.equal(report.turns, outcome.turns.filter((t) => !t.pinned).length, "a pinned turn never consulted the classifier");
+	assert.equal(
+		report.buckets.reduce((a, b) => a + b.turns, 0),
+		report.turns,
+		"every routed turn lands in exactly one bucket",
+	);
+	assert.ok(report.ece >= 0 && report.ece <= 1);
+	for (const b of report.buckets) {
+		assert.ok(b.meanConfidence >= b.lower && b.meanConfidence <= b.upper);
+		assert.ok(b.accuracy >= 0 && b.accuracy <= 1);
+		assert.equal(b.belowBar, b.upper <= DEFAULT_CONFIG.switching.minConfidence);
+	}
+	// This fixture was written with low confidence on the turns it gets wrong, so
+	// confidence must carry signal here; on live Jev that is the open question.
+	assert.ok(report.discrimination > 0, "confidence should predict correctness in this pack");
+
+	// An oracle classifier is perfectly accurate at confidence 1: no calibration error.
+	const perfect = computeCalibration((await run({ classifier: "oracle" })).turns, 0.5);
+	assert.equal(perfect.ece, 0);
 });

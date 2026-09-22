@@ -15,7 +15,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import { modelKey, type RouterConfig, type ThinkingLevel } from "../src/config.ts";
+import { modelKey, type RouterConfig, type ThinkingLevel, TIERS } from "../src/config.ts";
 import type { JevClient } from "../src/jev.ts";
 import { Ledger } from "../src/ledger.ts";
 import { chooseModel, type Decision } from "../src/router.ts";
@@ -208,11 +208,15 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			ledger.record(provider, id, usage.usage);
 		}
 
+		// Where the router landed, not what it asked for: the first tier list holding the
+		// chosen model, light first so the cheapest home wins when a model appears twice.
+		const effectiveTier = TIERS.find((t) => (cfg.tiers[t] ?? []).includes(chosenKey)) ?? decision.tier;
+
 		const eligibility = checkEligibility(chosen, loaded, ledger, cfg);
 		const solved = spec ? solves(spec, task.category, requiredSkill) : false;
 		const inTierAlternativeWouldSolve =
 			!solved &&
-			(cfg.tiers[decision.tier] ?? []).some((key) => {
+			(cfg.tiers[effectiveTier] ?? []).some((key) => {
 				if (key === chosenKey || loaded.unauthed.has(key)) return false;
 				const alt = loaded.byKey.get(key);
 				return alt !== undefined && solves(alt, task.category, requiredSkill);
@@ -224,6 +228,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			goldTier,
 			requestedTier,
 			chosenTier: decision.tier,
+			effectiveTier,
 			confidence,
 			classifierSource,
 			model: chosenKey,

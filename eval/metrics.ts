@@ -30,7 +30,10 @@ export interface RunMetrics {
 	medianTaskTurnSuccess: number;
 	worstTaskTurnSuccess: number;
 	turnSuccessRate: number;
+	/** Did the router land in the right tier? The headline: this decides the outcome. */
 	tierAccuracy: number;
+	/** Did the classifier ask for the right tier? Measures the classifier, not the router. */
+	classifierAccuracy: number;
 	underRouteRate: number;
 	overRouteRate: number;
 	underRouteFailures: number;
@@ -122,8 +125,10 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 	let under = 0;
 	let over = 0;
 	let underFail = 0;
+	let classifierExact = 0;
 	for (const t of turns) {
-		const delta = tierIndex(t.chosenTier) - tierIndex(t.goldTier);
+		if (t.requestedTier === t.goldTier) classifierExact += 1;
+		const delta = tierIndex(t.effectiveTier) - tierIndex(t.goldTier);
 		if (delta === 0) exact += 1;
 		else if (delta < 0) {
 			under += 1;
@@ -150,6 +155,7 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		worstTaskTurnSuccess: perTaskSuccess.length === 0 ? 0 : round(Math.min(...perTaskSuccess), 4),
 		turnSuccessRate: ratio(turns.filter((t) => t.solved).length, turns.length),
 		tierAccuracy: ratio(exact, turns.length),
+		classifierAccuracy: ratio(classifierExact, turns.length),
 		underRouteRate: ratio(under, turns.length),
 		overRouteRate: ratio(over, turns.length),
 		underRouteFailures: underFail,

@@ -1,0 +1,59 @@
+{
+	"turns": 60,
+	"buckets": [
+		{
+			"lower": 0,
+			"upper": 0.5,
+			"turns": 1,
+			"meanConfidence": 0.47,
+			"accuracy": 1,
+			"belowBar": true
+		},
+		{
+			"lower": 0.5,
+			"upper": 0.6,
+			"turns": 7,
+			"meanConfidence": 0.5714,
+			"accuracy": 0.1429,
+			"belowBar": false
+		},
+		{
+			"lower": 0.6,
+			"upper": 0.7,
+			"turns": 11,
+			"meanConfidence": 0.6491,
+			"accuracy": 0.8182,
+			"belowBar": false
+		},
+		{
+			"lower": 0.7,
+			"upper": 0.8,
+			"turns": 21,
+			"meanConfidence": 0.74,
+			"accuracy": 1,
+			"belowBar": false
+		},
+		{
+			"lower": 0.8,
+			"upper": 0.9,
+			"turns": 14,
+			"meanConfidence": 0.8386,
+			"accuracy": 1,
+			"belowBar": false
+		},
+		{
+			"lower": 0.9,
+			"upper": 1,
+			"turns": 6,
+			"meanConfidence": 0.9033,
+			"accuracy": 1,
+			"belowBar": false
+		}
+	],
+	"ece": 0.2282,
+	"bias": -0.1282,
+	"discrimination": 0.4211,
+	"minConfidence": 0.5,
+	"suppressed": 1,
+	"suppressedCorrect": 1
+}

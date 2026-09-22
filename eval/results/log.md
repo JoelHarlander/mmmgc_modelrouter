@@ -24,6 +24,9 @@ Jump to the round that established each claim, and what it rests on.
 | The shipped **confidence gate does not defend against bias** — a biased judge is confidently wrong | 8 | 5 seeds × 3 bias levels |
 | The **shipped candidate set is the worst of five**: `tier-top` gets +21.7pp for 40% of the spend and is bias-immune | 9 | 5 seeds; bias-immunity is model-dependent |
 | The fan-out's fragility to bias is the **tier price inversion** (r2) propagating into `pickParallelModels` | 9 | fleet prices |
+| The shipped routing confidence bar (0.50) is **nearly inert** — 1 turn in 60 falls below it | **12** | both packs |
+| Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
+| A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
 
 **Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
 judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
@@ -671,3 +674,91 @@ does, in under a second, on any machine.
 judge and its bias, the candidate set, its own assumptions, and now the shipped
 configuration against published data. The single remaining gap is the same one and is
 not closeable offline: `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 12 — 2026-09-22 — is the classifier's confidence worth anything?
+
+**Measured.** `src/router.ts` keeps the current model whenever confidence falls below
+`switching.minConfidence`. That bar only makes sense if confidence predicts
+correctness, and eleven rounds had used confidence — in the fixture, in the judge, in
+the auto-adopt gate — without once checking whether it carries signal. This is the
+routing-side twin of round 6's judge probe: the probe asks whether the judge's *pick*
+is trustworthy; this asks whether the classifier's *certainty* is.
+
+**Changed.** `--calibration` reports the classifier's reliability curve (stated
+confidence vs observed accuracy per bucket, plus expected calibration error,
+over/under-confidence, and discrimination). `--sweep confidence` sweeps the bar itself.
+Both run on whatever classifier produced the run, so `--classifier live --calibration`
+gives Jev's own curve on the same terms.
+
+**A measurement bug this round found and fixed.** The sweep produced a flat
+`tierAccuracy` at every bar setting, which cannot be right. The cause was mine:
+`src/router.ts` returns the *requested* tier in its `Decision` even when low confidence
+makes it keep the current model, and I had been reporting that as "tier accuracy" since
+round 1. So the headline quality metric was measuring **what the classifier asked for**,
+not **where the router landed**. Now split:
+
+- `classifierAccuracy` — requested tier vs gold. Measures the classifier.
+- `tierAccuracy` — the tier containing the model actually selected. Measures the router,
+  decides the outcome, and is what the gate watches.
+
+The fix immediately paid for itself: with a **perfect** classifier
+(`classifierAccuracy` 1.000) the router still lands wrong once —
+`pydata__xarray-4094` turn 3 is heavy work served by a light model, because
+`manualPinTurns: 3` holds a `/model` pin the operator set two turns earlier for a
+one-line question. Under the old metric that was invisible.
+
+**What the numbers did.** Calibration of the scripted classifier
+(`swe-router-long-v1`; these confidences are hand-written, so this measures the
+fixture — the number that matters is the same command against live Jev):
+
+| confidence | turns | stated | observed | gap |
+| --- | ---: | ---: | ---: | ---: |
+| 0.00–0.50 | 1 | 47.0% | 100% | −53.0pp |
+| **0.50–0.60** | 7 | 57.1% | **14.3%** | **+42.9pp** |
+| 0.60–0.70 | 11 | 64.9% | 81.8% | −16.9pp |
+| 0.70–0.80 | 21 | 74.0% | 100% | −26.0pp |
+| 0.80–0.90 | 14 | 83.9% | 100% | −16.1pp |
+| 0.90–1.00 | 6 | 90.3% | 100% | −9.7pp |
+
+Discrimination **+42.1pp** — confidence does separate right from wrong here — but the
+error is concentrated in the 0.50–0.60 band, which is **exactly where the shipped bar
+sits** and the only band where the classifier is badly *over*confident.
+
+The bar sweep:
+
+| bar | landed | classifier | turn ok | switches | list $ | cold prem | suppressed (correct) |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.00 | 86.7% | 86.7% | 75.0% | 34 | $69.27 | $34.26 | 0 (0) |
+| **0.50 (shipped)** | 86.7% | 86.7% | 75.0% | 34 | $69.27 | $34.26 | **1 (1)** |
+| **0.60** | **88.3%** | 86.7% | 75.0% | **31** | **$62.98** | **$30.09** | 8 (2) |
+| 0.70 | 76.7% | 86.7% | 65.0% | 22 | $49.73 | $22.42 | 19 (11) |
+| **0.80** | 43.3% | 86.7% | **36.7%** | 7 | $11.65 | $4.21 | 40 (32) |
+| 0.90 | 40.0% | 86.7% | 75.0% | 5 | $44.06 | $22.32 | 54 (46) |
+| 1.01 (never route) | 33.3% | 86.7% | **96.7%** | 0 | $70.06 | $37.45 | 60 (52) |
+
+**Three findings.**
+
+1. **The shipped bar is nearly inert.** At 0.50 exactly **one turn in 60** falls below
+   it, and that turn was classified *correctly*. The knob is doing nothing except, very
+   occasionally, discarding a right answer.
+2. **0.60 is free money in this pack** — the only row that improves landing accuracy
+   (88.3%), and it does so while removing 3 switches and **$6.29** of spend at no cost
+   to outcome. It suppresses 8 turns of which only 2 were correct, which is the bar
+   working as intended.
+3. **The bar is a stickiness mechanism, not a safety one.** It does not make the router
+   more careful; it makes it commit harder to whatever it last decided. At 0.80 the
+   session spends **51 of 60 turns on the weakest model in the fleet** — one confident
+   `light` classification routes it there and nothing afterwards clears the bar to route
+   it back — and turn success collapses to **36.7%**, *worse than both a lower bar and
+   never routing at all*. Outcome is non-monotone in the bar, which is the signature of
+   a ratchet rather than a guard.
+
+**Housekeeping.** Per-run result files are no longer committed (`eval/results/.gitignore`);
+the `latest-<profile>.json` baselines, the sweep/audit/calibration snapshots and this log
+are. The directory was 3.6 MB of history that the log already tells better.
+
+**Next.** Unchanged, and now with a second reason to want it: the calibration curve
+above is of *my handwriting*. `ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --calibration`
+measures Jev's, and `--probe --live-judge` measures the judge's. Neither is closeable offline.
