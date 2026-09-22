@@ -68,6 +68,23 @@ import type { ClassifierMode, TaskPack } from "./types.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
+/** Every mode --sweep accepts. Kept beside the dispatch and pinned against --help by test. */
+const KNOWN_SWEEPS = [
+	"judge",
+	"bias",
+	"profile",
+	"oracle",
+	"gate",
+	"policy",
+	"confidence",
+	"strategy",
+	"pin",
+	"start",
+	"assumptions",
+	"paired",
+	"coverage",
+] as const;
+
 interface Args {
 	pack: string;
 	fleet: string;
@@ -90,7 +107,7 @@ interface Args {
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin" | "start" | "assumptions" | "paired" | "coverage";
+	sweep?: (typeof KNOWN_SWEEPS)[number];
 	exploreTurns?: number;
 	calibration: boolean;
 	bootstrap?: number;
@@ -349,6 +366,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --audit-config         price the shipped DEFAULT_CONFIG tiers and check both ladders
   --audit-local          audit this machine's merged config instead (not reproducible)
   --validate             check the pack's ground truth against the fleet and exit
+  -h, --help             this list
   --allow-inconsistent   run even when the pack fails that check
 
 live mode sends real requests and costs money: it needs --classifier live AND
@@ -483,12 +501,17 @@ async function main(): Promise<number> {
 			const c = await runOracleSweep(base);
 			cells = c;
 			rendered = renderOracleSweep(c, title);
-		} else {
+		} else if (args.sweep === "judge" || args.sweep === "bias") {
 			const shape = args.sweep === "bias" ? { noises: [10, 30], biases: [0, 10, 20, 40], candidateNs: [2, 3] } : { biases: [0] };
 			title = `${args.sweep} sweep — pack ${pack.id}, classifier ${args.classifier}, mean of 5 seeds per cell`;
 			const c = await runJudgeSweep({ ...base, ...shape });
 			cells = c;
 			rendered = renderSweep(c, title);
+		} else {
+			// Without this an unknown mode fell through to the judge sweep and reported it
+			// under the typo's name, which is worse than failing.
+			process.stderr.write(`unknown --sweep mode "${args.sweep}"; known: ${KNOWN_SWEEPS.join(", ")}\n`);
+			return 2;
 		}
 		if (args.json) process.stdout.write(`${JSON.stringify({ title, cells }, null, "\t")}\n`);
 		else process.stdout.write(rendered);

@@ -1643,3 +1643,61 @@ test("whether routing spends more than not routing depends on which models it st
 	// What does survive both: the cold-start premium is about half of routed-turn spend.
 	for (const m of [routedFull, routedOut]) assert.ok(m.coldPremiumShare > 0.4 && m.coldPremiumShare < 0.6);
 });
+
+test("every flag the CLI documents is one it parses, and vice versa", () => {
+	// Twenty-seven rounds of rapid change invites drift between --help and the parser.
+	const cli = readFileSync(join(ROOT, "eval", "cli.ts"), "utf8");
+	const help = cli.slice(cli.indexOf("const HELP ="), cli.indexOf("async function main"));
+	const documented = new Set([...help.matchAll(/^\s+(--[a-z-]+)/gm)].map((m) => m[1]!));
+	const parsed = new Set([...cli.matchAll(/case "(--[a-z-]+)":/g)].map((m) => m[1]!));
+
+	// --sweep takes a named mode, so its modes are documented as separate lines.
+	const sweepModes = new Set([...help.matchAll(/^\s+--sweep (\w+)/gm)].map((m) => m[1]!));
+	const sweepCases = new Set([...cli.matchAll(/args\.sweep === "(\w+)"/g)].map((m) => m[1]!));
+	const known = new Set([...(/const KNOWN_SWEEPS = \[([\s\S]*?)\]/.exec(cli)?.[1] ?? "").matchAll(/"(\w+)"/g)].map((m) => m[1]!));
+	assert.deepEqual([...known].sort(), [...sweepModes].sort(), "KNOWN_SWEEPS and --help disagree");
+	for (const mode of sweepModes) assert.ok(sweepCases.has(mode), `--help documents --sweep ${mode} but nothing dispatches it`);
+	assert.ok(sweepModes.size >= 12);
+
+	for (const flag of documented) {
+		if (flag === "--sweep") continue;
+		assert.ok(parsed.has(flag), `--help documents ${flag} but the parser does not accept it`);
+	}
+	for (const flag of parsed) {
+		if (flag === "--help") continue;
+		assert.ok(documented.has(flag), `the parser accepts ${flag} but --help does not mention it`);
+	}
+	// An unknown flag must be rejected rather than silently ignored.
+	assert.match(cli, /unknown argument/);
+});
+
+test("the exit codes eval/README documents are the ones the code returns", () => {
+	const readme = readFileSync(join(ROOT, "eval", "README.md"), "utf8");
+	const cli = readFileSync(join(ROOT, "eval", "cli.ts"), "utf8");
+	const table = readme.slice(readme.indexOf("### Exit codes"), readme.indexOf("### Exit codes") + 1200);
+	const documented = new Set([...table.matchAll(/^\| `(\d)` \|/gm)].map((m) => Number(m[1])));
+	assert.deepEqual([...documented].sort(), [0, 1, 2, 3, 4, 5], "eval/README's exit-code table changed");
+
+	// Each non-zero code must actually be reachable from the CLI.
+	for (const code of [1, 2, 3, 4, 5]) {
+		assert.match(cli, new RegExp(`return (problems > 0 \\? )?${code}[;:]|\\? ${code} :`), `eval/README documents exit ${code} but nothing returns it`);
+	}
+});
+
+test("the docs do not quote a pack size the packs no longer have", () => {
+	const short = pack();
+	const long = pack(LONG_PACK);
+	const counts = (p: typeof short) => ({ tasks: p.tasks.length, turns: p.tasks.reduce((a, t) => a + t.turns.length, 0) });
+	const s = counts(short);
+	const l = counts(long);
+
+	for (const file of ["README.md", join("eval", "README.md"), join("docs", "research", "router-eval-findings.md")]) {
+		const text = readFileSync(join(ROOT, file), "utf8");
+		// Only check files that actually quote a size, so adding prose cannot fail this.
+		if (text.includes(`${s.tasks} tasks`)) assert.ok(text.includes(`${s.turns} turns`), `${file} quotes the short pack's tasks but stale turns`);
+		if (text.includes(`${l.tasks} tasks`)) assert.ok(text.includes(`${l.turns} turns`), `${file} quotes the long pack's tasks but stale turns`);
+		for (const stale of ["6 tasks, 60 turns", "6 tasks, 60 turns, 8–12 turns"]) {
+			assert.ok(!text.includes(stale), `${file} still quotes a pack size that no longer exists: "${stale}"`);
+		}
+	}
+});
