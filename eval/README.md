@@ -20,6 +20,7 @@ npm run eval -- --sweep start                 # does any of this depend on where
 npm run eval -- --sweep assumptions           # rank every declared constant by how much it moves the answer
 npm run eval -- --sweep paired                # 95% intervals on the comparisons the findings rest on
 npm run eval -- --sweep coverage              # visit ~400 configurations and check the invariants in each
+npm run eval -- --sweep axis                  # does a candidate set's bias-immunity survive another bias axis?
 npm run eval -- --bootstrap 2000              # what a single number from this pack is worth
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
@@ -232,8 +233,11 @@ and requiring every policy to return an unchanged set.
 The offline judge (`NoisyJudge`) perceives each candidate's true skill with a bounded
 error — `--judge-noise` is that error's half-width in skill points — so it is reliably
 right about large quality gaps and near a coin flip on small ones. `--judge-bias` adds
-skill points to the flashiest candidate regardless of its quality, modelling the
-documented failure mode of preferring the flagship's house style.
+skill points to whichever candidate wins on the bias **axis** — `price` (the flagship's
+house style), `length`, or `position` — regardless of its quality. `--sweep axis` scores
+every candidate policy on every axis, because a set that is robust to one can be
+actively harmful on another: `tier-top` is immune to a price bias and goes **−7.3pp**
+under a length bias.
 
 It is a stand-in for Jev, not a simulation of it, so **a single candidate run is not a
 result**. `--sweep judge` and `--sweep bias` are: they run the pack across candidate

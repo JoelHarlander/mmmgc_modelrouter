@@ -52,6 +52,7 @@ import {
 	runConfidenceSweep,
 	runOracleSweep,
 	runPairedComparisons,
+	runAxisSweep,
 	runPinSweep,
 	runStartSweep,
 	runPolicySweep,
@@ -1700,4 +1701,60 @@ test("the docs do not quote a pack size the packs no longer have", () => {
 			assert.ok(!text.includes(stale), `${file} still quotes a pack size that no longer exists: "${stale}"`);
 		}
 	}
+});
+
+test("a candidate set's bias-immunity does not survive a bias on another axis", async () => {
+	// Round 9 found tier-top unmoved by judge bias because its flashiest member is also
+	// its strongest, and flagged that the immunity might be axis-specific. It is.
+	const cells = await runAxisSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		policies: ["tier-top", "strongest"],
+		axes: ["price", "length"],
+		biases: [0, 40],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const at = (policy: string, axis: string, bias: number) => cells.find((c) => c.policy === policy && c.axis === axis && c.bias === bias)!;
+
+	// On the axis round 9 measured, tier-top is exactly as immune as it reported.
+	assert.equal(at("tier-top", "price", 40).adoptedLift, at("tier-top", "price", 0).adoptedLift);
+	assert.ok(at("tier-top", "price", 40).favouredIsStrongest, "that immunity is the alignment round 9 identified");
+
+	// On the other axis the alignment is gone, and so is the immunity.
+	assert.ok(!at("tier-top", "length", 40).favouredIsStrongest);
+	assert.ok(at("tier-top", "length", 40).adoptedLift < 0, "a length-biased judge should make tier-top actively harmful");
+	assert.ok(at("tier-top", "length", 40).judgeRegressions > at("tier-top", "price", 40).judgeRegressions * 5);
+});
+
+test("what makes a fan-out bias-robust is the floor of its candidate set, not an alignment", async () => {
+	const loaded = loadFleet(FLEET);
+	const current = loaded.models.find((m) => modelKey(m) === "faux-plan-anthropic/claude-opus-5");
+	const floorOf = (policy: string) =>
+		Math.min(...CANDIDATE_POLICIES[policy]!({ current, cfg: loaded.config, n: 3, byKey: loaded.byKey, unauthed: loaded.unauthed }).map((m) => m.skill));
+
+	const cells = await runAxisSweep({
+		pack: pack(LONG_PACK),
+		loaded,
+		classifier: "scripted",
+		policies: ["strongest", "tier-top", "shipped"],
+		axes: ["price", "length"],
+		biases: [40],
+		seeds: ["s1", "s2", "s3"],
+	});
+	// `strongest` is the only set whose weakest member is still a capable model.
+	assert.ok(floorOf("strongest") > floorOf("tier-top") + 20);
+	assert.ok(floorOf("strongest") > floorOf("shipped") + 20);
+
+	// ...and the only one that stays strongly positive on both axes, without ever being
+	// aligned with the bias on one of them. If every candidate is good enough, it does
+	// not matter which one a biased judge picks.
+	for (const axis of ["price", "length"]) {
+		const strongest = cells.find((c) => c.policy === "strongest" && c.axis === axis)!;
+		assert.ok(strongest.adoptedLift > 0.2, `strongest fell to ${strongest.adoptedLift} on the ${axis} axis`);
+		for (const policy of ["tier-top", "shipped"]) {
+			assert.ok(cells.find((c) => c.policy === policy && c.axis === axis)!.adoptedLift < strongest.adoptedLift);
+		}
+	}
+	assert.ok(!cells.find((c) => c.policy === "strongest" && c.axis === "length")!.favouredIsStrongest, "robustness here is not alignment");
 });

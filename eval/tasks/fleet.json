@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"note": "Offline fleet. Prices are the published list prices recorded in docs/research + the cache-cost study (USD per 1M tokens). `skill` is a declared competence used by the offline oracle; it is a stated assumption of the harness, not a measurement of any real model. Provider names are deliberately synthetic (faux-*) so a fixture can never reach a real endpoint. `ttftMs` and `throughputTps` are the published operational figures from docs/data/operational-stats.json (best time-to-first-token and output throughput, retrieved 2026-09-20), so wall-clock is grounded the same way prices are.",
+	"note": "Offline fleet. Prices are the published list prices recorded in docs/research + the cache-cost study (USD per 1M tokens). `skill` is a declared competence used by the offline oracle; it is a stated assumption of the harness, not a measurement of any real model. Provider names are deliberately synthetic (faux-*) so a fixture can never reach a real endpoint. `ttftMs` and `throughputTps` are the published operational figures from docs/data/operational-stats.json (best time-to-first-token and output throughput, retrieved 2026-09-20), so wall-clock is grounded the same way prices are. `verbosity` (0-100) is how long and elaborate a model's answers tend to be. It is declared, and chosen to be uncorrelated with both price and skill, so that a length-biased judge can be told apart from a price-biased one.",
 	"skillLadder": {
 		"note": "The scale `skill` and a task's `requiredSkill` are both expressed on. The three bands deliberately restate the tier criteria in src/state.ts, so a turn's requiredSkill and the tier Jev is asked to choose mean the same thing.",
 		"30-49": "light band: answer a factual question, explain a snippet, a one-line command, a docstring, a regression test for behaviour already described",
@@ -22,6 +22,7 @@
 			},
 			"ttftMs": 366,
 			"throughputTps": 269.5,
+			"verbosity": 30,
 			"skill": 46,
 			"skillByCategory": {
 				"lookup": 8,
@@ -47,6 +48,7 @@
 			},
 			"ttftMs": 345,
 			"throughputTps": 277,
+			"verbosity": 72,
 			"skill": 49,
 			"skillByCategory": {
 				"lookup": 6,
@@ -71,6 +73,7 @@
 			},
 			"ttftMs": 109,
 			"throughputTps": 507,
+			"verbosity": 84,
 			"skill": 62,
 			"skillByCategory": {
 				"test-writing": 5,
@@ -94,6 +97,7 @@
 			},
 			"ttftMs": 3478,
 			"throughputTps": 91.5,
+			"verbosity": 40,
 			"skill": 74,
 			"skillByCategory": {
 				"concurrency": 4,
@@ -116,6 +120,7 @@
 			},
 			"ttftMs": 1696,
 			"throughputTps": 284.5,
+			"verbosity": 55,
 			"skill": 86,
 			"skillByCategory": {
 				"architecture": 3,
@@ -139,6 +144,7 @@
 			},
 			"ttftMs": 1335.5,
 			"throughputTps": 84,
+			"verbosity": 25,
 			"skill": 91,
 			"skillByCategory": {
 				"architecture": 6,

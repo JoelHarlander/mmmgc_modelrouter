@@ -11,7 +11,8 @@
  * be read as a result rather than a coincidence.
  */
 import { bootstrapDifference, renderPaired, tasksNeededFor } from "./bootstrap.ts";
-import { CANDIDATE_POLICIES, NoisyJudge } from "./candidates.ts";
+import { type BiasAxis, CANDIDATE_POLICIES, NoisyJudge } from "./candidates.ts";
+import { modelKey } from "../src/config.ts";
 import { buildFleet, type LoadedFleet } from "./fleet.ts";
 import { mergeConfig } from "../src/config.ts";
 import { computeCalibration } from "./calibration.ts";
@@ -219,6 +220,101 @@ export function renderTrafficSweep(cells: TrafficCell[], title: string): string 
 				`${c.planPointsUsed.toFixed(2).padStart(8)}   ${usd(c.fanoutListEquivalentUsd).padStart(10)} ${usd(c.listUsdPerExtraSolve).padStart(10)}`,
 		);
 	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
+export interface AxisCell {
+	policy: string;
+	axis: string;
+	bias: number;
+	seeds: number;
+	adoptedLift: number;
+	judgeRegressions: number;
+	/** The set member each axis favours, and whether it is also the strongest. */
+	favoured: string;
+	favouredIsStrongest: boolean;
+}
+
+/**
+ * Does a candidate set's bias-immunity survive a bias on a *different axis*?
+ *
+ * Round 9 found `tier-top` unmoved by judge bias, because its flashiest member is also
+ * its strongest, and flagged in the same breath that the immunity might be specific to
+ * that axis. It never tested it. This does: `price` is round 9's axis, `length` is the
+ * other documented judge failure mode, and a set is only robust if it survives both.
+ */
+export async function runAxisSweep(options: SweepOptions & { policies?: string[]; axes?: BiasAxis[]; candidateN?: number }): Promise<AxisCell[]> {
+	const policies = options.policies ?? Object.keys(CANDIDATE_POLICIES);
+	const axes = options.axes ?? (["price", "length"] as BiasAxis[]);
+	const biases = options.biases ?? [0, 40];
+	const seeds = options.seeds ?? DEFAULT_SEEDS;
+	const cells: AxisCell[] = [];
+
+	const current = options.loaded.models.find((m) => modelKey(m) === (options.startModel ?? "faux-plan-anthropic/claude-opus-5"));
+
+	for (const policy of policies) {
+		const set = CANDIDATE_POLICIES[policy]!({
+			current,
+			cfg: options.loaded.config,
+			n: options.candidateN ?? 3,
+			byKey: options.loaded.byKey,
+			unauthed: options.loaded.unauthed,
+		});
+		const strongest = [...set].sort((a, b) => b.skill - a.skill)[0];
+		for (const axis of axes) {
+			const favoured =
+				axis === "length"
+					? [...set].sort((a, b) => (b.verbosity ?? 0) - (a.verbosity ?? 0))[0]
+					: [...set].sort((a, b) => b.cost.output - a.cost.output)[0];
+			for (const bias of biases) {
+				const runs = [];
+				for (const seed of seeds) {
+					const outcome = await runEval({
+						pack: options.pack,
+						loaded: options.loaded,
+						classifier: options.classifier,
+						startModel: options.startModel,
+						candidateN: options.candidateN ?? 3,
+						candidatePolicy: policy,
+						judgeMinConfidence: 0,
+						seed,
+						judge: new NoisyJudge({ noise: 10, seed, bias, biasAxis: axis }),
+					});
+					const m = computeMetrics(outcome.turns, outcome.stateChars).candidate;
+					if (m) runs.push(m);
+				}
+				if (runs.length === 0) continue;
+				cells.push({
+					policy,
+					axis,
+					bias,
+					seeds: runs.length,
+					adoptedLift: mean(runs.map((r) => r.adoptedLift)),
+					judgeRegressions: mean(runs.map((r) => r.judgeRegressions)),
+					favoured: favoured?.key ?? "none",
+					favouredIsStrongest: favoured?.key === strongest?.key,
+				});
+			}
+		}
+	}
+	return cells;
+}
+
+export function renderAxisSweep(cells: AxisCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  policy       axis     bias   adopted lift   regress   favoured member        also strongest?");
+	let last = "";
+	for (const c of cells) {
+		if (c.policy !== last && last !== "") out.push("");
+		last = c.policy;
+		out.push(
+			`  ${c.policy.padEnd(11)}  ${c.axis.padEnd(7)} ${String(c.bias).padStart(4)}   ${signedPct(c.adoptedLift).padStart(12)}   ${c.judgeRegressions.toFixed(1).padStart(7)}   ` +
+				`${(c.favoured.split("/").pop() ?? "").padEnd(22)} ${c.favouredIsStrongest ? "yes" : "NO"}`,
+		);
+	}
+	out.push("");
+	out.push("  a set is only bias-robust if it survives every axis, and you cannot align with an axis you have not measured.");
 	out.push("");
 	return `${out.join("\n")}\n`;
 }

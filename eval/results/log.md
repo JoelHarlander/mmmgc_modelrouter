@@ -1749,3 +1749,57 @@ to routing winning (round 15), to never-switching winning again (round 27, becau
 demonstration that it is not quotable rather than a claim that it is.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 29 — 2026-09-23 — test the caveat I wrote and never checked
+
+**Measured.** A sentence from round 9. It found `tier-top` unmoved by judge bias because
+its flashiest candidate is also its strongest, and added: *"`tier-top`'s immunity is
+immunity to **this** model of bias — a judge that prefers the higher-priced-looking
+answer. If Jev's real bias runs on some other axis (length, structure, hedging), the
+alignment argument does not automatically transfer."* Twenty rounds later, nobody had
+checked.
+
+**Changed.** Judge bias now runs on a named **axis**: `price` (round 9's), `length`, or
+`position`. The fleet declares a `verbosity` per model, chosen deliberately
+**uncorrelated with both price and skill** so the two axes can be told apart.
+`--sweep axis` scores every candidate policy on every axis.
+
+**What the numbers did. The caveat was right, and worse than it sounded.**
+
+| candidate set | weakest member | clean | price-biased | length-biased |
+| --- | ---: | ---: | ---: | ---: |
+| **`strongest`** | **skill 74** | +30.3pp | **+30.9pp** | **+26.9pp** |
+| `spread` | skill 46 | +30.4pp | +27.4pp | +12.6pp |
+| `shipped` | skill 46 | +25.6pp | +9.7pp | +13.8pp |
+| **`tier-top`** | skill 46 | +26.9pp | **+26.9pp** | **−7.3pp** |
+
+`tier-top`'s immunity is **entirely specific to the price axis**. Bias the judge by
+length instead and it goes from +26.9pp to **−7.3pp** — worse than the shipped set it was
+recommended over, with 27.6 regressions against 0. The mechanism is visible in the sets:
+tier-top's most expensive member is `claude-opus-5` (its strongest) but its most verbose
+is `glm-5.3` (40 skill points weaker), so a length-biased judge picks the weak model
+every time.
+
+**And the round-9 design rule was the wrong one.** It said: *make the flashiest candidate
+the strongest*. The sweep says something better. `strongest` is robust on **both** axes
+(+30.9pp, +26.9pp) **without being aligned on the length axis at all** — its most verbose
+member is not its strongest either. What it has instead is a **floor**: its weakest
+candidate is skill 74, where every other set's is 46.
+
+> **If every candidate is good enough, it does not matter much which one a biased judge
+> picks.** Aligning the flashiest candidate with the strongest only defends against a
+> bias you have already measured. Raising the floor defends against one you have not.
+
+**Which sharpens the outstanding measurement rather than replacing it.** The two
+candidates for a recommendation now differ on a real trade: `tier-top` costs $140.58 to
+fan out and is robust *if* Jev's bias runs on price; `strongest` costs $588.71 and is
+robust either way. **Which one is right depends entirely on a number nobody has
+measured**, and `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` measures it for
+under a cent. Round 20 called the judge the loudest assumption; round 29 turns it into a
+$450 decision.
+
+**Next.** The probe reports a bias *magnitude* and controls for position, but does not yet
+separate a length bias from a presentation one. That is the obvious next thing, and it is
+what would make the live reading actionable rather than merely alarming.

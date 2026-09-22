@@ -18,6 +18,12 @@ export interface FleetModel {
 	ttftMs?: number;
 	/** Published output throughput, tokens/second. */
 	throughputTps?: number;
+	/**
+	 * How long and elaborate this model's answers tend to be, 0..100. Declared, and
+	 * deliberately uncorrelated with price and skill, so a length-biased judge can be
+	 * told apart from a price-biased one.
+	 */
+	verbosity?: number;
 	/** 0..100 declared competence. The offline oracle's ground truth. */
 	skill: number;
 	/** Per-category adjustments, so the fleet is not totally ordered. */

@@ -35,8 +35,10 @@ export interface JudgeCandidate {
 	/** Present in live mode; the offline judge scores the declared skill instead. */
 	text?: string;
 	trueSkill: number;
-	/** How much this candidate looks like the expensive answer. Drives the judge's bias. */
+	/** How much this candidate looks like the expensive answer. Drives a `price` bias. */
 	flashiness?: number;
+	/** How long and elaborate this candidate's answer is. Drives a `length` bias. */
+	verbosity?: number;
 }
 
 export interface Judge {
@@ -44,17 +46,28 @@ export interface Judge {
 	pick(request: string, candidates: JudgeCandidate[], context: { taskId: string; turn: number }): Promise<JudgeVerdict>;
 }
 
+/**
+ * Which axis a judge's systematic preference runs on.
+ *
+ * Round 9 found that `tier-top` is immune to bias because its flashiest candidate is
+ * also its strongest — and said in the same breath that the immunity might be specific
+ * to *that* axis. `price` is the axis round 9 measured; `length` is the other documented
+ * LLM-judge failure mode, and `position` is a preference for whichever answer came first.
+ */
+export type BiasAxis = "price" | "length" | "position";
+
 export interface NoisyJudgeOptions {
 	/** Half-width, in skill points, of the judge's perception error. */
 	noise: number;
 	seed: string;
 	temperature?: number;
 	/**
-	 * Skill points the judge hands the flashiest candidate regardless of quality. Models
-	 * the documented LLM-judge failure mode of preferring the flagship's house style;
-	 * `flashiness` is supplied per candidate (here, its list price rank).
+	 * Skill points the judge hands the candidate that wins on `biasAxis`, regardless of
+	 * quality. Models the documented LLM-judge failure modes.
 	 */
 	bias?: number;
+	/** Which axis that preference runs on. Defaults to `price` - round 9's axis. */
+	biasAxis?: BiasAxis;
 }
 
 /**
@@ -70,6 +83,7 @@ export class NoisyJudge implements Judge {
 	private readonly seed: string;
 	private readonly temperature: number;
 	private readonly bias: number;
+	private readonly biasAxis: BiasAxis;
 
 	constructor(noiseOrOptions: number | NoisyJudgeOptions, seed = "", temperature = 6) {
 		const o: NoisyJudgeOptions = typeof noiseOrOptions === "number" ? { noise: noiseOrOptions, seed, temperature } : noiseOrOptions;
@@ -77,14 +91,22 @@ export class NoisyJudge implements Judge {
 		this.seed = o.seed;
 		this.temperature = o.temperature ?? 6;
 		this.bias = o.bias ?? 0;
-		this.name = this.bias === 0 ? `noisy(${this.noise})` : `noisy(${this.noise},bias ${this.bias})`;
+		this.biasAxis = o.biasAxis ?? "price";
+		this.name = this.bias === 0 ? `noisy(${this.noise})` : `noisy(${this.noise},bias ${this.bias} on ${this.biasAxis})`;
+	}
+
+	/** The candidate this judge unfairly prefers, on whichever axis its bias runs. */
+	private favoured(candidates: JudgeCandidate[]): JudgeCandidate {
+		if (this.biasAxis === "position") return candidates[0]!;
+		const of = (c: JudgeCandidate) => (this.biasAxis === "length" ? (c.verbosity ?? 0) : (c.flashiness ?? 0));
+		return candidates.reduce((a, b) => (of(b) > of(a) ? b : a));
 	}
 
 	async pick(_request: string, candidates: JudgeCandidate[], context: { taskId: string; turn: number }): Promise<JudgeVerdict> {
-		const flashiest = candidates.reduce((a, b) => ((b.flashiness ?? 0) > (a.flashiness ?? 0) ? b : a));
+		const favoured = this.favoured(candidates);
 		const perceived = candidates.map((c) => {
 			const jitter = (hashUnit(this.seed, context.taskId, context.turn, c.key) * 2 - 1) * this.noise;
-			const bias = c === flashiest ? this.bias : 0;
+			const bias = c === favoured ? this.bias : 0;
 			return { label: c.label, score: c.trueSkill + jitter + bias };
 		});
 		const max = Math.max(...perceived.map((p) => p.score));

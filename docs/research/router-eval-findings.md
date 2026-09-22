@@ -193,10 +193,33 @@ headroom exists, while the raw lift moved 7×.
 | `spread` | **+19.0pp** | $359.87 | +69% | +15.8pp, 0 regressions |
 
 `tier-top` — the model the router itself prefers in each tier — is better, **2.5×
-cheaper**, **2.8× less added wall-clock**, and immune to a bias that costs the shipped
-set almost all of its lift. The shipped set is slowest because `tiers.standard[0]` is
-`gpt-6-astra`, which has the worst time-to-first-token in the fleet; a fan-out waits on
-its slowest member, since `src/parallel.ts` runs candidates in parallel.
+cheaper**, **2.8× less added wall-clock**, and immune to a *price*-axis bias. The shipped
+set is slowest because `tiers.standard[0]` is `gpt-6-astra`, which has the worst
+time-to-first-token in the fleet; a fan-out waits on its slowest member, since
+`src/parallel.ts` runs candidates in parallel.
+
+**But that immunity is axis-specific, and the axis has not been measured.**
+`--sweep axis` biases the judge by *length* instead of by price. `tier-top` goes from
+**+26.9pp to −7.3pp** — worse than the shipped set — because its most verbose member is
+its *weakest*. Only one set stays robust on both axes:
+
+| candidate set | weakest member | clean | price-biased | length-biased |
+| --- | ---: | ---: | ---: | ---: |
+| `strongest` | **skill 74** | +30.3pp | **+30.9pp** | **+26.9pp** |
+| `spread` | skill 46 | +30.4pp | +27.4pp | +12.6pp |
+| `shipped` | skill 46 | +25.6pp | +9.7pp | +13.8pp |
+| `tier-top` | skill 46 | +26.9pp | +26.9pp | **−7.3pp** |
+
+**The design rule is the floor, not an alignment.** `strongest` is robust *without* being
+aligned with the bias on the length axis — because its weakest member is still a capable
+model, so it does not matter much which one a biased judge picks. Aligning the flashiest
+candidate with the strongest only works against a bias you have already measured; raising
+the floor works against a bias you have not.
+
+**Recommendation.** Until `--probe --live-judge` says which axis Jev runs on, prefer a
+candidate set with a **high floor** over one that merely happens to be aligned.
+`strongest` costs the most to fan out ($588.71 against `tier-top`'s $140.58), so this is
+a real trade — and it is one the probe would resolve for under a cent.
 
 **On whether `/duo` should ever be a default:** fanning out with the shipped set makes a
 session **70% longer**; with `tier-top`, **25% longer**. Money scales with the number of

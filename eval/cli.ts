@@ -45,6 +45,7 @@ import {
 import {
 	renderConfidenceSweep,
 	renderPinSweep,
+	renderAxisSweep,
 	renderPairedComparisons,
 	renderStartSweep,
 	renderStrategySweep,
@@ -55,6 +56,7 @@ import {
 	renderTrafficSweep,
 	runConfidenceSweep,
 	runPinSweep,
+	runAxisSweep,
 	runPairedComparisons,
 	runStartSweep,
 	runStrategySweep,
@@ -83,6 +85,7 @@ const KNOWN_SWEEPS = [
 	"assumptions",
 	"paired",
 	"coverage",
+	"axis",
 ] as const;
 
 interface Args {
@@ -337,6 +340,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep assumptions    vary every declared constant and rank what the answer rests on
   --sweep paired         95% intervals on the comparisons the findings rest on
   --sweep coverage       visit many configurations and check the invariants in each
+  --sweep axis           does a candidate set's bias-immunity survive a different bias axis?
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --context-sensitivity <x>  override every task's declared contextSensitivity (0..1)
@@ -441,6 +445,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "axis") {
+			title = `bias-axis sweep — pack ${pack.id}, n=${args.candidatesExplicit ? args.candidates : 3}, mean of 5 seeds per cell`;
+			const c = await runAxisSweep({ ...base, candidateN: args.candidatesExplicit ? args.candidates : 3 });
+			cells = c;
+			rendered = renderAxisSweep(c, title);
 		} else if (args.sweep === "coverage") {
 			title = `invariant coverage — pack ${pack.id}`;
 			const c = await runCoverage({ pack, loaded });

@@ -447,6 +447,7 @@ async function runCandidateTurn(args: CandidateTurnArgs): Promise<CandidateTurnR
 			trueSkill: skill,
 			// List output price stands in for "looks like the flagship's answer".
 			flashiness: spec.cost.output,
+			verbosity: spec.verbosity,
 			text: syntheticResponse(spec, task.category, prompt),
 		});
 	});
