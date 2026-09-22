@@ -1555,3 +1555,52 @@ it sits between, so once a sub-cent term entered both, the identity
 derived from the rounded pair. A test that had been checking that identity caught it.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 25 — 2026-09-23 — the axis nobody had measured
+
+**Measured.** Time. Twenty-four rounds reported quality and money and never once reported
+how long anything took — even though `/duo` is a feature a person sits and waits for, and
+"three times the money" reads very differently from "three times the money and three
+times the wait".
+
+**Changed.** The fleet carries published **time-to-first-token** and **output
+throughput** from `docs/data/operational-stats.json`, the same source as its prices, so
+wall-clock is grounded rather than invented. A turn costs
+`calls × (ttft + outputTokens / throughput)`. A **fan-out** costs the *maximum* over its
+candidates plus the judge, not the sum, because `src/parallel.ts` runs them through
+`Promise.allSettled` — a test pins that against the source. New metrics
+`wallClockSeconds` and `fanoutWallClockSeconds`.
+
+**What the numbers did.** A fan-out multiplies money and does **not** multiply time —
+but it waits on its slowest member, so a single slow model taxes every turn. On a
+175-turn run:
+
+| candidate set | fan-out $ | added wall-clock | lift | headroom captured |
+| --- | ---: | ---: | ---: | ---: |
+| **`shipped`** | $356.96 | **+3477s (+70%)** | +14.3pp | 89% |
+| **`tier-top`** | **$140.58** | **+1219s (+25%)** | **+16.0pp** | **100%** |
+| `spread` | $359.87 | +3410s (+69%) | +19.4pp | 97% |
+| `strongest` | $588.71 | +3477s (+70%) | +19.4pp | 97% |
+| `cheapest` | $29.17 | +1038s (+21%) | −21.1pp | — |
+
+**Round 9's result gains a third axis and it points the same way.** The shipped candidate
+set is not just the most expensive and the most bias-fragile — it is also **the slowest**,
+because `tiers.standard[0]` is `gpt-6-astra`, which has the **worst time-to-first-token
+in the fleet** (3478ms against GLM 5.3's 109ms). `tier-top` is better, costs **39%** as
+much, and adds **35%** as much wall-clock.
+
+That also puts a number on the honest version of the trade. Fanning out with the shipped
+set makes a session **70% longer**; with `tier-top` it makes it **25% longer**. Neither is
+"free", and neither is 3×. Anyone deciding whether `/duo` should be a default needs the
+25% figure, not an intuition.
+
+**And the latency work found a metric bug.** Running the `cheapest` policy reported
+`judgeHeadroomCaptured` at **106%**. That set contains nothing better than the routed
+model, so its ceiling (60.0%) sits *below* the baseline (80.0%), the headroom is negative,
+and the ratio was a sign error rather than a number. It now reads **0** when there is no
+headroom to capture, and a test covers the case — one of the few places in this harness
+where a fan-out is actively harmful and the metric was flattering it.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

@@ -31,6 +31,7 @@ import { compareMetrics, GATED_METRICS, gateRegressions, latestPath, readRun, ty
 import {
 	CACHE_GROWTH_TOKENS_PER_CALL,
 	CALLS_PER_TURN,
+	callLatencyMs,
 	COMPACTION_SKILL_PENALTY,
 	COMPACTION_SUMMARY_TOKENS,
 	planCompaction,
@@ -1463,4 +1464,50 @@ test("the router's own overhead is inside the totals, and booked the way src/led
 	function round4(n: number) {
 		return Math.round(n * 1e4) / 1e4;
 	}
+});
+
+test("wall-clock comes from published throughput, and a fan-out waits on its slowest member", async () => {
+	const loaded = loadFleet(FLEET);
+	// Every fleet model carries published figures; a missing one would silently fall back.
+	for (const spec of loaded.byKey.values()) {
+		assert.ok(spec.ttftMs && spec.ttftMs > 0, `${spec.key} has no published TTFT`);
+		assert.ok(spec.throughputTps && spec.throughputTps > 0, `${spec.key} has no published throughput`);
+	}
+	const slow = loaded.byKey.get("faux-plan-codex/gpt-6-astra")!;
+	const quick = loaded.byKey.get("faux-or/glm-5.3")!;
+	assert.ok(callLatencyMs(slow, 1500) > callLatencyMs(quick, 1500) * 3, "the fleet must actually span a latency range");
+	// ttft + output/throughput, in ms.
+	assert.equal(Math.round(callLatencyMs(slow, 1500)), Math.round(slow.ttftMs! + (1500 / slow.throughputTps!) * 1000));
+
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3, judgeMinConfidence: 0 });
+	for (const turn of outcome.turns) {
+		assert.ok(turn.wallClockMs > 0);
+		if (!turn.candidate) continue;
+		// src/parallel.ts uses Promise.allSettled, so the fan-out waits on the slowest
+		// candidate, not on all of them.
+		const each = turn.candidate.candidates.length;
+		const sumOfParts = turn.candidate.fanoutWallClockMs * each;
+		assert.ok(turn.candidate.fanoutWallClockMs > 0 && turn.candidate.fanoutWallClockMs < sumOfParts);
+	}
+	const src = readFileSync(join(ROOT, "src", "parallel.ts"), "utf8");
+	assert.match(src, /Promise\.allSettled\(models\.map\(runOne\)\)/, "src/parallel.ts stopped running candidates in parallel");
+});
+
+test("the shipped candidate set is also the slowest, and headroom captured cannot exceed what exists", async () => {
+	const at = async (candidatePolicy: string) =>
+		computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), candidateN: 3, candidatePolicy, judgeMinConfidence: 0 })));
+	const shipped = await at("shipped");
+	const alt = await at("tier-top");
+	const cheapest = await at("cheapest");
+
+	// Time is a third axis on round 9's result, and it points the same way.
+	assert.ok(alt.fanoutWallClockSeconds < shipped.fanoutWallClockSeconds / 2, "tier-top should add far less wall-clock");
+	assert.ok(alt.candidate!.fanoutListEquivalentUsd < shipped.candidate!.fanoutListEquivalentUsd / 2);
+	assert.ok(alt.candidate!.adoptedLift >= shipped.candidate!.adoptedLift);
+
+	// A candidate set with nothing better than the routed model has no headroom, and the
+	// captured fraction must read 0 rather than a sign error.
+	assert.ok(cheapest.candidate!.oracleSuccessRate < cheapest.candidate!.baselineSuccessRate);
+	assert.equal(cheapest.candidate!.judgeHeadroomCaptured, 0);
+	assert.ok(cheapest.candidate!.adoptedLift < 0, "...and the fan-out should be recorded as harmful");
 });

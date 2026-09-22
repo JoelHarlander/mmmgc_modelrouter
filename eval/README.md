@@ -155,6 +155,13 @@ whether a conversation gets summarised away is a routing consequence —
 `avoidableCompactions` counts the ones the fleet's roomiest authed model would not have
 needed.
 
+**Wall-clock** is modelled from the same source as the prices: published
+time-to-first-token and output throughput in `docs/data/operational-stats.json`. A turn
+costs `calls × (ttft + outputTokens / throughput)`. A **fan-out** costs the *maximum*
+over its candidates plus the judge, not the sum, because `src/parallel.ts` runs them
+through `Promise.allSettled` — so money scales with the number of candidates and time
+does not, but time scales with the worst one.
+
 Two cost numbers are reported side by side, and the gap between them is the point:
 
 - `ledgerCostUsd` — what `src/ledger.ts` sees. Subscription routes report **$0**.

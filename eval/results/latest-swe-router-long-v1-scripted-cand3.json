@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T14-23-43-swe-router-long-v1-scripted-cand3-538d2d3",
-	"at": "2026-09-22T14:23:43.123Z",
+	"runId": "2026-09-22T14-28-26-swe-router-long-v1-scripted-cand3-43254f0",
+	"at": "2026-09-22T14:28:26.372Z",
 	"profile": "swe-router-long-v1-scripted-cand3",
 	"pack": "swe-router-long-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,7 +11,7 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "538d2d3",
+	"git": "43254f0",
 	"metrics": {
 		"tasks": 20,
 		"turns": 175,
@@ -53,6 +53,8 @@
 		"avoidableCompactions": 7,
 		"compactionCostUsd": 0.2124,
 		"turnsLostToCompaction": 5,
+		"wallClockSeconds": 8445.4,
+		"fanoutWallClockSeconds": 3477.4,
 		"modelShare": {
 			"faux-or/glm-5.3-flash": 74,
 			"faux-plan-anthropic/claude-opus-5": 23,
@@ -109,6 +111,7 @@
 			"coldWriteTokens": 100000,
 			"ledgerCostUsd": 0.03709,
 			"listEquivalentUsd": 0.03709,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0271875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -162,6 +165,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01575,
 				"fanoutListEquivalentUsd": 1.62825
 			}
@@ -194,6 +198,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0306875,
 			"listEquivalentUsd": 0.0306875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0306875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -247,6 +252,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01785,
 				"fanoutListEquivalentUsd": 1.84035
 			}
@@ -280,6 +286,7 @@
 			"coldWriteTokens": 128000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.14425,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.41231249999999997,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -333,6 +340,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01995,
 				"fanoutListEquivalentUsd": 2.05245
 			}
@@ -366,6 +374,7 @@
 			"coldWriteTokens": 142000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.5195000000000003,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.894625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -419,6 +428,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02205,
 				"fanoutListEquivalentUsd": 2.26455
 			}
@@ -452,6 +462,7 @@
 			"coldWriteTokens": 156000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.37525,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.48231250000000003,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -505,6 +516,7 @@
 				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02415,
 				"fanoutListEquivalentUsd": 2.4766500000000002
 			}
@@ -532,6 +544,7 @@
 			"coldWriteTokens": 170000,
 			"ledgerCostUsd": 0.061590000000000006,
 			"listEquivalentUsd": 0.061590000000000006,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.044687500000000005,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -585,6 +598,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02625,
 				"fanoutListEquivalentUsd": 2.6887499999999998
 			}
@@ -619,6 +633,7 @@
 			"coldWriteTokens": 22000,
 			"ledgerCostUsd": 0.00979,
 			"listEquivalentUsd": 0.00979,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -672,6 +687,7 @@
 				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02835,
 				"fanoutListEquivalentUsd": 2.90085
 			}
@@ -698,6 +714,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0111875,
 			"listEquivalentUsd": 0.0111875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0111875,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -751,6 +768,7 @@
 				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.00615,
 				"fanoutListEquivalentUsd": 0.65865
 			}
@@ -784,6 +802,7 @@
 			"coldWriteTokens": 50000,
 			"ledgerCostUsd": 0.019590000000000003,
 			"listEquivalentUsd": 0.019590000000000003,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0146875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -837,6 +856,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.00825,
 				"fanoutListEquivalentUsd": 0.8707499999999999
 			}
@@ -870,6 +890,7 @@
 			"coldWriteTokens": 64000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.2325,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.5046250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -923,6 +944,7 @@
 				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01035,
 				"fanoutListEquivalentUsd": 1.08285
 			}
@@ -956,6 +978,7 @@
 			"coldWriteTokens": 78000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.73175,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.2873125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -1009,6 +1032,7 @@
 				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.012450000000000001,
 				"fanoutListEquivalentUsd": 1.29495
 			}
@@ -1042,6 +1066,7 @@
 			"coldWriteTokens": 92000,
 			"ledgerCostUsd": 0.03429,
 			"listEquivalentUsd": 0.03429,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.025187499999999998,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -1095,6 +1120,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01455,
 				"fanoutListEquivalentUsd": 1.50705
 			}
@@ -1127,6 +1153,7 @@
 			"coldWriteTokens": 120000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.4749,
+			"wallClockMs": 66423,
 			"warmListEquivalentUsd": 1.1030250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -1180,6 +1207,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01875,
 				"fanoutListEquivalentUsd": 1.93125
 			}
@@ -1213,6 +1241,7 @@
 			"coldWriteTokens": 135000,
 			"ledgerCostUsd": 0.0639425,
 			"listEquivalentUsd": 0.0639425,
+			"wallClockMs": 16848,
 			"warmListEquivalentUsd": 0.05054000000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -1266,6 +1295,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.021,
 				"fanoutListEquivalentUsd": 2.1585
 			}
@@ -1299,6 +1329,7 @@
 			"coldWriteTokens": 150000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 3.0299,
+			"wallClockMs": 66423,
 			"warmListEquivalentUsd": 1.313025,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -1352,6 +1383,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02325,
 				"fanoutListEquivalentUsd": 2.38575
 			}
@@ -1385,6 +1417,7 @@
 			"coldWriteTokens": 165000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.6537,
+			"wallClockMs": 25405,
 			"warmListEquivalentUsd": 0.7090125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -1438,6 +1471,7 @@
 				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.025500000000000002,
 				"fanoutListEquivalentUsd": 2.613
 			}
@@ -1470,6 +1504,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.7615125,
+			"wallClockMs": 25405,
 			"warmListEquivalentUsd": 0.7615125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -1523,6 +1558,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02775,
 				"fanoutListEquivalentUsd": 2.84025
 			}
@@ -1555,6 +1591,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.8140125,
+			"wallClockMs": 25405,
 			"warmListEquivalentUsd": 0.8140125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -1608,6 +1645,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.030000000000000002,
 				"fanoutListEquivalentUsd": 3.0674999999999994
 			}
@@ -1642,6 +1680,7 @@
 			"coldWriteTokens": 22000,
 			"ledgerCostUsd": 0.0130925,
 			"listEquivalentUsd": 0.0130925,
+			"wallClockMs": 16848,
 			"warmListEquivalentUsd": 0.01099,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -1695,6 +1734,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.03225,
 				"fanoutListEquivalentUsd": 3.2947500000000005
 			}
@@ -1721,6 +1761,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.01624,
 			"listEquivalentUsd": 0.01624,
+			"wallClockMs": 16848,
 			"warmListEquivalentUsd": 0.01624,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -1774,6 +1815,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0063,
 				"fanoutListEquivalentUsd": 0.6738
 			}
@@ -1800,6 +1842,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.02149,
 			"listEquivalentUsd": 0.02149,
+			"wallClockMs": 16848,
 			"warmListEquivalentUsd": 0.02149,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -1853,6 +1896,7 @@
 				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.00855,
 				"fanoutListEquivalentUsd": 0.9010499999999999
 			}
@@ -1886,6 +1930,7 @@
 			"coldWriteTokens": 67000,
 			"ledgerCostUsd": 0.033342500000000004,
 			"listEquivalentUsd": 0.033342500000000004,
+			"wallClockMs": 16848,
 			"warmListEquivalentUsd": 0.02674,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -1939,6 +1984,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0108,
 				"fanoutListEquivalentUsd": 1.1282999999999999
 			}
@@ -1971,6 +2017,7 @@
 			"coldWriteTokens": 80000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.4965,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.584625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2024,6 +2071,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.012750000000000001,
 				"fanoutListEquivalentUsd": 1.32525
 			}
@@ -2057,6 +2105,7 @@
 			"coldWriteTokens": 92000,
 			"ledgerCostUsd": 0.03429,
 			"listEquivalentUsd": 0.03429,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.025187499999999998,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2110,6 +2159,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01455,
 				"fanoutListEquivalentUsd": 1.50705
 			}
@@ -2143,6 +2193,7 @@
 			"coldWriteTokens": 104000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.9462499999999999,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.35231250000000003,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2196,6 +2247,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01635,
 				"fanoutListEquivalentUsd": 1.68885
 			}
@@ -2229,6 +2281,7 @@
 			"coldWriteTokens": 116000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.0905,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7646250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2282,6 +2335,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01815,
 				"fanoutListEquivalentUsd": 1.87065
 			}
@@ -2315,6 +2369,7 @@
 			"coldWriteTokens": 128000,
 			"ledgerCostUsd": 0.04689,
 			"listEquivalentUsd": 0.04689,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0341875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2368,6 +2423,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01995,
 				"fanoutListEquivalentUsd": 2.05245
 			}
@@ -2400,6 +2456,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.037187500000000005,
 			"listEquivalentUsd": 0.037187500000000005,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.037187500000000005,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2453,6 +2510,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.021750000000000002,
 				"fanoutListEquivalentUsd": 2.23425
 			}
@@ -2486,6 +2544,7 @@
 			"coldWriteTokens": 152000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.6845000000000003,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.944625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -2539,6 +2598,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02355,
 				"fanoutListEquivalentUsd": 2.4160500000000003
 			}
@@ -2572,6 +2632,7 @@
 			"coldWriteTokens": 164000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.4412500000000001,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.5023125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2625,6 +2686,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02535,
 				"fanoutListEquivalentUsd": 2.5978499999999998
 			}
@@ -2658,6 +2720,7 @@
 			"coldWriteTokens": 176000,
 			"ledgerCostUsd": 0.06369,
 			"listEquivalentUsd": 0.06369,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.046187500000000006,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2711,6 +2774,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02715,
 				"fanoutListEquivalentUsd": 2.77965
 			}
@@ -2743,6 +2807,7 @@
 			"coldWriteTokens": 110000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.9915,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7346250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2796,6 +2861,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01725,
 				"fanoutListEquivalentUsd": 1.7797500000000002
 			}
@@ -2829,6 +2895,7 @@
 			"coldWriteTokens": 123000,
 			"ledgerCostUsd": 0.04514,
 			"listEquivalentUsd": 0.04514,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0329375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2882,6 +2949,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.019200000000000002,
 				"fanoutListEquivalentUsd": 1.9767
 			}
@@ -2915,6 +2983,7 @@
 			"coldWriteTokens": 136000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.4205,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.864625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -2968,6 +3037,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.021150000000000002,
 				"fanoutListEquivalentUsd": 2.17365
 			}
@@ -3000,6 +3070,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.9296249999999999,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.9296249999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -3053,6 +3124,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0231,
 				"fanoutListEquivalentUsd": 2.3706
 			}
@@ -3085,6 +3157,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.9946250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.9946250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -3138,6 +3211,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02505,
 				"fanoutListEquivalentUsd": 2.5675499999999998
 			}
@@ -3170,6 +3244,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.059625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.059625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -3223,6 +3298,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.027,
 				"fanoutListEquivalentUsd": 2.7645
 			}
@@ -3255,6 +3331,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.124625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.124625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -3308,6 +3385,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02895,
 				"fanoutListEquivalentUsd": 2.9614499999999997
 			}
@@ -3340,6 +3418,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.189625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.189625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -3393,6 +3472,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0309,
 				"fanoutListEquivalentUsd": 3.1584
 			}
@@ -3425,6 +3505,7 @@
 			"coldWriteTokens": 90000,
 			"ledgerCostUsd": 0.03359,
 			"listEquivalentUsd": 0.03359,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0246875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -3478,6 +3559,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01425,
 				"fanoutListEquivalentUsd": 1.47675
 			}
@@ -3510,6 +3592,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0274375,
 			"listEquivalentUsd": 0.0274375,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0274375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -3563,6 +3646,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0159,
 				"fanoutListEquivalentUsd": 1.6434
 			}
@@ -3590,6 +3674,7 @@
 			"coldWriteTokens": 112000,
 			"ledgerCostUsd": 0.174426,
 			"listEquivalentUsd": 0.174426,
+			"wallClockMs": 5969,
 			"warmListEquivalentUsd": 0.098364,
 			"classifierCostUsd": 0,
 			"solved": true,
@@ -3643,6 +3728,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.09804,
 				"fanoutListEquivalentUsd": 1.89054
 			}
@@ -3669,6 +3755,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.106944,
 			"listEquivalentUsd": 0.106944,
+			"wallClockMs": 5969,
 			"warmListEquivalentUsd": 0.106944,
 			"classifierCostUsd": 0,
 			"solved": true,
@@ -3722,6 +3809,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.10728,
 				"fanoutListEquivalentUsd": 2.06478
 			}
@@ -3748,6 +3836,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.115524,
 			"listEquivalentUsd": 0.115524,
+			"wallClockMs": 5969,
 			"warmListEquivalentUsd": 0.115524,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -3801,6 +3890,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.11652,
 				"fanoutListEquivalentUsd": 2.23902
 			}
@@ -3834,6 +3924,7 @@
 			"coldWriteTokens": 145000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.569,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.9096250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -3887,6 +3978,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0225,
 				"fanoutListEquivalentUsd": 2.3099999999999996
 			}
@@ -3919,6 +4011,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.9646250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.9646250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -3972,6 +4065,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02415,
 				"fanoutListEquivalentUsd": 2.4766500000000002
 			}
@@ -4005,6 +4099,7 @@
 			"coldWriteTokens": 167000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.4660000000000002,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.5098125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -4058,6 +4153,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0258,
 				"fanoutListEquivalentUsd": 2.6432999999999995
 			}
@@ -4091,6 +4187,7 @@
 			"coldWriteTokens": 178000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 3.1135,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.074625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -4144,6 +4241,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.027450000000000002,
 				"fanoutListEquivalentUsd": 2.8099499999999997
 			}
@@ -4184,6 +4282,7 @@
 			"coldWriteTokens": 22000,
 			"ledgerCostUsd": 0.00979,
 			"listEquivalentUsd": 0.00979,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -4237,6 +4336,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0291,
 				"fanoutListEquivalentUsd": 2.9765999999999995
 			}
@@ -4269,6 +4369,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.010437499999999999,
 			"listEquivalentUsd": 0.010437499999999999,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.010437499999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -4322,6 +4423,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0057,
 				"fanoutListEquivalentUsd": 0.6132000000000001
 			}
@@ -4354,6 +4456,7 @@
 			"coldWriteTokens": 130000,
 			"ledgerCostUsd": 0.04759000000000001,
 			"listEquivalentUsd": 0.04759000000000001,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0346875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -4407,6 +4510,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02025,
 				"fanoutListEquivalentUsd": 2.08275
 			}
@@ -4440,6 +4544,7 @@
 			"coldWriteTokens": 144000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.5525,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.904625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -4493,6 +4598,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.022350000000000002,
 				"fanoutListEquivalentUsd": 2.29485
 			}
@@ -4526,6 +4632,7 @@
 			"coldWriteTokens": 158000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.39175,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.48731250000000004,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -4579,6 +4686,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02445,
 				"fanoutListEquivalentUsd": 2.50695
 			}
@@ -4611,6 +4719,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.5223125000000001,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.5223125000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -4664,6 +4773,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02655,
 				"fanoutListEquivalentUsd": 2.7190499999999997
 			}
@@ -4696,6 +4806,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.5573125,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.5573125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -4749,6 +4860,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.028650000000000002,
 				"fanoutListEquivalentUsd": 2.9311499999999997
 			}
@@ -4783,6 +4895,7 @@
 			"coldWriteTokens": 22000,
 			"ledgerCostUsd": 0.00979,
 			"listEquivalentUsd": 0.00979,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -4836,6 +4949,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.03075,
 				"fanoutListEquivalentUsd": 3.14325
 			}
@@ -4862,6 +4976,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0111875,
 			"listEquivalentUsd": 0.0111875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0111875,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -4915,6 +5030,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.00615,
 				"fanoutListEquivalentUsd": 0.65865
 			}
@@ -4941,6 +5057,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0146875,
 			"listEquivalentUsd": 0.0146875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0146875,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -4994,6 +5111,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.00825,
 				"fanoutListEquivalentUsd": 0.8707499999999999
 			}
@@ -5027,6 +5145,7 @@
 			"coldWriteTokens": 64000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.2325,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.5046250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -5080,6 +5199,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01035,
 				"fanoutListEquivalentUsd": 1.08285
 			}
@@ -5113,6 +5233,7 @@
 			"coldWriteTokens": 78000,
 			"ledgerCostUsd": 0.029390000000000003,
 			"listEquivalentUsd": 0.029390000000000003,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0216875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -5166,6 +5287,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.012450000000000001,
 				"fanoutListEquivalentUsd": 1.29495
 			}
@@ -5198,6 +5320,7 @@
 			"coldWriteTokens": 85000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.579,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.6096250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -5251,6 +5374,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0135,
 				"fanoutListEquivalentUsd": 1.401
 			}
@@ -5284,6 +5408,7 @@
 			"coldWriteTokens": 97000,
 			"ledgerCostUsd": 0.03604,
 			"listEquivalentUsd": 0.03604,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0264375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -5337,6 +5462,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.015300000000000001,
 				"fanoutListEquivalentUsd": 1.5827999999999998
 			}
@@ -5370,6 +5496,7 @@
 			"coldWriteTokens": 109000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.9749999999999999,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.729625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -5423,6 +5550,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0171,
 				"fanoutListEquivalentUsd": 1.7646
 			}
@@ -5455,6 +5583,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.789625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.789625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -5508,6 +5637,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0189,
 				"fanoutListEquivalentUsd": 1.9463999999999997
 			}
@@ -5541,6 +5671,7 @@
 			"coldWriteTokens": 133000,
 			"ledgerCostUsd": 0.04864,
 			"listEquivalentUsd": 0.04864,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.035437500000000004,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -5594,6 +5725,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0207,
 				"fanoutListEquivalentUsd": 2.1282
 			}
@@ -5627,6 +5759,7 @@
 			"coldWriteTokens": 145000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.569,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.9096250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -5680,6 +5813,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0225,
 				"fanoutListEquivalentUsd": 2.3099999999999996
 			}
@@ -5713,6 +5847,7 @@
 			"coldWriteTokens": 157000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.3835000000000002,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.4848125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -5766,6 +5901,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.024300000000000002,
 				"fanoutListEquivalentUsd": 2.4918000000000005
 			}
@@ -5799,6 +5935,7 @@
 			"coldWriteTokens": 169000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.9650000000000003,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.029625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -5852,6 +5989,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0261,
 				"fanoutListEquivalentUsd": 2.6736
 			}
@@ -5885,6 +6023,7 @@
 			"coldWriteTokens": 181000,
 			"ledgerCostUsd": 0.06544,
 			"listEquivalentUsd": 0.06544,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0474375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -5938,6 +6077,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0279,
 				"fanoutListEquivalentUsd": 2.8554
 			}
@@ -5970,6 +6110,7 @@
 			"coldWriteTokens": 95000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.744,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.6596249999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6023,6 +6164,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.015000000000000001,
 				"fanoutListEquivalentUsd": 1.5524999999999998
 			}
@@ -6056,6 +6198,7 @@
 			"coldWriteTokens": 108000,
 			"ledgerCostUsd": 0.03989,
 			"listEquivalentUsd": 0.03989,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.029187499999999998,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6109,6 +6252,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01695,
 				"fanoutListEquivalentUsd": 1.74945
 			}
@@ -6142,6 +6286,7 @@
 			"coldWriteTokens": 121000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.173,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.789625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -6195,6 +6340,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0189,
 				"fanoutListEquivalentUsd": 1.9463999999999997
 			}
@@ -6227,6 +6373,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.854625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.854625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6280,6 +6427,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02085,
 				"fanoutListEquivalentUsd": 2.14335
 			}
@@ -6312,6 +6460,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.9196250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.9196250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6365,6 +6514,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0228,
 				"fanoutListEquivalentUsd": 2.3403
 			}
@@ -6397,6 +6547,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.9846250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.9846250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6450,6 +6601,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02475,
 				"fanoutListEquivalentUsd": 2.5372500000000002
 			}
@@ -6482,6 +6634,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.049625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.049625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6535,6 +6688,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0267,
 				"fanoutListEquivalentUsd": 2.7342
 			}
@@ -6575,6 +6729,7 @@
 			"coldWriteTokens": 22000,
 			"ledgerCostUsd": 0.00979,
 			"listEquivalentUsd": 0.00979,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6628,6 +6783,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.028650000000000002,
 				"fanoutListEquivalentUsd": 2.93115
 			}
@@ -6660,6 +6816,7 @@
 			"coldWriteTokens": 80000,
 			"ledgerCostUsd": 0.03009,
 			"listEquivalentUsd": 0.03009,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0221875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6713,6 +6870,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.012750000000000001,
 				"fanoutListEquivalentUsd": 1.32525
 			}
@@ -6746,6 +6904,7 @@
 			"coldWriteTokens": 91000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.678,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.6396250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6799,6 +6958,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.014400000000000001,
 				"fanoutListEquivalentUsd": 1.4919
 			}
@@ -6832,6 +6992,7 @@
 			"coldWriteTokens": 102000,
 			"ledgerCostUsd": 0.037790000000000004,
 			"listEquivalentUsd": 0.037790000000000004,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0276875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6885,6 +7046,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01605,
 				"fanoutListEquivalentUsd": 1.65855
 			}
@@ -6918,6 +7080,7 @@
 			"coldWriteTokens": 113000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.0410000000000004,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.749625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -6971,6 +7134,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0177,
 				"fanoutListEquivalentUsd": 1.8251999999999997
 			}
@@ -7003,6 +7167,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.8046249999999999,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.8046249999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7056,6 +7221,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01935,
 				"fanoutListEquivalentUsd": 1.99185
 			}
@@ -7088,6 +7254,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.8596250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.8596250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7141,6 +7308,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.021,
 				"fanoutListEquivalentUsd": 2.1585
 			}
@@ -7173,6 +7341,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.914625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.914625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7226,6 +7395,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02265,
 				"fanoutListEquivalentUsd": 2.32515
 			}
@@ -7259,6 +7429,7 @@
 			"coldWriteTokens": 157000,
 			"ledgerCostUsd": 0.05704000000000001,
 			"listEquivalentUsd": 0.05704000000000001,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0414375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7312,6 +7483,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.024300000000000002,
 				"fanoutListEquivalentUsd": 2.4918
 			}
@@ -7344,6 +7516,7 @@
 			"coldWriteTokens": 105000,
 			"ledgerCostUsd": 0.03884,
 			"listEquivalentUsd": 0.03884,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0284375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7397,6 +7570,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0165,
 				"fanoutListEquivalentUsd": 1.704
 			}
@@ -7430,6 +7604,7 @@
 			"coldWriteTokens": 118000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.1235,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7746250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7483,6 +7658,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01845,
 				"fanoutListEquivalentUsd": 1.90095
 			}
@@ -7515,6 +7691,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.8396250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.8396250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7568,6 +7745,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0204,
 				"fanoutListEquivalentUsd": 2.0979
 			}
@@ -7601,6 +7779,7 @@
 			"coldWriteTokens": 144000,
 			"ledgerCostUsd": 0.05249,
 			"listEquivalentUsd": 0.05249,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.038187500000000006,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7654,6 +7833,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.022350000000000002,
 				"fanoutListEquivalentUsd": 2.29485
 			}
@@ -7686,6 +7866,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0414375,
 			"listEquivalentUsd": 0.0414375,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0414375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -7739,6 +7920,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.024300000000000002,
 				"fanoutListEquivalentUsd": 2.4918
 			}
@@ -7772,6 +7954,7 @@
 			"coldWriteTokens": 170000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.9815000000000005,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.0346250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7825,6 +8008,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02625,
 				"fanoutListEquivalentUsd": 2.6887499999999998
 			}
@@ -7858,6 +8042,7 @@
 			"coldWriteTokens": 183000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.598,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.5498125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -7911,6 +8096,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0282,
 				"fanoutListEquivalentUsd": 2.8857
 			}
@@ -7944,6 +8130,7 @@
 			"coldWriteTokens": 196000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 3.4105,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.164625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -7997,6 +8184,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.03015,
 				"fanoutListEquivalentUsd": 3.08265
 			}
@@ -8037,6 +8225,7 @@
 			"coldWriteTokens": 22000,
 			"ledgerCostUsd": 0.00979,
 			"listEquivalentUsd": 0.00979,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8090,6 +8279,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.032100000000000004,
 				"fanoutListEquivalentUsd": 3.2796000000000003
 			}
@@ -8122,6 +8312,7 @@
 			"coldWriteTokens": 70000,
 			"ledgerCostUsd": 0.026590000000000003,
 			"listEquivalentUsd": 0.026590000000000003,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0196875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8175,6 +8366,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.011250000000000001,
 				"fanoutListEquivalentUsd": 1.1737499999999998
 			}
@@ -8208,6 +8400,7 @@
 			"coldWriteTokens": 80000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.4965,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.584625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8261,6 +8454,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.012750000000000001,
 				"fanoutListEquivalentUsd": 1.32525
 			}
@@ -8293,6 +8487,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.634625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.634625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8346,6 +8541,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01425,
 				"fanoutListEquivalentUsd": 1.47675
 			}
@@ -8379,6 +8575,7 @@
 			"coldWriteTokens": 100000,
 			"ledgerCostUsd": 0.03709,
 			"listEquivalentUsd": 0.03709,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0271875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8432,6 +8629,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01575,
 				"fanoutListEquivalentUsd": 1.62825
 			}
@@ -8465,6 +8663,7 @@
 			"coldWriteTokens": 110000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.9915,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7346250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8518,6 +8717,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01725,
 				"fanoutListEquivalentUsd": 1.7797500000000002
 			}
@@ -8550,6 +8750,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.7846250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7846250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8603,6 +8804,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01875,
 				"fanoutListEquivalentUsd": 1.93125
 			}
@@ -8636,6 +8838,7 @@
 			"coldWriteTokens": 130000,
 			"ledgerCostUsd": 0.04759000000000001,
 			"listEquivalentUsd": 0.04759000000000001,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0346875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8689,6 +8892,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02025,
 				"fanoutListEquivalentUsd": 2.08275
 			}
@@ -8721,6 +8925,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.037187500000000005,
 			"listEquivalentUsd": 0.037187500000000005,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.037187500000000005,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8774,6 +8979,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.021750000000000002,
 				"fanoutListEquivalentUsd": 2.23425
 			}
@@ -8806,6 +9012,7 @@
 			"coldWriteTokens": 90000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.6615,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.634625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8859,6 +9066,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01425,
 				"fanoutListEquivalentUsd": 1.47675
 			}
@@ -8892,6 +9100,7 @@
 			"coldWriteTokens": 102000,
 			"ledgerCostUsd": 0.037790000000000004,
 			"listEquivalentUsd": 0.037790000000000004,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0276875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -8945,6 +9154,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01605,
 				"fanoutListEquivalentUsd": 1.65855
 			}
@@ -8978,6 +9188,7 @@
 			"coldWriteTokens": 114000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.0575,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7546250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9031,6 +9242,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01785,
 				"fanoutListEquivalentUsd": 1.8403499999999997
 			}
@@ -9064,6 +9276,7 @@
 			"coldWriteTokens": 126000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.12775,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.40731249999999997,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9117,6 +9330,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01965,
 				"fanoutListEquivalentUsd": 2.02215
 			}
@@ -9150,6 +9364,7 @@
 			"coldWriteTokens": 138000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.4535,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.874625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9203,6 +9418,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02145,
 				"fanoutListEquivalentUsd": 2.20395
 			}
@@ -9235,6 +9451,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.934625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.934625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9288,6 +9505,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02325,
 				"fanoutListEquivalentUsd": 2.38575
 			}
@@ -9321,6 +9539,7 @@
 			"coldWriteTokens": 162000,
 			"ledgerCostUsd": 0.058789999999999995,
 			"listEquivalentUsd": 0.058789999999999995,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0426875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9374,6 +9593,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02505,
 				"fanoutListEquivalentUsd": 2.56755
 			}
@@ -9406,6 +9626,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.045687500000000006,
 			"listEquivalentUsd": 0.045687500000000006,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.045687500000000006,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9459,6 +9680,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.026850000000000002,
 				"fanoutListEquivalentUsd": 2.7493499999999997
 			}
@@ -9491,6 +9713,7 @@
 			"coldWriteTokens": 75000,
 			"ledgerCostUsd": 0.02834,
 			"listEquivalentUsd": 0.02834,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0209375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9544,6 +9767,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.012,
 				"fanoutListEquivalentUsd": 1.2494999999999998
 			}
@@ -9577,6 +9801,7 @@
 			"coldWriteTokens": 85000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.579,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.6096250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9630,6 +9855,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0135,
 				"fanoutListEquivalentUsd": 1.401
 			}
@@ -9663,6 +9889,7 @@
 			"coldWriteTokens": 95000,
 			"ledgerCostUsd": 0.035339999999999996,
 			"listEquivalentUsd": 0.035339999999999996,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0259375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9716,6 +9943,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.015000000000000001,
 				"fanoutListEquivalentUsd": 1.5524999999999998
 			}
@@ -9749,6 +9977,7 @@
 			"coldWriteTokens": 105000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.909,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.709625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9802,6 +10031,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0165,
 				"fanoutListEquivalentUsd": 1.704
 			}
@@ -9834,6 +10064,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.759625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.759625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9887,6 +10118,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.018000000000000002,
 				"fanoutListEquivalentUsd": 1.8555
 			}
@@ -9919,6 +10151,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.809625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.809625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -9972,6 +10205,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0195,
 				"fanoutListEquivalentUsd": 2.0069999999999997
 			}
@@ -10005,6 +10239,7 @@
 			"coldWriteTokens": 135000,
 			"ledgerCostUsd": 0.049339999999999995,
 			"listEquivalentUsd": 0.049339999999999995,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.035937500000000004,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10058,6 +10293,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.021,
 				"fanoutListEquivalentUsd": 2.1585
 			}
@@ -10090,6 +10326,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.038437500000000006,
 			"listEquivalentUsd": 0.038437500000000006,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.038437500000000006,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10143,6 +10380,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0225,
 				"fanoutListEquivalentUsd": 2.3099999999999996
 			}
@@ -10175,6 +10413,7 @@
 			"coldWriteTokens": 100000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.8265,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.684625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10228,6 +10467,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01575,
 				"fanoutListEquivalentUsd": 1.6282499999999998
 			}
@@ -10261,6 +10501,7 @@
 			"coldWriteTokens": 113000,
 			"ledgerCostUsd": 0.04164,
 			"listEquivalentUsd": 0.04164,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0304375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10314,6 +10555,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0177,
 				"fanoutListEquivalentUsd": 1.8251999999999997
 			}
@@ -10347,6 +10589,7 @@
 			"coldWriteTokens": 126000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.2555,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.8146249999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10400,6 +10643,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01965,
 				"fanoutListEquivalentUsd": 2.02215
 			}
@@ -10433,6 +10677,7 @@
 			"coldWriteTokens": 139000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.235,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.43981250000000005,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10486,6 +10731,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0216,
 				"fanoutListEquivalentUsd": 2.2190999999999996
 			}
@@ -10518,6 +10764,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.4723125,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.4723125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10571,6 +10818,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02355,
 				"fanoutListEquivalentUsd": 2.4160500000000003
 			}
@@ -10598,6 +10846,7 @@
 			"coldWriteTokens": 165000,
 			"ledgerCostUsd": 0.059840000000000004,
 			"listEquivalentUsd": 0.059840000000000004,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.043437500000000004,
 			"classifierCostUsd": 0,
 			"solved": true,
@@ -10651,6 +10900,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.025500000000000002,
 				"fanoutListEquivalentUsd": 2.6129999999999995
 			}
@@ -10677,6 +10927,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0466875,
 			"listEquivalentUsd": 0.0466875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0466875,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -10730,6 +10981,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.027450000000000002,
 				"fanoutListEquivalentUsd": 2.8099499999999997
 			}
@@ -10764,6 +11016,7 @@
 			"coldWriteTokens": 22000,
 			"ledgerCostUsd": 0.00979,
 			"listEquivalentUsd": 0.00979,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0,
 			"solved": false,
@@ -10817,6 +11070,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0294,
 				"fanoutListEquivalentUsd": 3.0069
 			}
@@ -10850,6 +11104,7 @@
 			"coldWriteTokens": 35000,
 			"ledgerCostUsd": 0.01434,
 			"listEquivalentUsd": 0.01434,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0109375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10903,6 +11158,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.006,
 				"fanoutListEquivalentUsd": 0.6435
 			}
@@ -10935,6 +11191,7 @@
 			"coldWriteTokens": 88000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.6285,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.624625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -10988,6 +11245,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01395,
 				"fanoutListEquivalentUsd": 1.4464499999999998
 			}
@@ -11021,6 +11279,7 @@
 			"coldWriteTokens": 99000,
 			"ledgerCostUsd": 0.03674,
 			"listEquivalentUsd": 0.03674,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0269375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11074,6 +11333,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.015600000000000001,
 				"fanoutListEquivalentUsd": 1.6130999999999998
 			}
@@ -11107,6 +11367,7 @@
 			"coldWriteTokens": 110000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.9915,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7346250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11160,6 +11421,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01725,
 				"fanoutListEquivalentUsd": 1.7797500000000002
 			}
@@ -11192,6 +11454,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.789625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.789625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11245,6 +11508,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0189,
 				"fanoutListEquivalentUsd": 1.9463999999999997
 			}
@@ -11277,6 +11541,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.844625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.844625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11330,6 +11595,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.020550000000000002,
 				"fanoutListEquivalentUsd": 2.1130500000000003
 			}
@@ -11362,6 +11628,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.8996250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.8996250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11415,6 +11682,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0222,
 				"fanoutListEquivalentUsd": 2.2797
 			}
@@ -11448,6 +11716,7 @@
 			"coldWriteTokens": 154000,
 			"ledgerCostUsd": 0.05599,
 			"listEquivalentUsd": 0.05599,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0406875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11501,6 +11770,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02385,
 				"fanoutListEquivalentUsd": 2.44635
 			}
@@ -11533,6 +11803,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.043437500000000004,
 			"listEquivalentUsd": 0.043437500000000004,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.043437500000000004,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11586,6 +11857,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.025500000000000002,
 				"fanoutListEquivalentUsd": 2.6129999999999995
 			}
@@ -11618,6 +11890,7 @@
 			"coldWriteTokens": 92000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.6945000000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.644625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11671,6 +11944,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01455,
 				"fanoutListEquivalentUsd": 1.50705
 			}
@@ -11704,6 +11978,7 @@
 			"coldWriteTokens": 104000,
 			"ledgerCostUsd": 0.03849,
 			"listEquivalentUsd": 0.03849,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0281875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11757,6 +12032,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01635,
 				"fanoutListEquivalentUsd": 1.68885
 			}
@@ -11790,6 +12066,7 @@
 			"coldWriteTokens": 116000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.0905,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7646250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11843,6 +12120,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01815,
 				"fanoutListEquivalentUsd": 1.87065
 			}
@@ -11876,6 +12154,7 @@
 			"coldWriteTokens": 128000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.14425,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.41231249999999997,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -11929,6 +12208,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01995,
 				"fanoutListEquivalentUsd": 2.05245
 			}
@@ -11961,6 +12241,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.4423125,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.4423125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12014,6 +12295,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.021750000000000002,
 				"fanoutListEquivalentUsd": 2.23425
 			}
@@ -12046,6 +12328,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.4723125,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.4723125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12099,6 +12382,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02355,
 				"fanoutListEquivalentUsd": 2.4160500000000003
 			}
@@ -12132,6 +12416,7 @@
 			"coldWriteTokens": 164000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.8825000000000003,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 1.004625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12185,6 +12470,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02535,
 				"fanoutListEquivalentUsd": 2.5978499999999998
 			}
@@ -12218,6 +12504,7 @@
 			"coldWriteTokens": 176000,
 			"ledgerCostUsd": 0.06369,
 			"listEquivalentUsd": 0.06369,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.046187500000000006,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12271,6 +12558,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02715,
 				"fanoutListEquivalentUsd": 2.77965
 			}
@@ -12303,6 +12591,7 @@
 			"coldWriteTokens": 82000,
 			"ledgerCostUsd": 0.03079,
 			"listEquivalentUsd": 0.03079,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0226875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12356,6 +12645,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01305,
 				"fanoutListEquivalentUsd": 1.3555499999999998
 			}
@@ -12389,6 +12679,7 @@
 			"coldWriteTokens": 93000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.711,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.6496249999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12442,6 +12733,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.014700000000000001,
 				"fanoutListEquivalentUsd": 1.5222000000000002
 			}
@@ -12475,6 +12767,7 @@
 			"coldWriteTokens": 104000,
 			"ledgerCostUsd": 0.03849,
 			"listEquivalentUsd": 0.03849,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0281875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12528,6 +12821,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01635,
 				"fanoutListEquivalentUsd": 1.68885
 			}
@@ -12561,6 +12855,7 @@
 			"coldWriteTokens": 115000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.0740000000000003,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.759625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12614,6 +12909,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.018000000000000002,
 				"fanoutListEquivalentUsd": 1.8555
 			}
@@ -12646,6 +12942,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.8146249999999999,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.8146249999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12699,6 +12996,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01965,
 				"fanoutListEquivalentUsd": 2.02215
 			}
@@ -12731,6 +13029,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.8696250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.8696250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12784,6 +13083,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0213,
 				"fanoutListEquivalentUsd": 2.1888
 			}
@@ -12816,6 +13116,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.924625,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.924625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -12869,6 +13170,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02295,
 				"fanoutListEquivalentUsd": 2.35545
 			}
@@ -12902,6 +13204,7 @@
 			"coldWriteTokens": 159000,
 			"ledgerCostUsd": 0.05774,
 			"listEquivalentUsd": 0.05774,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0419375,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -12955,6 +13258,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.0246,
 				"fanoutListEquivalentUsd": 2.5221
 			}
@@ -12987,6 +13291,7 @@
 			"coldWriteTokens": 98000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.7935,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.674625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13040,6 +13345,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01545,
 				"fanoutListEquivalentUsd": 1.59795
 			}
@@ -13073,6 +13379,7 @@
 			"coldWriteTokens": 110000,
 			"ledgerCostUsd": 0.04059,
 			"listEquivalentUsd": 0.04059,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0296875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -13126,6 +13433,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01725,
 				"fanoutListEquivalentUsd": 1.77975
 			}
@@ -13159,6 +13467,7 @@
 			"coldWriteTokens": 122000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.0947500000000001,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.39731250000000007,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13212,6 +13521,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01905,
 				"fanoutListEquivalentUsd": 1.96155
 			}
@@ -13244,6 +13554,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.4273125,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.4273125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13297,6 +13608,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02085,
 				"fanoutListEquivalentUsd": 2.14335
 			}
@@ -13329,6 +13641,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.4573125,
+			"wallClockMs": 18146,
 			"warmListEquivalentUsd": 0.4573125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13382,6 +13695,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02265,
 				"fanoutListEquivalentUsd": 2.32515
 			}
@@ -13415,6 +13729,7 @@
 			"coldWriteTokens": 158000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.7835,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.9746250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13468,6 +13783,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02445,
 				"fanoutListEquivalentUsd": 2.50695
 			}
@@ -13501,6 +13817,7 @@
 			"coldWriteTokens": 170000,
 			"ledgerCostUsd": 0.061590000000000006,
 			"listEquivalentUsd": 0.061590000000000006,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.044687500000000005,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13554,6 +13871,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02625,
 				"fanoutListEquivalentUsd": 2.6887499999999998
 			}
@@ -13586,6 +13904,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0476875,
 			"listEquivalentUsd": 0.0476875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0476875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
@@ -13639,6 +13958,7 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.028050000000000002,
 				"fanoutListEquivalentUsd": 2.87055
 			}
@@ -13671,6 +13991,7 @@
 			"coldWriteTokens": 72000,
 			"ledgerCostUsd": 0.027290000000000002,
 			"listEquivalentUsd": 0.027290000000000002,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0201875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13724,6 +14045,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.011550000000000001,
 				"fanoutListEquivalentUsd": 1.2040499999999998
 			}
@@ -13756,6 +14078,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0226875,
 			"listEquivalentUsd": 0.0226875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0226875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13809,6 +14132,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01305,
 				"fanoutListEquivalentUsd": 1.3555499999999998
 			}
@@ -13842,6 +14166,7 @@
 			"coldWriteTokens": 92000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.6945000000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.644625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13895,6 +14220,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01455,
 				"fanoutListEquivalentUsd": 1.50705
 			}
@@ -13928,6 +14254,7 @@
 			"coldWriteTokens": 102000,
 			"ledgerCostUsd": 0.037790000000000004,
 			"listEquivalentUsd": 0.037790000000000004,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0276875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -13981,6 +14308,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01605,
 				"fanoutListEquivalentUsd": 1.65855
 			}
@@ -14013,6 +14341,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0301875,
 			"listEquivalentUsd": 0.0301875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0301875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14066,6 +14395,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01755,
 				"fanoutListEquivalentUsd": 1.81005
 			}
@@ -14099,6 +14429,7 @@
 			"coldWriteTokens": 122000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 2.1895000000000002,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7946250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14152,6 +14483,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01905,
 				"fanoutListEquivalentUsd": 1.96155
 			}
@@ -14185,6 +14517,7 @@
 			"coldWriteTokens": 132000,
 			"ledgerCostUsd": 0.04829,
 			"listEquivalentUsd": 0.04829,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.035187500000000003,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14238,6 +14571,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.020550000000000002,
 				"fanoutListEquivalentUsd": 2.11305
 			}
@@ -14270,6 +14604,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.037687500000000006,
 			"listEquivalentUsd": 0.037687500000000006,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.037687500000000006,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14323,6 +14658,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02205,
 				"fanoutListEquivalentUsd": 2.26455
 			}
@@ -14355,6 +14691,7 @@
 			"coldWriteTokens": 76000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.4305,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.564625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14408,6 +14745,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.012150000000000001,
 				"fanoutListEquivalentUsd": 1.26465
 			}
@@ -14441,6 +14779,7 @@
 			"coldWriteTokens": 86000,
 			"ledgerCostUsd": 0.032189999999999996,
 			"listEquivalentUsd": 0.032189999999999996,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0236875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14494,6 +14833,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01365,
 				"fanoutListEquivalentUsd": 1.41615
 			}
@@ -14527,6 +14867,7 @@
 			"coldWriteTokens": 96000,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 1.7605,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.664625,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14580,6 +14921,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01515,
 				"fanoutListEquivalentUsd": 1.5676499999999998
 			}
@@ -14612,6 +14954,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.7146250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7146250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14665,6 +15008,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01665,
 				"fanoutListEquivalentUsd": 1.7191500000000002
 			}
@@ -14697,6 +15041,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.7646250000000001,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.7646250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14750,6 +15095,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01815,
 				"fanoutListEquivalentUsd": 1.87065
 			}
@@ -14782,6 +15128,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0,
 			"listEquivalentUsd": 0.8146249999999999,
+			"wallClockMs": 47445,
 			"warmListEquivalentUsd": 0.8146249999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14835,6 +15182,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.01965,
 				"fanoutListEquivalentUsd": 2.02215
 			}
@@ -14868,6 +15216,7 @@
 			"coldWriteTokens": 136000,
 			"ledgerCostUsd": 0.04969,
 			"listEquivalentUsd": 0.04969,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.036187500000000004,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -14921,6 +15270,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.021150000000000002,
 				"fanoutListEquivalentUsd": 2.1736500000000003
 			}
@@ -14953,6 +15303,7 @@
 			"coldWriteTokens": 0,
 			"ledgerCostUsd": 0.0386875,
 			"listEquivalentUsd": 0.0386875,
+			"wallClockMs": 12034,
 			"warmListEquivalentUsd": 0.0386875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
@@ -15006,6 +15357,7 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
+				"fanoutWallClockMs": 19871,
 				"fanoutLedgerCostUsd": 0.02265,
 				"fanoutListEquivalentUsd": 2.32515
 			}

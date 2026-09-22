@@ -138,14 +138,21 @@ headroom exists, while the raw lift moved 7×.
 
 **The shipped candidate set is the worst of five compared.** At n=3:
 
-| candidate set | lift | fan-out $ | $/extra solve | with a 20-pt biased judge |
+| candidate set | lift | fan-out $ | added wall-clock | with a 20-pt biased judge |
 | --- | ---: | ---: | ---: | --- |
-| **`shipped`** | +12.8pp | $356.96 | $13.86 | **collapses to +1.4pp**, 14.8 regressions |
-| `tier-top` | **+16.0pp** | **$140.58** | **$5.02** | **unmoved: +16.0pp**, 0 regressions |
-| `spread` | **+19.0pp** | $359.87 | $10.53 | +15.8pp, 0 regressions |
+| **`shipped`** | +12.8pp | $356.96 | **+70%** | **collapses to +1.4pp**, 14.8 regressions |
+| `tier-top` | **+16.0pp** | **$140.58** | **+25%** | **unmoved: +16.0pp**, 0 regressions |
+| `spread` | **+19.0pp** | $359.87 | +69% | +15.8pp, 0 regressions |
 
 `tier-top` — the model the router itself prefers in each tier — is better, **2.5×
-cheaper**, and immune to a bias that costs the shipped set almost all of its lift.
+cheaper**, **2.8× less added wall-clock**, and immune to a bias that costs the shipped
+set almost all of its lift. The shipped set is slowest because `tiers.standard[0]` is
+`gpt-6-astra`, which has the worst time-to-first-token in the fleet; a fan-out waits on
+its slowest member, since `src/parallel.ts` runs candidates in parallel.
+
+**On whether `/duo` should ever be a default:** fanning out with the shipped set makes a
+session **70% longer**; with `tier-top`, **25% longer**. Money scales with the number of
+candidates and time does not — but time scales with the worst one.
 
 **Fan out to learn, not to pay.** `--explore-turns 3` (fan out for three turns, then
 commit to the judge's favourite) reaches the same quality as fanning out every turn for

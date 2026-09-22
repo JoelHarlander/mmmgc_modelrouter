@@ -665,6 +665,8 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 	row("hidden on plan", "planHiddenUsd", usd(m.planHiddenUsd));
 	row("  = weekly plan points", "planPointsUsed", m.planPointsUsed.toFixed(3));
 	row("classifier cost", "classifierCostUsd", usd(m.classifierCostUsd, 6));
+	row("wall clock", "wallClockSeconds", `${m.wallClockSeconds.toFixed(0)}s`);
+	row("  fan-out added", "fanoutWallClockSeconds", `${m.fanoutWallClockSeconds.toFixed(0)}s`);
 	row("list $ / resolved task", "listUsdPerResolvedTask", usd(m.listUsdPerResolvedTask));
 	out.push("");
 	out.push("cache");

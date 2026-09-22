@@ -1,0 +1,151 @@
+{
+	"title": "strategy sweep — pack swe-router-long-v1, classifier scripted, n=3, mean of 5 seeds",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"strategy": "route",
+			"exploreTurns": 0,
+			"candidateN": 0,
+			"bias": 0,
+			"seeds": 1,
+			"turnSuccessRate": 0.8,
+			"listEquivalentUsd": 149.2088,
+			"fanoutListEquivalentUsd": 0,
+			"fanoutTurns": 0,
+			"listUsdPerExtraSolve": null
+		},
+		{
+			"strategy": "fanout-always",
+			"exploreTurns": 0,
+			"candidateN": 3,
+			"bias": 0,
+			"seeds": 5,
+			"turnSuccessRate": 0.928,
+			"listEquivalentUsd": 506.1672,
+			"fanoutListEquivalentUsd": 356.9584,
+			"fanoutTurns": 175,
+			"listUsdPerExtraSolve": 15.9356
+		},
+		{
+			"strategy": "explore-1",
+			"exploreTurns": 1,
+			"candidateN": 3,
+			"bias": 0,
+			"seeds": 5,
+			"turnSuccessRate": 0.9417,
+			"listEquivalentUsd": 138.8674,
+			"fanoutListEquivalentUsd": 30.1107,
+			"fanoutTurns": 20,
+			"listUsdPerExtraSolve": -0.417
+		},
+		{
+			"strategy": "explore-2",
+			"exploreTurns": 2,
+			"candidateN": 3,
+			"bias": 0,
+			"seeds": 5,
+			"turnSuccessRate": 0.912,
+			"listEquivalentUsd": 166.1196,
+			"fanoutListEquivalentUsd": 63.8423,
+			"fanoutTurns": 40,
+			"listUsdPerExtraSolve": 0.8628
+		},
+		{
+			"strategy": "explore-3",
+			"exploreTurns": 3,
+			"candidateN": 3,
+			"bias": 0,
+			"seeds": 5,
+			"turnSuccessRate": 0.9703,
+			"listEquivalentUsd": 230.5561,
+			"fanoutListEquivalentUsd": 101.2751,
+			"fanoutTurns": 60,
+			"listUsdPerExtraSolve": 2.7295
+		},
+		{
+			"strategy": "explore-5",
+			"exploreTurns": 5,
+			"candidateN": 3,
+			"bias": 0,
+			"seeds": 5,
+			"turnSuccessRate": 0.9829,
+			"listEquivalentUsd": 334.1981,
+			"fanoutListEquivalentUsd": 187.0262,
+			"fanoutTurns": 100,
+			"listUsdPerExtraSolve": 5.7796
+		},
+		{
+			"strategy": "route",
+			"exploreTurns": 0,
+			"candidateN": 0,
+			"bias": 20,
+			"seeds": 1,
+			"turnSuccessRate": 0.8,
+			"listEquivalentUsd": 149.2088,
+			"fanoutListEquivalentUsd": 0,
+			"fanoutTurns": 0,
+			"listUsdPerExtraSolve": null
+		},
+		{
+			"strategy": "fanout-always",
+			"exploreTurns": 0,
+			"candidateN": 3,
+			"bias": 20,
+			"seeds": 5,
+			"turnSuccessRate": 0.8137,
+			"listEquivalentUsd": 506.1672,
+			"fanoutListEquivalentUsd": 356.9584,
+			"fanoutTurns": 175,
+			"listUsdPerExtraSolve": 148.8878
+		},
+		{
+			"strategy": "explore-1",
+			"exploreTurns": 1,
+			"candidateN": 3,
+			"bias": 20,
+			"seeds": 5,
+			"turnSuccessRate": 0.7383,
+			"listEquivalentUsd": 173.8935,
+			"fanoutListEquivalentUsd": 30.1107,
+			"fanoutTurns": 20,
+			"listUsdPerExtraSolve": null
+		},
+		{
+			"strategy": "explore-2",
+			"exploreTurns": 2,
+			"candidateN": 3,
+			"bias": 20,
+			"seeds": 5,
+			"turnSuccessRate": 0.6651,
+			"listEquivalentUsd": 177.993,
+			"fanoutListEquivalentUsd": 63.8423,
+			"fanoutTurns": 40,
+			"listUsdPerExtraSolve": null
+		},
+		{
+			"strategy": "explore-3",
+			"exploreTurns": 3,
+			"candidateN": 3,
+			"bias": 20,
+			"seeds": 5,
+			"turnSuccessRate": 0.7612,
+			"listEquivalentUsd": 260.3848,
+			"fanoutListEquivalentUsd": 101.2751,
+			"fanoutTurns": 60,
+			"listUsdPerExtraSolve": null
+		},
+		{
+			"strategy": "explore-5",
+			"exploreTurns": 5,
+			"candidateN": 3,
+			"bias": 20,
+			"seeds": 5,
+			"turnSuccessRate": 0.8206,
+			"listEquivalentUsd": 371.073,
+			"fanoutListEquivalentUsd": 187.0262,
+			"fanoutTurns": 100,
+			"listUsdPerExtraSolve": 61.5435
+		}
+	]
+}

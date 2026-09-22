@@ -86,6 +86,11 @@ export interface RunMetrics {
 	/** Turns that failed only because a compaction had discarded what they needed. */
 	turnsLostToCompaction: number;
 
+	/** Modelled wall-clock for the whole run, in seconds. */
+	wallClockSeconds: number;
+	/** Seconds the fan-out added. It runs candidates in parallel, so this is small. */
+	fanoutWallClockSeconds: number;
+
 	modelShare: Record<string, number>;
 	avgStateChars: number;
 
@@ -108,7 +113,11 @@ export interface CandidateMetrics {
 	oracleSuccessRate: number;
 	/** judge - baseline. The number the captain's question is really about. */
 	judgeLift: number;
-	/** How much of the available headroom the judge captured: (judge-base)/(oracle-base). */
+	/**
+	 * Share of the available headroom the judge captured: (judge − base) / (oracle − base).
+	 * 0 when the candidate set contains nothing better than the routed model, because
+	 * there is then no headroom and the ratio is meaningless rather than large.
+	 */
 	judgeHeadroomCaptured: number;
 	/** Of turns where some candidate solved, the share where the judge picked a solver. */
 	judgeRecall: number;
@@ -218,6 +227,9 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		turnsLostToCompaction: turns.filter((t) => !t.solved && t.compactionPenalty > 0 && t.effectiveSkill >= t.requiredSkill - t.compactionPenalty)
 			.length,
 
+		wallClockSeconds: round(sum(turns, (t) => t.wallClockMs + (t.candidate?.fanoutWallClockMs ?? 0)) / 1000, 1),
+		fanoutWallClockSeconds: round(sum(turns, (t) => t.candidate?.fanoutWallClockMs ?? 0) / 1000, 1),
+
 		modelShare,
 		avgStateChars: Math.round(stateChars.reduce((a, b) => a + b, 0) / Math.max(1, stateChars.length)),
 	};
@@ -254,7 +266,9 @@ function candidateMetrics(turns: TurnRecord[]): CandidateMetrics {
 		gateRescueRate: ratio(rescued, gated.length),
 		oracleSuccessRate: ratio(oracle, n),
 		judgeLift: round(lift, 4),
-		judgeHeadroomCaptured: headroom === 0 ? 0 : round((judged - base) / headroom, 4),
+		// Undefined when the candidate set holds nothing better than the routed model:
+		// there is no headroom to capture, and the ratio would be a sign error.
+		judgeHeadroomCaptured: headroom <= 0 ? 0 : round(Math.max(0, judged - base) / headroom, 4),
 		judgeRecall: ratio(recallHits, solvable.length),
 		judgeRegressions: regressions,
 		fanoutLedgerCostUsd: round(sum(turns, (t) => t.candidate!.fanoutLedgerCostUsd)),

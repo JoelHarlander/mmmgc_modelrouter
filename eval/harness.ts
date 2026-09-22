@@ -342,6 +342,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			coldWriteTokens: usage?.coldWriteTokens ?? 0,
 			ledgerCostUsd: usage?.ledgerCostUsd ?? 0,
 			listEquivalentUsd: usage?.listEquivalentUsd ?? 0,
+			wallClockMs: usage?.wallClockMs ?? 0,
 			warmListEquivalentUsd: warmUsage?.listEquivalentUsd ?? 0,
 			classifierCostUsd,
 			solved,
@@ -420,10 +421,12 @@ async function runCandidateTurn(args: CandidateTurnArgs): Promise<CandidateTurnR
 	const outputTokens = cfg.switching.expectedOutputTokens;
 	const outcomes: CandidateOutcome[] = [];
 	const judgeInput: JudgeCandidate[] = [];
+	const latencies: number[] = [];
 
 	specs.forEach((spec, i) => {
 		const label = String.fromCharCode(65 + i);
 		const usage = simulateFanoutUsage(spec, contextTokens, outputTokens);
+		latencies.push(usage.wallClockMs);
 		const { provider, id } = splitModel(spec.key);
 		ledger.record(provider, id, usage.usage);
 		const skill = effectiveSkill(spec, task.category);
@@ -472,6 +475,9 @@ async function runCandidateTurn(args: CandidateTurnArgs): Promise<CandidateTurnR
 		oracleSolved: oracleBest.solved,
 		baselineSolved,
 		judgeCostUsd: verdict.costUsd,
+		// src/parallel.ts uses Promise.allSettled: the candidates run together, so the
+		// fan-out waits on the slowest of them, not on all of them.
+		fanoutWallClockMs: Math.round(Math.max(...latencies) + verdict.ms),
 		fanoutLedgerCostUsd: outcomes.reduce((a, o) => a + o.ledgerCostUsd, 0),
 		fanoutListEquivalentUsd: outcomes.reduce((a, o) => a + o.listEquivalentUsd, 0),
 	};

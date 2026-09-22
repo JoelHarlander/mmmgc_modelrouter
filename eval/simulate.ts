@@ -74,6 +74,17 @@ export function requiredSkillAfterCompaction(
 	return requiredSkill + penalty * contextSensitivity * lostFraction;
 }
 
+/** Fallbacks for a fleet entry with no published figures: mid-range, and flagged by test. */
+export const DEFAULT_TTFT_MS = 800;
+export const DEFAULT_THROUGHPUT_TPS = 150;
+
+/** One provider call: time to first token, then output streamed at the published rate. */
+export function callLatencyMs(model: FleetModel, outputTokens: number): number {
+	const ttft = model.ttftMs ?? DEFAULT_TTFT_MS;
+	const tps = model.throughputTps ?? DEFAULT_THROUGHPUT_TPS;
+	return ttft + (outputTokens / tps) * 1000;
+}
+
 export function effectiveSkill(model: FleetModel, category: string): number {
 	return model.skill + (model.skillByCategory?.[category] ?? 0);
 }
@@ -99,6 +110,8 @@ export interface TurnUsage {
 	/** What the turn is worth at list price regardless of who pays. */
 	listEquivalentUsd: number;
 	coldWriteTokens: number;
+	/** Modelled wall-clock, from the fleet's published TTFT and throughput. */
+	wallClockMs: number;
 }
 
 export function simulateTurnUsage(args: TurnUsageArgs): TurnUsage {
@@ -146,7 +159,13 @@ export function simulateTurnUsage(args: TurnUsageArgs): TurnUsage {
 		totalTokens: cacheRead + cacheWrite + output,
 		cost,
 	};
-	return { usage, ledgerCostUsd: cost.total, listEquivalentUsd, coldWriteTokens: cold ? contextTokens : 0 };
+	return {
+		usage,
+		ledgerCostUsd: cost.total,
+		listEquivalentUsd,
+		coldWriteTokens: cold ? contextTokens : 0,
+		wallClockMs: Math.round(calls * callLatencyMs(model, outPerCall)),
+	};
 }
 
 /**
@@ -180,7 +199,13 @@ export function simulateFanoutUsage(model: FleetModel, contextTokens: number, ou
 		totalTokens: contextTokens + outputTokens,
 		cost,
 	};
-	return { usage, ledgerCostUsd: cost.total, listEquivalentUsd, coldWriteTokens: contextTokens };
+	return {
+		usage,
+		ledgerCostUsd: cost.total,
+		listEquivalentUsd,
+		coldWriteTokens: contextTokens,
+		wallClockMs: Math.round(callLatencyMs(model, outputTokens)),
+	};
 }
 
 /**

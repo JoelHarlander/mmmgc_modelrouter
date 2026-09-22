@@ -14,6 +14,10 @@ export interface FleetModel {
 	/** True for subscription/OAuth routes, which the ledger sees as $0. */
 	oauth: boolean;
 	cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
+	/** Published best time-to-first-token, ms. See docs/data/operational-stats.json. */
+	ttftMs?: number;
+	/** Published output throughput, tokens/second. */
+	throughputTps?: number;
 	/** 0..100 declared competence. The offline oracle's ground truth. */
 	skill: number;
 	/** Per-category adjustments, so the fleet is not totally ordered. */
@@ -135,6 +139,8 @@ export interface TurnRecord {
 	coldWriteTokens: number;
 	ledgerCostUsd: number;
 	listEquivalentUsd: number;
+	/** Modelled wall-clock for the turn, from published TTFT and throughput. */
+	wallClockMs: number;
 	/** What the same turn would have cost on the same model with a warm cache. */
 	warmListEquivalentUsd: number;
 	classifierCostUsd: number;
@@ -179,6 +185,13 @@ export interface CandidateTurnRecord {
 	oracleSolved: boolean;
 	baselineSolved: boolean;
 	judgeCostUsd: number;
+	/**
+	 * Wall-clock the fan-out added. src/parallel.ts runs candidates through
+	 * Promise.allSettled, so this is the *slowest* candidate plus the judge, not the sum.
+	 * Money therefore scales with the number of candidates and time does not - but time
+	 * scales with the worst one, so a single slow model taxes every turn.
+	 */
+	fanoutWallClockMs: number;
 	fanoutLedgerCostUsd: number;
 	fanoutListEquivalentUsd: number;
 }
