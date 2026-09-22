@@ -2095,3 +2095,73 @@ test("proposed-v2 differs from v1 only by giving `standard` the clause `heavy` a
 	}
 	assert.doesNotMatch(tier(v1).criteria.standard!, /asks \*about\* such work/, "v1's standard is the gap v2 closes");
 });
+
+test("the predictions in section 9 are the numbers the harness actually produces", async () => {
+	// Round 40. Section 9 exists so a downstream task can check a fix against a number
+	// instead of an argument. A prediction that drifts from the harness is worse than no
+	// prediction at all, so the load-bearing ones are re-measured here.
+	const brief = readFileSync(join(ROOT, "docs", "research", "router-eval-findings.md"), "utf8");
+	const quotes = (needle: string, why: string) => assert.ok(brief.includes(needle), `the brief no longer says "${needle}" — ${why}`);
+
+	// §9C: the acceptance intervals a fan-out change is checked against. Seeded, so exact.
+	const paired = await runPairedComparisons({ pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted" });
+	const fanOut = paired.find((c) => c.label.startsWith("fan-out every turn"));
+	assert.ok(fanOut, "the paired sweep no longer reports the fan-out comparison §9C is built on");
+	const quality = fanOut.results.find((r) => r.metric === "sessionSuccessRate")!;
+	assert.ok(quality.significant, "§9C states fan-out's quality gain as resolvable; it no longer is");
+	quotes(`+${(quality.low * 100).toFixed(1)}pp`, "§9C's quality acceptance floor moved");
+
+	// §9B/§0b: under-routing is the expensive error, and worse for standard than heavy.
+	// The whole v2-over-v1 recommendation rests on this ordering, so pin the ordering.
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const rank = { light: 0, standard: 1, heavy: 2 } as const;
+	const solvedRate = (gold: string, dir: "under" | "over" | "exact") => {
+		const ts = outcome.turns.filter((t) => {
+			if (t.pinned || t.goldTier !== gold) return false;
+			const d = rank[t.requestedTier] - rank[t.goldTier];
+			return dir === "under" ? d < 0 : dir === "over" ? d > 0 : d === 0;
+		});
+		return ts.length ? (ts.filter((t) => t.solved).length / ts.length) * 100 : Number.NaN;
+	};
+	const penalty = (gold: string) => solvedRate(gold, "exact") - solvedRate(gold, "under");
+	const standardPenalty = penalty("standard");
+	const heavyPenalty = penalty("heavy");
+	assert.ok(standardPenalty > heavyPenalty, `under-routing standard (${standardPenalty.toFixed(1)}pp) is no longer worse than heavy (${heavyPenalty.toFixed(1)}pp) — §9B's recommendation of v2 over v1 turns on this ordering`);
+	quotes(`−${standardPenalty.toFixed(1)}pp`, "the standard under-routing penalty moved");
+	quotes(`−${heavyPenalty.toFixed(1)}pp`, "the heavy under-routing penalty moved");
+
+	// And over-routing light must stay nearly free, or "under-routing is the expensive
+	// error" stops being the right summary of the table.
+	assert.ok(solvedRate("light", "exact") - solvedRate("light", "over") < 10, "over-routing light is no longer close to free; §9B's framing needs revisiting");
+});
+
+test("the phrasing defect shows up in the routing packs, not only in the probe built for it", async () => {
+	// Round 40, and the answer to the fair challenge that a probe pack finds what it was
+	// written to find. These two packs were authored for routing, carry Jev's real
+	// recorded answers, and are split here on nothing but a trailing question mark.
+	const rank = { light: 0, standard: 1, heavy: 2 } as const;
+	let qTotal = 0;
+	let qUnder = 0;
+	let iTotal = 0;
+	let iUnder = 0;
+	for (const p of [pack(), pack(LONG_PACK)]) {
+		for (const t of (await run({ pack: p })).turns) {
+			if (t.pinned || !t.goldTier || !t.classifierAnswer || !t.prompt) continue;
+			const under = rank[t.classifierAnswer.tier] < rank[t.goldTier];
+			if (t.prompt.trim().endsWith("?")) {
+				qTotal++;
+				if (under) qUnder++;
+			} else {
+				iTotal++;
+				if (under) iUnder++;
+			}
+		}
+	}
+	assert.ok(qTotal >= 30 && iTotal >= 100, `${qTotal} questions / ${iTotal} instructions; the packs no longer carry both phrasings in quantity`);
+	const qRate = qUnder / qTotal;
+	const iRate = iUnder / iTotal;
+	// The brief claims a multiple, not a couple of points. Hold it to that shape.
+	assert.ok(qRate > iRate * 3, `questions are under-classified ${(qRate * 100).toFixed(1)}% against instructions' ${(iRate * 100).toFixed(1)}% — the brief claims roughly 6x`);
+	assert.ok(qRate > 0.25, `only ${(qRate * 100).toFixed(1)}% of question turns are under-classified; the brief says ~39%`);
+	assert.ok(iRate < 0.15, `${(iRate * 100).toFixed(1)}% of instruction turns are under-classified; the brief says ~6%`);
+});

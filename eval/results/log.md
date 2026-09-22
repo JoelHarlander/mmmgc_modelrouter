@@ -46,6 +46,8 @@ Jump to the round that established each claim, and what it rests on.
 | ~~A candidate rewrite closes 30% of the gap, question accuracy 33.3% → 50.0%~~ | 38 | **SUPERSEDED in r39.** At 30 pairs the same wording closes **65%** and the 12-pair reading could not see that it costs 30pp of `standard` instruction accuracy. |
 | **The phrasing effect scales with difficulty and is absent on light controls** (gap +0.00, 8/8 both wordings) — so it is difficulty mis-sorting, not a question-vs-instruction artefact | **39** | live, 30 pairs |
 | **Under-routing is the expensive error, and under-routing `standard` (−63.1pp solved) is worse than `heavy` (−50.5pp)** — which reverses which candidate wording to prefer | **39** | long pack, 175 turns |
+| **The phrasing defect is present in the routing packs too — 39.5% of question turns under-classified against 6.6% of instruction turns, p = 8.3 × 10⁻⁷.** The only claim here that resolves at conventional significance | **40** | 189 recorded turns, packs not built for it |
+| **The live judge probe replicates exactly** — all 24 verdicts identical, no bias, on a second independent run | **40** | live, 48 calls |
 | The §0 fix, simulated: **32 of 396 broken configurations → 0**, byte-identical where nothing is blocked | **38** | exact |
 | Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
@@ -2530,3 +2532,76 @@ workload mix from an authored pack. What is now established: the defect is real,
 
 **Spend.** 240 live calls (four question sets × 30 pairs × 2 wordings). **$0.00**;
 gateway credits unchanged at $5.00.
+
+---
+
+## Round 40 — 2026-09-23 — replicate the other pillar, then answer the challenge I had not answered
+
+Firstmate asked directly whether the loop had converged, and listed what would justify
+another round. I worked that list rather than my own instincts.
+
+### "A load-bearing figure resting on a single unreplicated run"
+
+Round 39 caught §9B this way. The **other** pillar was §6 — the live judge probe, one run
+of 48 calls, which decides the candidate set in §5 *and* supplies the noise estimate that
+prices the floor. Re-ran it:
+
+| | run 1 | run 2 |
+| --- | ---: | ---: |
+| accuracy | 0.9583 | 0.9583 |
+| estimated bias points | 0 | 0 |
+| dominant axis | none | none |
+| position bias | 0.0417 | 0.0417 |
+| mean confidence | 0.8825 | 0.8838 |
+
+**All 24 per-item verdicts identical.** The only figure that moved at all was mean
+confidence, by 0.13pp, never enough to flip a verdict. §6 holds, and §5's decision with
+it. Unlike §9B, this one survived contact.
+
+### "A claim in the brief that no test pins"
+
+§9's predictions were the gap. §9A was pinned in round 38; §9B's ordering and §9C's
+acceptance floor were not — and those are precisely the numbers a downstream task will
+check a fix against. A prediction that drifts from the harness is worse than none. Now
+pinned: the fan-out quality floor must still be resolvable and still be the figure the
+brief quotes, and under-routing `standard` must remain worse than under-routing `heavy`,
+since the whole v2-over-v1 recommendation turns on that ordering.
+
+### The challenge I had not answered
+
+A reviewer would reasonably say: *you wrote a pack to show questions are misclassified,
+and it showed questions are misclassified.* Fair. So I asked the two **routing** packs,
+which were authored for a different purpose long before this effect was suspected, and
+which carry Jev's **real** recorded answers from round 35. Split on nothing but a
+trailing question mark:
+
+| pack | | n | under-classified | mean tier error |
+| --- | --- | ---: | ---: | ---: |
+| long | question | 38 | **39.5%** | −0.24 |
+| long | instruction | 122 | **6.6%** | −0.01 |
+| short | question | 3 | 33.3% | −0.33 |
+| short | instruction | 26 | 3.8% | +0.15 |
+
+**A 6× difference, on packs not built to test it.** Pooled: 16 of 41 against 9 of 148,
+**Fisher exact one-sided p = 8.3 × 10⁻⁷**; the long pack alone is p = 4.5 × 10⁻⁶.
+
+This is the **only claim in the brief that resolves at conventional significance**, and
+it is worth saying why it can when the quality claims cannot: it is a claim about
+*classification rates* — a directly observed binary over 189 turns — not about simulated
+outcomes. It is a different kind of measurement, not an exception to the resolution
+limits in "Read this first".
+
+### "A configuration the captain actually runs"
+
+Checked and **cannot be answered from here**: there is no user config on this machine
+(`~/.pi/modelrouter.json` and friends are absent), so `--audit-config` audits shipped
+`DEFAULT_CONFIG`. If the captain's real config differs — different providers, different
+tier membership, a plan that is not `openai-codex` — §1's dominated-tier finding and §3's
+cold-start premium would both need re-running against it. That is a genuine unknown and
+it is listed as one, not quietly assumed away.
+
+**Spend.** 48 live calls for the probe replication. **$0.00**; credits unchanged at $5.00.
+
+**Where this leaves the loop.** Both pillars are now replicated, the predictions are
+pinned, and the headline finding has independent confirmation at p < 10⁻⁶. See the status
+line for the convergence judgement.

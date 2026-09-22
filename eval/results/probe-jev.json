@@ -1,7 +1,7 @@
 {
 	"probePack": "judge-probe-v1",
-	"at": "2026-09-22T15:18:55.989Z",
-	"git": "ae97ab2",
+	"at": "2026-09-22T17:00:30.274Z",
+	"git": "c0149b0",
 	"judge": "jev",
 	"items": 24,
 	"calls": 48,
@@ -24,7 +24,7 @@
 	},
 	"dominantAxis": "none",
 	"axisMarginPoints": 0,
-	"meanConfidence": 0.8825,
+	"meanConfidence": 0.8838,
 	"costUsd": 0,
 	"results": [
 		{
@@ -40,7 +40,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.83
+					"confidence": 0.86
 				},
 				{
 					"order": "BA",
@@ -51,7 +51,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.9
+					"confidence": 0.91
 				}
 			],
 			"costUsd": 0
@@ -98,7 +98,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.79
+					"confidence": 0.86
 				},
 				{
 					"order": "BA",
@@ -109,7 +109,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.89
+					"confidence": 0.84
 				}
 			],
 			"costUsd": 0
@@ -156,7 +156,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.77
+					"confidence": 0.73
 				},
 				{
 					"order": "BA",
@@ -301,7 +301,7 @@
 					"pickedLonger": true,
 					"presentationTrap": true,
 					"lengthTrap": false,
-					"confidence": 0.72
+					"confidence": 0.76
 				},
 				{
 					"order": "BA",
@@ -312,7 +312,7 @@
 					"pickedLonger": true,
 					"presentationTrap": true,
 					"lengthTrap": false,
-					"confidence": 0.35
+					"confidence": 0.36
 				}
 			],
 			"costUsd": 0
@@ -330,7 +330,7 @@
 					"pickedLonger": false,
 					"presentationTrap": false,
 					"lengthTrap": true,
-					"confidence": 0.14
+					"confidence": 0.12
 				},
 				{
 					"order": "BA",
@@ -359,7 +359,7 @@
 					"pickedLonger": true,
 					"presentationTrap": false,
 					"lengthTrap": false,
-					"confidence": 0.39
+					"confidence": 0.43
 				},
 				{
 					"order": "BA",
@@ -370,7 +370,7 @@
 					"pickedLonger": false,
 					"presentationTrap": false,
 					"lengthTrap": false,
-					"confidence": 0.04
+					"confidence": 0.02
 				}
 			],
 			"costUsd": 0
@@ -446,7 +446,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.93
+					"confidence": 0.9
 				},
 				{
 					"order": "BA",
@@ -457,7 +457,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.98
+					"confidence": 0.97
 				}
 			],
 			"costUsd": 0
@@ -515,7 +515,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.9
+					"confidence": 0.92
 				}
 			],
 			"costUsd": 0
@@ -533,7 +533,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.8
+					"confidence": 0.83
 				},
 				{
 					"order": "BA",
@@ -544,7 +544,7 @@
 					"pickedLonger": false,
 					"presentationTrap": true,
 					"lengthTrap": true,
-					"confidence": 0.72
+					"confidence": 0.7
 				}
 			],
 			"costUsd": 0

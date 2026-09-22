@@ -105,6 +105,30 @@ A dose-response of that shape - nothing on easy work, most on hard work - is wha
 would expect if the criteria text were mis-sorting by difficulty, and not what you would
 expect from a model that simply treats questions as chatter.
 
+**And it is not an artefact of a pack built to show it.** The fair challenge to any probe
+is that it was authored to elicit the thing it found. So the same question is asked of
+the two **routing** packs — written for a different purpose, months before this effect was
+suspected, and carrying Jev's *real* recorded answers (round 35's `--record`). Splitting
+their turns on nothing more than whether the prompt ends in a question mark:
+
+| pack | | n | under-classified | mean tier error |
+| --- | --- | ---: | ---: | ---: |
+| long | question | 38 | **39.5%** | −0.24 |
+| long | instruction | 122 | **6.6%** | −0.01 |
+| short | question | 3 | 33.3% | −0.33 |
+| short | instruction | 26 | 3.8% | +0.15 |
+
+**A 6× difference in how often Jev under-classifies, on packs that were not built to test
+this.** Pooled, that is 16 of 41 against 9 of 148 — **Fisher exact one-sided
+p = 8.3 × 10⁻⁷** (long pack alone, p = 4.5 × 10⁻⁶).
+
+This is worth being precise about, because it is the **only claim in this brief that
+resolves at conventional significance**. It can, where the quality claims cannot, because
+it is a claim about *classification rates* — a directly observed binary over 189 turns —
+and not about simulated outcomes. Everything in "Read this first" about quality
+differences still stands; this is a different kind of measurement, not an exception to
+it.
+
 **Why.** Not a defect in the model. The shipped `light` criterion in `src/state.ts` reads:
 
 > *"A small, well-specified step: **answer a factual question, explain a snippet**, rename
