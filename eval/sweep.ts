@@ -10,7 +10,7 @@
  * Every cell is the mean over several seeds, with the spread reported, so a cell can
  * be read as a result rather than a coincidence.
  */
-import { NoisyJudge } from "./candidates.ts";
+import { CANDIDATE_POLICIES, NoisyJudge } from "./candidates.ts";
 import { buildFleet, type LoadedFleet } from "./fleet.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics } from "./metrics.ts";
@@ -214,6 +214,88 @@ export function renderTrafficSweep(cells: TrafficCell[], title: string): string 
 			`  ${String(c.callsPerTurn).padStart(5)}  ${String(c.cacheGrowthTokensPerCall).padStart(6)}  ${String(c.outputTokensPerCall).padStart(6)}   ` +
 				`${usd(c.listEquivalentUsd).padStart(10)}  ${usd(c.coldPremiumUsd).padStart(10)}   ${pct(c.coldPremiumShare).padStart(6)}   ` +
 				`${c.planPointsUsed.toFixed(2).padStart(8)}   ${usd(c.fanoutListEquivalentUsd).padStart(10)} ${usd(c.listUsdPerExtraSolve).padStart(10)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
+export interface PolicyCell {
+	policy: string;
+	candidateN: number;
+	bias: number;
+	seeds: number;
+	baselineSuccessRate: number;
+	/** Can the set even contain a solver? The ceiling a perfect judge would reach. */
+	oracleSuccessRate: number;
+	judgeSuccessRate: number;
+	adoptedSuccessRate: number;
+	adoptedLift: number;
+	judgeRegressions: number;
+	fanoutListEquivalentUsd: number;
+	listUsdPerExtraSolve: number;
+}
+
+/**
+ * What the inherited candidate policy costs by comparison. `shipped` is
+ * src/parallel.ts's own set; the rest are alternatives the harness scores against it.
+ * Nothing here changes the shipped fan-out.
+ */
+export async function runPolicySweep(options: SweepOptions & { policies?: string[]; candidateN?: number }): Promise<PolicyCell[]> {
+	const policies = options.policies ?? Object.keys(CANDIDATE_POLICIES);
+	const candidateN = options.candidateN ?? 3;
+	const biases = options.biases ?? [0, 20];
+	const seeds = options.seeds ?? DEFAULT_SEEDS;
+	const cells: PolicyCell[] = [];
+
+	for (const policy of policies) {
+		for (const bias of biases) {
+			const runs = [];
+			for (const seed of seeds) {
+				const outcome = await runEval({
+					pack: options.pack,
+					loaded: options.loaded,
+					classifier: options.classifier,
+					startModel: options.startModel,
+					candidateN,
+					candidatePolicy: policy,
+					seed,
+					judge: new NoisyJudge({ noise: 10, seed, bias }),
+				});
+				const m = computeMetrics(outcome.turns, outcome.stateChars).candidate;
+				if (m) runs.push(m);
+			}
+			if (runs.length === 0) continue;
+			cells.push({
+				policy,
+				candidateN,
+				bias,
+				seeds: runs.length,
+				baselineSuccessRate: mean(runs.map((r) => r.baselineSuccessRate)),
+				oracleSuccessRate: mean(runs.map((r) => r.oracleSuccessRate)),
+				judgeSuccessRate: mean(runs.map((r) => r.judgeSuccessRate)),
+				adoptedSuccessRate: mean(runs.map((r) => r.adoptedSuccessRate)),
+				adoptedLift: mean(runs.map((r) => r.adoptedLift)),
+				judgeRegressions: mean(runs.map((r) => r.judgeRegressions)),
+				fanoutListEquivalentUsd: mean(runs.map((r) => r.fanoutListEquivalentUsd)),
+				listUsdPerExtraSolve: meanFinite(runs.map((r) => r.listUsdPerExtraSolve)),
+			});
+		}
+	}
+	return cells;
+}
+
+export function renderPolicySweep(cells: PolicyCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  policy       bias   baseline   ceiling   raw pick   adopted    adopted lift   regress   fan-out $    $/extra");
+	let last = "";
+	for (const c of cells) {
+		if (c.policy !== last && last !== "") out.push("");
+		last = c.policy;
+		out.push(
+			`  ${c.policy.padEnd(11)} ${String(c.bias).padStart(4)}   ${pct(c.baselineSuccessRate).padStart(8)}  ${pct(c.oracleSuccessRate).padStart(8)}   ` +
+				`${pct(c.judgeSuccessRate).padStart(8)}  ${pct(c.adoptedSuccessRate).padStart(8)}   ${signedPct(c.adoptedLift).padStart(13)}   ${c.judgeRegressions.toFixed(1).padStart(7)}   ` +
+				`${usd(c.fanoutListEquivalentUsd).padStart(9)}  ${usd(c.listUsdPerExtraSolve).padStart(9)}`,
 		);
 	}
 	out.push("");

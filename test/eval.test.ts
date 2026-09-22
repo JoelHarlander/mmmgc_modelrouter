@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, modelKey } from "../src/config.ts";
 import { pickParallelModels } from "../src/parallel.ts";
-import { JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
+import { CANDIDATE_POLICIES, JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
 import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifier.ts";
 import { loadFleet } from "../eval/fleet.ts";
 import { runEval } from "../eval/harness.ts";
@@ -25,7 +25,16 @@ import { compareMetrics, readRun, type RunRecord, writeRun } from "../eval/resul
 import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
 import { buildFleet } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
-import { type OracleCell, perturbFleet, runJudgeSweep, runOracleSweep, runTrafficSweep, type SweepCell, type TrafficCell } from "../eval/sweep.ts";
+import {
+	type OracleCell,
+	perturbFleet,
+	runJudgeSweep,
+	runOracleSweep,
+	runPolicySweep,
+	runTrafficSweep,
+	type SweepCell,
+	type TrafficCell,
+} from "../eval/sweep.ts";
 import { loadProbePack, runProbe } from "../eval/probe.ts";
 import type { Fleet, TaskPack } from "../eval/types.ts";
 
@@ -232,8 +241,11 @@ test("the harness's candidate policy matches src/parallel.ts#pickParallelModels"
 		const ctx = { model: current, modelRegistry: loaded.registry } as unknown as ExtensionCommandContext;
 		for (const n of [2, 3, 4, 6]) {
 			const shipped = pickParallelModels(ctx, loaded.config, n).map(modelKey);
-			const harness = pickCandidates({ current, cfg: loaded.config, n, byKey: loaded.byKey, unauthed: loaded.unauthed }).map((m) => m.key);
+			const policyArgs = { current, cfg: loaded.config, n, byKey: loaded.byKey, unauthed: loaded.unauthed };
+			const harness = pickCandidates(policyArgs).map((m) => m.key);
 			assert.deepEqual(harness, shipped, `candidate policy drifted for n=${n}, current=${startKey ?? "none"}`);
+			// ...and the registry entry the sweeps use must be that same policy.
+			assert.deepEqual(CANDIDATE_POLICIES.shipped!(policyArgs).map((m) => m.key), shipped);
 		}
 	}
 });
@@ -383,6 +395,60 @@ test("a judge that systematically prefers the flashy answer makes the fan-out wo
 	assert.ok(unbiased.judgeLift > 0, "the unbiased judge should still help");
 	assert.ok(biased.judgeLift < 0, "a strong flagship bias should cost more turns than it wins");
 	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
+});
+
+test("no candidate policy is allowed to read the oracle's skill numbers", () => {
+	const raw = JSON.parse(readFileSync(FLEET, "utf8")) as Fleet;
+	const base = loadFleet(FLEET);
+	// perturbFleet moves skill and nothing else, so a policy that peeked at skill would
+	// return a different set. Every policy must be blind to it.
+	const jittered = buildFleet(perturbFleet(raw, 30, "peek"));
+	const current = base.models.find((m) => modelKey(m) === "faux-plan-anthropic/claude-opus-5");
+	for (const [name, policy] of Object.entries(CANDIDATE_POLICIES)) {
+		for (const n of [2, 3, 4]) {
+			const before = policy({ current, cfg: base.config, n, byKey: base.byKey, unauthed: base.unauthed }).map((m) => m.key);
+			const after = policy({ current, cfg: jittered.config, n, byKey: jittered.byKey, unauthed: jittered.unauthed }).map((m) => m.key);
+			assert.deepEqual(after, before, `policy "${name}" (n=${n}) changed when only hidden skill changed: it is cheating`);
+		}
+	}
+});
+
+test("the shipped candidate set is the only one whose flashiest member is not its strongest", () => {
+	const loaded = loadFleet(FLEET);
+	const current = loaded.models.find((m) => modelKey(m) === "faux-plan-anthropic/claude-opus-5");
+	const opposed: string[] = [];
+	for (const [name, policy] of Object.entries(CANDIDATE_POLICIES)) {
+		const set = policy({ current, cfg: loaded.config, n: 3, byKey: loaded.byKey, unauthed: loaded.unauthed });
+		const flashiest = [...set].sort((a, b) => b.cost.output - a.cost.output)[0]!;
+		const strongest = [...set].sort((a, b) => b.skill - a.skill)[0]!;
+		if (flashiest.key !== strongest.key) opposed.push(name);
+	}
+	// This is why the shipped set collapses under judge bias while the others do not, and
+	// it follows from the tier price inversion --validate already warns about: the policy
+	// takes tiers.standard[0], which is pricier and weaker than the heavy tier's pick.
+	assert.deepEqual(opposed, ["shipped"]);
+});
+
+test("an alternative candidate set is both cheaper and more robust than the shipped one", async () => {
+	const cells = await runPolicySweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		policies: ["shipped", "tier-top"],
+		biases: [0, 20],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const find = (policy: string, bias: number) => cells.find((c) => c.policy === policy && c.bias === bias)!;
+	const shipped = find("shipped", 0);
+	const alt = find("tier-top", 0);
+
+	assert.ok(alt.adoptedLift > shipped.adoptedLift, "tier-top should deliver more lift");
+	assert.ok(alt.fanoutListEquivalentUsd < shipped.fanoutListEquivalentUsd / 2, "...for less than half the fan-out bill");
+	assert.ok(alt.listUsdPerExtraSolve < shipped.listUsdPerExtraSolve);
+
+	// ...and it does not fall over when the judge is biased, where the shipped set does.
+	assert.ok(find("shipped", 20).adoptedLift < 0, "the shipped set should go negative at bias 20");
+	assert.ok(find("tier-top", 20).adoptedLift > 0, "tier-top should stay positive");
 });
 
 test("the confidence gate is the shipped auto-adopt rule, and a zero bar disables it", async () => {

@@ -24,7 +24,17 @@ import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
 import { DEFAULT_TRAFFIC } from "./simulate.ts";
 import { appendLog, compareMetrics, ensureDirFor, latestPath, readRun, resultsDir, type RunRecord, writeRun } from "./results.ts";
-import { renderGateSweep, renderOracleSweep, renderSweep, renderTrafficSweep, runJudgeSweep, runOracleSweep, runTrafficSweep } from "./sweep.ts";
+import {
+	renderGateSweep,
+	renderOracleSweep,
+	renderPolicySweep,
+	renderSweep,
+	renderTrafficSweep,
+	runJudgeSweep,
+	runOracleSweep,
+	runPolicySweep,
+	runTrafficSweep,
+} from "./sweep.ts";
 import { formatProblems, validatePack } from "./validate.ts";
 import type { ClassifierMode, TaskPack } from "./types.ts";
 
@@ -46,7 +56,8 @@ interface Args {
 	noWrite: boolean;
 	validateOnly: boolean;
 	allowInconsistent: boolean;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy";
+	candidatePolicy?: string;
 	judgeMinConfidence?: number;
 	callsPerTurn?: number;
 	probe: boolean;
@@ -100,6 +111,9 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--judge-bias":
 				args.judgeBias = Number(next());
+				break;
+			case "--candidate-policy":
+				args.candidatePolicy = next();
 				break;
 			case "--judge-min-confidence":
 				args.judgeMinConfidence = Number(next());
@@ -211,6 +225,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep profile        sweep the measured traffic constants the cost model rests on
   --sweep oracle         jitter the declared model skills and see which findings survive
   --sweep gate           sweep the confidence bar src/parallel.ts auto-adopts above
+  --sweep policy         compare the shipped candidate set against alternatives
+  --candidate-policy <p> shipped | strongest | cheapest | spread | tier-top
   --judge-min-confidence <c>  that bar (default: switching.minConfidence)
   --calls-per-turn <n>   provider calls per user turn (default 5, the measured median)
   --probe                measure a judge's presentation bias on paired responses and exit
@@ -285,6 +301,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "policy") {
+			title = `policy sweep — pack ${pack.id}, classifier ${args.classifier}, n=${args.candidates || 3}, mean of 5 seeds per cell`;
+			const c = await runPolicySweep({ ...base, candidateN: args.candidates || 3 });
+			cells = c;
+			rendered = renderPolicySweep(c, title);
 		} else if (args.sweep === "gate") {
 			title = `gate sweep — pack ${pack.id}, classifier ${args.classifier}, mean of 5 seeds per cell`;
 			const c = await runJudgeSweep({
@@ -327,6 +348,7 @@ async function main(): Promise<number> {
 		candidateN: args.candidates,
 		judge: new NoisyJudge({ noise: args.judgeNoise, seed: args.seed, bias: args.judgeBias }),
 		judgeMinConfidence: args.judgeMinConfidence,
+		candidatePolicy: args.candidatePolicy,
 		seed: args.seed,
 		jev,
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
@@ -376,6 +398,7 @@ function defaultProfile(args: Args, packId: string): string {
 	const bits: string[] = [packId, args.classifier];
 	if (args.candidates >= 2) bits.push(`cand${args.candidates}`);
 	if (args.judgeBias) bits.push(`bias${args.judgeBias}`);
+	if (args.candidatePolicy && args.candidatePolicy !== "shipped") bits.push(args.candidatePolicy);
 	if (args.callsPerTurn) bits.push(`calls${args.callsPerTurn}`);
 	if (args.unauthed.length) bits.push(`noauth${args.unauthed.length}`);
 	return bits.join("-");

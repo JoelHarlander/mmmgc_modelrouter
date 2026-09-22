@@ -11,6 +11,7 @@ npm run eval -- --sweep judge                 # over what range of judge quality
 npm run eval -- --sweep bias                  # what a judge that prefers the flagship's style costs
 npm run eval -- --sweep profile               # how far the cost numbers move with the traffic constants
 npm run eval -- --sweep gate                  # does the shipped confidence bar on auto-adopt help?
+npm run eval -- --sweep policy                # what the inherited candidate set costs vs alternatives
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
@@ -147,6 +148,13 @@ and the adopted outcome separately. `--judge-min-confidence` moves the bar and
 The candidate set is chosen by the **same policy** as `src/parallel.ts`, and the judge
 question is the **same string** it sends to Jev. `test/eval.test.ts` pins both against
 that file, so if the shipped fan-out changes, the harness fails rather than drifts.
+
+`--candidate-policy` swaps in an alternative set (`strongest`, `cheapest`, `spread`,
+`tier-top`) and `--sweep policy` scores them all against `shipped`. These exist to say
+what the inherited policy *costs*; none of them changes the shipped fan-out. Every
+policy may read only what the real router knows — tier lists, `models[key].capability`
+and published prices — and a test enforces that by jittering the hidden `skill` numbers
+and requiring every policy to return an unchanged set.
 
 The offline judge (`NoisyJudge`) perceives each candidate's true skill with a bounded
 error — `--judge-noise` is that error's half-width in skill points — so it is reliably

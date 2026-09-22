@@ -21,7 +21,7 @@ import { Ledger } from "../src/ledger.ts";
 import { chooseModel, type Decision } from "../src/router.ts";
 import { buildRoutingState } from "../src/state.ts";
 import { applyStakesOverride, classify } from "./classifier.ts";
-import { type Judge, type JudgeCandidate, NoisyJudge, pickCandidates, syntheticResponse } from "./candidates.ts";
+import { CANDIDATE_POLICIES, type CandidatePolicy, type Judge, type JudgeCandidate, NoisyJudge, syntheticResponse } from "./candidates.ts";
 import type { LoadedFleet } from "./fleet.ts";
 import { FakeSession } from "./session.ts";
 import { DEFAULT_TRAFFIC, effectiveSkill, simulateFanoutUsage, simulateTurnUsage, solves, type TrafficProfile } from "./simulate.ts";
@@ -43,6 +43,8 @@ export interface RunOptions {
 	 * `switching.minConfidence`, which is the bar src/parallel.ts uses for auto-adopt.
 	 */
 	judgeMinConfidence?: number;
+	/** Which candidate set to fan out to. Defaults to the shipped src/parallel.ts policy. */
+	candidatePolicy?: string;
 	seed?: string;
 	jev?: JevClient;
 	ledgerFile?: string;
@@ -261,6 +263,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 				candidateN,
 				seed,
 				minConfidence: options.judgeMinConfidence ?? cfg.switching.minConfidence,
+				policy: resolvePolicy(options.candidatePolicy),
 			});
 		}
 
@@ -292,11 +295,18 @@ interface CandidateTurnArgs {
 	candidateN: number;
 	seed: string;
 	minConfidence: number;
+	policy: CandidatePolicy;
+}
+
+function resolvePolicy(name: string | undefined): CandidatePolicy {
+	const policy = CANDIDATE_POLICIES[name ?? "shipped"];
+	if (!policy) throw new Error(`unknown candidate policy "${name}"; known: ${Object.keys(CANDIDATE_POLICIES).join(", ")}`);
+	return policy;
 }
 
 async function runCandidateTurn(args: CandidateTurnArgs): Promise<CandidateTurnRecord | undefined> {
 	const { task, turn, prompt, requiredSkill, contextTokens, current, baselineSolved, cfg, loaded, ledger, judge, candidateN, minConfidence } = args;
-	const specs = pickCandidates({ current, cfg, n: candidateN, byKey: loaded.byKey, unauthed: loaded.unauthed });
+	const specs = args.policy({ current, cfg, n: candidateN, byKey: loaded.byKey, unauthed: loaded.unauthed });
 	if (specs.length < 2) return undefined;
 
 	const outputTokens = cfg.switching.expectedOutputTokens;

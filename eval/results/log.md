@@ -461,3 +461,69 @@ n=3 returned +5.2pp) and having an unbiased judge in the first place — which i
 `src/parallel.ts#pickParallelModels` and has never been compared against an
 alternative, even though round 3 noticed it never includes the strongest model at n=2
 or n=3.
+
+---
+
+## Round 9 — 2026-09-22 — score the candidate set that was inherited without asking
+
+**Measured.** Which models the fan-out actually asks. The harness has used
+`src/parallel.ts#pickParallelModels` since round 1 — the routed model, then the first
+entry of each tier from heavy down — and round 3 noticed in passing that it never
+includes the strongest model at n=2 or n=3. Nothing had scored it against anything.
+
+**Changed.** Four alternative candidate policies (`strongest`, `cheapest`, `spread`,
+`tier-top`) alongside `shipped`, selectable with `--candidate-policy` and compared by
+`--sweep policy`. Every policy may read only what the real router knows: tier lists,
+`models[key].capability` and published prices. A test enforces that by jittering the
+hidden `skill` numbers and requiring every policy to return an unchanged set — a policy
+that peeked at the oracle would fail it. **None of this changes the shipped fan-out.**
+
+**What the numbers did** (`swe-router-long-v1`, n=3, noise 10, mean of 5 seeds):
+
+| policy | bias | ceiling | adopted | adopted lift | regress | fan-out $ | $/extra solve |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| **`shipped`** | 0 | 96.7% | 91.3% | **+16.3pp** | 0.6 | $157.08 | **$13.65** |
+| **`shipped`** | 20 | 96.7% | 72.3% | **−2.7pp** | 8.8 | $157.08 | $78.54 |
+| `strongest` | 0 | 100% | 90.7% | +15.7pp | 0.0 | $259.25 | $18.31 |
+| `strongest` | 20 | 100% | 100% | +25.0pp | 0.0 | $259.25 | $17.28 |
+| `cheapest` | 0 | 48.3% | 51.7% | −23.3pp | 23.8 | $12.92 | — |
+| `spread` | 0 | 100% | 97.7% | +22.7pp | 0.0 | $160.70 | $11.35 |
+| **`tier-top`** | 0 | 96.7% | 96.7% | **+21.7pp** | 0.0 | **$61.95** | **$4.77** |
+| **`tier-top`** | 20 | 96.7% | 96.7% | **+21.7pp** | 0.0 | **$61.95** | **$4.77** |
+
+**The inherited policy is the worst of the sensible ones on every axis at once.**
+`tier-top` — the model the *router itself* would prefer in each tier — delivers
+**+21.7pp against `shipped`'s +16.3pp**, for **$61.95 of fan-out against $157.08**, at
+**$4.77 per extra solve against $13.65**. It is simultaneously better, 2.5× cheaper,
+and completely unmoved by a judge bias that takes `shipped` **negative**.
+
+**And the reason connects two earlier rounds.** Printing the sets explains all of it:
+
+| policy | set (skill, output $/Mtok) | flashiest vs strongest |
+| --- | --- | --- |
+| **`shipped`** | opus-5 (86, $25) · **astra (74, $50)** · flash (46, $0.5) | **opposed** |
+| `strongest` | fable (91, $50) · opus-5 (86, $25) · astra (74, $50) | aligned |
+| `spread` | opus-5 (86, $25) · fable (91, $50) · flash (46, $0.5) | aligned |
+| `tier-top` | opus-5 (86, $25) · glm-5.3 (62, $2.64) · flash (46, $0.5) | aligned |
+
+`shipped` is the **only** set whose flashiest member is not its strongest, and a test
+now asserts that. Judge bias points at the most expensive-looking answer; in every
+other set that answer is also the best one, so bias is harmless or even helpful. In the
+shipped set it points at `gpt-6-astra` — pricier than Opus and 12 skill points weaker.
+
+That is the **tier price inversion from round 2 propagating into the fan-out**: the
+policy takes `tiers.standard[0]`, and in the shipped defaults the standard tier's
+preferred model costs more per token than the heavy tier's. One configuration fact
+explains both why over-routing is unpenalised (round 2) and why the fan-out is fragile
+to a biased judge (round 9).
+
+**Caveat, stated plainly.** `tier-top`'s immunity is immunity to *this* model of bias —
+a judge that prefers the higher-priced-looking answer. If Jev's real bias runs on some
+other axis (length, structure, hedging), the alignment argument does not automatically
+transfer. What does transfer regardless of the bias axis: `tier-top` gets more lift for
+40% of the spend, and that comparison does not depend on the bias model at all.
+
+**Next.** Nine rounds in, the harness measures the router, the cache, the traffic
+model, the judge's error, the judge's bias, the adoption gate, the candidate set and
+its own competence assumption. The remaining gap is unchanged and is not something more
+offline rounds can close: `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

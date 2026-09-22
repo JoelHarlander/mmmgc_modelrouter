@@ -121,18 +121,100 @@ export class JevJudge implements Judge {
 	}
 }
 
-/**
- * Mirrors src/parallel.ts#pickParallelModels for the eval fleet: the routed model
- * first, then the strongest configured model of each tier from heavy down, then
- * the remaining tier entries, skipping anything unauthed.
- */
-export function pickCandidates(args: {
+export interface CandidatePolicyArgs {
 	current: Model<Api> | undefined;
 	cfg: RouterConfig;
 	n: number;
 	byKey: Map<string, FleetModel>;
 	unauthed: Set<string>;
-}): FleetModel[] {
+}
+
+export type CandidatePolicy = (args: CandidatePolicyArgs) => FleetModel[];
+
+/**
+ * Alternative candidate sets, for measuring what a *different* fan-out would buy.
+ * None of these change the shipped fan-out: `shipped` is the one it actually uses and
+ * is pinned against src/parallel.ts by test; the rest exist only to say what the
+ * inherited policy costs by comparison.
+ *
+ * Every policy may only use information the real router has — the configured tier
+ * lists, `models[key].capability`, and published prices. None may read the oracle's
+ * `skill`, which is the hidden truth they are being scored against. In this fleet
+ * `capability` and `skill` deliberately disagree, so ranking by capability is a noisy
+ * proxy, as it would be in reality.
+ */
+export const CANDIDATE_POLICIES: Record<string, CandidatePolicy> = {
+	shipped: (args) => pickCandidates(args),
+
+	/** The N highest declared capabilities. Ignores cost and the current model entirely. */
+	strongest: (args) => rank(args, (a, b) => capabilityOf(args.cfg, b) - capabilityOf(args.cfg, a)),
+
+	/** The N cheapest per cold turn: the spend-first mirror of `strongest`. */
+	cheapest: (args) => rank(args, (a, b) => coldish(a) - coldish(b)),
+
+	/**
+	 * The routed model, then alternately the strongest and the cheapest of what is left.
+	 * Maximises the quality range in the set, which is what a judge needs before it can
+	 * tell the candidates apart at all.
+	 */
+	spread: (args) => {
+		const { current, byKey, unauthed, n, cfg } = args;
+		const pool = [...byKey.values()].filter((m) => !unauthed.has(m.key));
+		const chosen: FleetModel[] = [];
+		const take = (m: FleetModel | undefined) => {
+			if (m && chosen.length < n && !chosen.includes(m)) chosen.push(m);
+		};
+		take(current ? byKey.get(modelKey(current)) : undefined);
+		let wantStrong = true;
+		while (chosen.length < n) {
+			const rest = pool.filter((m) => !chosen.includes(m));
+			if (rest.length === 0) break;
+			rest.sort((a, b) => (wantStrong ? capabilityOf(cfg, b) - capabilityOf(cfg, a) : coldish(a) - coldish(b)));
+			take(rest[0]);
+			wantStrong = !wantStrong;
+		}
+		return chosen;
+	},
+
+	/** The model the router itself would prefer in each tier, heaviest first, then fill. */
+	"tier-top": (args) => {
+		const { cfg, byKey, unauthed, n } = args;
+		const chosen: FleetModel[] = [];
+		const take = (key: string | undefined) => {
+			const m = key ? byKey.get(key) : undefined;
+			if (m && chosen.length < n && !chosen.includes(m) && !unauthed.has(m.key)) chosen.push(m);
+		};
+		for (const tier of [...TIERS].reverse()) {
+			const keys = (cfg.tiers[tier] ?? []).filter((k) => !unauthed.has(k) && byKey.has(k));
+			take([...keys].sort((a, b) => coldish(byKey.get(a)!) - coldish(byKey.get(b)!))[0]);
+		}
+		for (const tier of [...TIERS].reverse()) for (const key of cfg.tiers[tier] ?? []) take(key);
+		return chosen;
+	},
+};
+
+function capabilityOf(cfg: RouterConfig, m: FleetModel): number {
+	return cfg.models[m.key]?.capability ?? 50;
+}
+
+/** A cold turn's rough price shape — what a fan-out candidate actually pays. */
+function coldish(m: FleetModel): number {
+	return m.cost.input + m.cost.output / 10;
+}
+
+function rank(args: CandidatePolicyArgs, cmp: (a: FleetModel, b: FleetModel) => number): FleetModel[] {
+	return [...args.byKey.values()]
+		.filter((m) => !args.unauthed.has(m.key))
+		.sort(cmp)
+		.slice(0, args.n);
+}
+
+/**
+ * Mirrors src/parallel.ts#pickParallelModels for the eval fleet: the routed model
+ * first, then the strongest configured model of each tier from heavy down, then
+ * the remaining tier entries, skipping anything unauthed.
+ */
+export function pickCandidates(args: CandidatePolicyArgs): FleetModel[] {
 	const { current, cfg, n, byKey, unauthed } = args;
 	const chosen: FleetModel[] = [];
 	const seen = new Set<string>();
