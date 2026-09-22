@@ -1940,3 +1940,41 @@ the shipped loop rather than by my re-reading it, which is how round 24's audit 
 and is not a method that scales.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 33 — 2026-09-23 — make the change reviewable
+
+**Measured.** The diff. Thirty-two rounds had produced a branch of **+64,444 lines**, of
+which **52,603 were results JSON** — and the largest single committed file was a
+15,366-line baseline. A change nobody can read is a change nobody can check, and this one
+is going to a reviewer who was not here for any of it.
+
+**Changed.** The committed `latest-<profile>.json` baseline now carries **metrics only**.
+The full per-turn detail stays in the per-run file, which is already gitignored. Nothing
+is lost: the gate and `--compare` read `metrics` and nothing else — the turn records were
+two orders of magnitude larger than the numbers they support, and `--explain` reads them
+from the run that produced them.
+
+**What the numbers did.**
+
+| | before | after |
+| --- | ---: | ---: |
+| tracked lines under `eval/results/` | 52,603 | **12,045** |
+| largest committed baseline | 15,366 lines | **66 lines** |
+| net change to the branch | — | **−40,592 lines** |
+
+What remains committed is what a reader actually wants: this log, the eight baselines the
+gate compares against, and the sweep, audit, probe, calibration, bootstrap and coverage
+snapshots that the findings quote.
+
+Two tests hold it: the baseline must not carry turn records, the per-run file must, and
+the per-run file must be several times larger — so if `turns` ever creeps back into the
+committed artefact it fails rather than silently re-inflating the diff.
+
+**Also verified this round.** `src/` is **untouched** since the base commit — the brief's
+hard constraint, checked rather than asserted — and the whole thing builds, tests and
+gates green from a clean `git archive` of `HEAD` with nothing but `node_modules`
+supplied.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

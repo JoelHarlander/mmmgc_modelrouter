@@ -331,6 +331,17 @@ test("results round-trip and the comparison knows which direction is better", as
 	assert.ok(back);
 	assert.deepEqual(back.metrics, metrics);
 
+	// The committed baseline carries the numbers and not the turn records: the gate and
+	// --compare read metrics only, and the turns are ~50x larger than what supports them.
+	assert.equal(back.turns, undefined, "the baseline should not carry per-turn detail");
+	// Compared through JSON on both sides: a round trip drops keys whose value is
+	// undefined, which is a serialisation artefact rather than a difference.
+	assert.deepEqual(readRun(written.runPath)?.turns, JSON.parse(JSON.stringify(outcome.turns)), "...but the per-run record still should");
+	assert.ok(
+		readFileSync(written.runPath, "utf8").length > readFileSync(written.latestPath, "utf8").length * 5,
+		"dropping turns should make the baseline dramatically smaller",
+	);
+
 	// A regressed run is recorded for inspection but must not become the new baseline.
 	const regressed = writeRun(root, { ...record, runId: "2026-01-02T00-00-00-test-def5678" }, { updateLatest: false });
 	assert.equal(regressed.latestPath, undefined);

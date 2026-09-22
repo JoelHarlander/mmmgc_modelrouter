@@ -22,7 +22,13 @@ export interface RunRecord {
 	live: boolean;
 	git?: string;
 	metrics: RunMetrics;
-	turns: TurnRecord[];
+	/**
+	 * Per-turn detail. Present in the per-run file and **omitted from the committed
+	 * `latest-<profile>.json` baseline**, which exists only to be compared against: the
+	 * gate and `--compare` read `metrics` and nothing else, and the turn records are two
+	 * orders of magnitude larger than the numbers they support.
+	 */
+	turns?: TurnRecord[];
 }
 
 export function resultsDir(root: string): string {
@@ -45,7 +51,8 @@ export function writeRun(root: string, record: RunRecord, options: { updateLates
 	writeFileSync(runPath, `${JSON.stringify(record, replacer, "\t")}\n`);
 	if (options.updateLatest === false) return { runPath };
 	const latest = latestPath(root, record.profile);
-	writeFileSync(latest, `${JSON.stringify(record, replacer, "\t")}\n`);
+	const { turns: _turns, ...baseline } = record;
+	writeFileSync(latest, `${JSON.stringify(baseline, replacer, "\t")}\n`);
 	return { runPath, latestPath: latest };
 }
 
