@@ -20,15 +20,21 @@
 		"halfWidth": 0.122
 	},
 	"listEquivalentUsd": {
-		"point": 149.2058,
-		"low": 106.7574,
-		"high": 192.2703,
-		"halfWidth": 42.7564
+		"point": 149.2088,
+		"low": 106.7604,
+		"high": 192.2735,
+		"halfWidth": 42.7566
 	},
 	"coldPremiumShare": {
 		"point": 0.4929,
 		"low": 0.3701,
 		"high": 0.5775,
 		"halfWidth": 0.1037
+	},
+	"wallClockSeconds": {
+		"point": 4968,
+		"low": 3991.2,
+		"high": 5928.1,
+		"halfWidth": 968.45
 	}
 }

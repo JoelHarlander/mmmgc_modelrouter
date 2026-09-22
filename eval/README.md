@@ -66,8 +66,8 @@ deltas. `--note "..."` appends a round line to [`results/log.md`](results/log.md
 | `4` | `--audit-config` only: the shipped tiers are not a cost ladder, not a capability ladder, or collapse onto one model |
 
 `--gate` watches a deliberately small set — `ineligibleChoices` (no tolerance),
-`turnSuccessRate`, `sessionSuccessRate` and `tierAccuracy` (±2pp), `listEquivalentUsd`
-and `coldPremiumUsd` (±5%), and `candidate.adoptedLift` (±2pp). It watches what a
+`turnSuccessRate`, `sessionSuccessRate` and `tierAccuracy` (±2pp), `listEquivalentUsd`,
+`coldPremiumUsd` and `wallClockSeconds` (±5%), and `candidate.adoptedLift` (±2pp). It watches what a
 session **adopts**, not what the judge would have picked. `--gate-tolerance <x>` scales
 the band; improvements never fail, however large.
 
@@ -281,7 +281,9 @@ for the *differences* the findings actually rest on — paired, because every cl
 "A beats B on the same tasks", which cancels the shared task-difficulty variance.
 
 The result is worth knowing before reading any number here: on the 20-task long pack,
-**5 of 5 cost differences resolve at 95% and 0 of 5 quality differences do.** Resolving
+**5 of 5 cost differences resolve at 95%, 5 of 5 wall-clock differences resolve, and
+0 of 5 quality differences do.** This harness resolves *resources* and does not resolve
+*outcomes*. Resolving
 a 5pp quality difference would need about 211 tasks of this shape and 2pp about 1300.
 
 This harness measures money well and quality poorly, and growing the pack does not fix

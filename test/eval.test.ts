@@ -22,6 +22,7 @@ import { computeCalibration } from "../eval/calibration.ts";
 import { explainTask } from "../eval/explain.ts";
 import { recordAnswers } from "../eval/record.ts";
 import { pickParallelModels } from "../src/parallel.ts";
+import { heuristicTier } from "../src/router.ts";
 import { CANDIDATE_POLICIES, JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
 import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifier.ts";
 import { loadFleet } from "../eval/fleet.ts";
@@ -1510,4 +1511,35 @@ test("the shipped candidate set is also the slowest, and headroom captured canno
 	assert.ok(cheapest.candidate!.oracleSuccessRate < cheapest.candidate!.baselineSuccessRate);
 	assert.equal(cheapest.candidate!.judgeHeadroomCaptured, 0);
 	assert.ok(cheapest.candidate!.adoptedLift < 0, "...and the fan-out should be recorded as harmful");
+});
+
+test("the router can keep a rate-limited model, and the heuristic fallback guarantees it", async () => {
+	// Found in round 26 by sweeping the start model. Reported, not fixed: another task
+	// owns changes to how the router selects a model. This test documents the behaviour
+	// and guards the detector that found it.
+	const outcome = await run({ startModel: "faux-plan-codex/gpt-6-astra" });
+	const ineligible = outcome.turns.filter((t) => !t.eligible);
+	assert.equal(ineligible.length, 1, "the pack should still reach the case");
+	const turn = ineligible[0]!;
+	assert.match(turn.ineligibleReason ?? "", /rate limited \(429\)/);
+	assert.match(turn.reason, /confidence .* < .*; keeping/, "it is the low-confidence branch that keeps it");
+	assert.equal(turn.switched, false);
+
+	// The mechanism, from src/ rather than from the fixture: chooseModel's low-confidence
+	// early return hands back `current` without consulting ledger.isBlocked...
+	const router = readFileSync(join(ROOT, "src", "router.ts"), "utf8");
+	const earlyReturn = router.slice(router.indexOf("if (confidence < cfg.switching.minConfidence"), router.indexOf("// Try the requested tier"));
+	assert.ok(earlyReturn.includes("model: current"), "src/router.ts's low-confidence branch changed shape");
+	assert.ok(!earlyReturn.includes("isBlocked"), "src/router.ts now checks the block before keeping current — update this test and the brief");
+
+	// ...and every confidence heuristicTier can return is below the default bar, so a Jev
+	// outage always takes that branch. The two fallbacks cancel each other out.
+	const confidences = [...router.matchAll(/confidence: (0\.\d+)/g)].map((m) => Number(m[1]));
+	assert.ok(confidences.length >= 3, "could not read heuristicTier's confidences");
+	for (const c of confidences) {
+		assert.ok(c < DEFAULT_CONFIG.switching.minConfidence, `heuristicTier can return ${c}, which would clear the ${DEFAULT_CONFIG.switching.minConfidence} bar`);
+	}
+	for (const prompt of ["ls", "why does this deadlock under load?", "implement the described function in two files"]) {
+		assert.ok(heuristicTier(prompt).confidence < DEFAULT_CONFIG.switching.minConfidence);
+	}
 });

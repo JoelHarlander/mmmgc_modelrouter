@@ -19,7 +19,8 @@ Jump to the round that established each claim, and what it rests on.
 
 | Finding | Round | Robust to |
 | --- | :---: | --- |
-| The router never picks an ineligible model — `ineligibleChoices` is 0 in every profile, including after a plan 429 | 1 | everything swept |
+| ~~The router never picks an ineligible model~~ | 1 | **FALSIFIED in r26.** Start the session on the provider that gets 429'd and the low-confidence branch keeps it, cooldown and all. |
+| **A Jev outage disables quota avoidance**: every `heuristicTier` confidence is below `minConfidence`, so the fallback always takes the branch that skips `isBlocked` | **26** | read from `src/router.ts` |
 | `planHiddenUsd` is ~98% of spend: almost all of it is invisible to the ledger it spends by | 1 | everything swept |
 | The default tiers are **not a cost ladder** — escalating a tier makes a turn *cheaper* | 2, **11** | **published list prices, no simulation** |
 | The shipped **`standard` tier is dominated by `heavy`**: cheaper *and* more capable, so no request justifies it | **11** | published prices + AA Intelligence Index |
@@ -1602,5 +1603,71 @@ model, so its ceiling (60.0%) sits *below* the baseline (80.0%), the headroom is
 and the ratio was a sign error rather than a number. It now reads **0** when there is no
 headroom to capture, and a test covers the case — one of the few places in this harness
 where a fan-out is actively harmful and the metric was flattering it.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 26 — 2026-09-23 — wall-clock joins the gate, and the eval finds a real bug
+
+**Measured.** Two loose ends from round 25: wall-clock was a headline metric but was
+neither gated nor bootstrapped, so a change that made the router twice as slow would
+have passed silently.
+
+**Changed.** `wallClockSeconds` is now a gated metric (±5%, like the cost metrics),
+appears in `--bootstrap`, and is a third column in `--sweep paired`.
+
+**What the numbers did.** The pattern from round 21 extends cleanly:
+
+> **5/5 cost differences resolve. 5/5 wall-clock differences resolve. 0/5 quality
+> differences do.**
+
+This harness resolves **resources** and does not resolve **outcomes**. That sharpens the
+`tier-top` recommendation considerably: it saves **2258 seconds** with a 95% interval of
+[−2684s, −2064s] and **$216** at [−$252, −$184] — both *resolved* — while its quality
+advantage (+2.9pp) is not. The honest recommendation is therefore "switch the candidate
+set for the measured time and money; the quality gain is directional", which is a
+stronger thing to say than "it's better".
+
+---
+
+**And then the gate test found a bug in the shipped router.**
+
+Verifying that the wall-clock gate fired, I ran the short pack with the session starting
+on `gpt-6-astra` — chosen only because it is the slowest model in the fleet. It exited
+**1**, not 3: **`ineligibleChoices: 1`**. That counter was built in round 1 to catch the
+router selecting a model that was unauthed, blocked or unknown, and it had read **0 in
+every profile of every round** until now.
+
+```
+mwaskom__seaborn-3010 t1: model=faux-plan-codex/gpt-6-astra
+  ineligible: rate limited (429) until 01:00:00
+  reason: 'confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra'
+```
+
+`chooseModel`'s low-confidence early return (`src/router.ts:66-75`) hands back the
+current model **without consulting `ledger.isBlocked`**. So when the classifier is
+unsure, the router keeps whatever the session is on — including a provider the ledger has
+just put in a 429 cooldown.
+
+**It compounds with the Jev-outage fallback, and that is the real finding.**
+`heuristicTier` returns confidence **0.34 or 0.4**; `switching.minConfidence` defaults to
+**0.5**. Every heuristic answer is therefore below the bar, so a Jev outage *always*
+takes the branch that skips the block check. **The fallback for "I don't know what this
+turn needs" disables the fallback for "this provider is refusing requests."** Round 12's
+calibration sweep noticed the heuristic sits entirely under the bar and did not follow
+the consequence through; round 26 did, by accident, while testing something else.
+
+Reported, **not fixed** — another task owns how the router selects a model. It is now
+§0 of [the findings brief](../../docs/research/router-eval-findings.md), and a test
+documents the behaviour, pins the mechanism against `src/router.ts`'s source, and fails
+if either the branch or `heuristicTier`'s confidences change.
+
+**The lesson is round 19's, again.** A default nobody varied — the starting model — hid
+a genuine router bug for twenty-five rounds behind a counter specifically designed to
+catch it. `--sweep start` existed from round 19; what was missing was running the
+*ordinary* profiles from a non-default start. `--sweep assumptions` now varies it, but
+only for the metrics it reports, not for the exit code. Worth remembering that a
+detector only fires in the states you actually visit.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

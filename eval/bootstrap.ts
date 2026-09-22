@@ -33,10 +33,11 @@ export interface BootstrapReport {
 	tierAccuracy: Interval;
 	listEquivalentUsd: Interval;
 	coldPremiumShare: Interval;
+	wallClockSeconds: Interval;
 	adoptedLift?: Interval;
 }
 
-const METRICS = ["sessionSuccessRate", "turnSuccessRate", "tierAccuracy", "listEquivalentUsd", "coldPremiumShare"] as const;
+const METRICS = ["sessionSuccessRate", "turnSuccessRate", "tierAccuracy", "listEquivalentUsd", "coldPremiumShare", "wallClockSeconds"] as const;
 
 export function bootstrap(turns: TurnRecord[], resamples = 1000, seed = "bootstrap"): BootstrapReport {
 	const byTask = new Map<string, TurnRecord[]>();
@@ -68,6 +69,7 @@ export function bootstrap(turns: TurnRecord[], resamples = 1000, seed = "bootstr
 		tierAccuracy: interval(point.tierAccuracy, samples.tierAccuracy!),
 		listEquivalentUsd: interval(point.listEquivalentUsd, samples.listEquivalentUsd!),
 		coldPremiumShare: interval(point.coldPremiumShare, samples.coldPremiumShare!),
+		wallClockSeconds: interval(point.wallClockSeconds, samples.wallClockSeconds!),
 	};
 	if (point.candidate && samples.adoptedLift!.length > 0) {
 		report.adoptedLift = interval(point.candidate.adoptedLift, samples.adoptedLift!);
@@ -128,7 +130,7 @@ export interface PairedResult {
 export function bootstrapDifference(
 	a: TurnRecord[],
 	b: TurnRecord[],
-	metrics: readonly string[] = ["sessionSuccessRate", "listEquivalentUsd"],
+	metrics: readonly string[] = ["sessionSuccessRate", "listEquivalentUsd", "wallClockSeconds"],
 	resamples = 1000,
 	seed = "paired",
 ): PairedResult[] {
@@ -179,7 +181,11 @@ function groupByTask(turns: TurnRecord[]): Map<string, TurnRecord[]> {
 export function renderPaired(results: PairedResult[], label: string): string {
 	const out: string[] = [`  ${label}`];
 	for (const r of results) {
-		const fmt = r.metric.toLowerCase().includes("usd") ? (n: number) => `$${n.toFixed(2)}` : (n: number) => `${(n * 100).toFixed(1)}pp`;
+		const fmt = r.metric.toLowerCase().includes("usd")
+			? (n: number) => `$${n.toFixed(2)}`
+			: r.metric.toLowerCase().includes("seconds")
+				? (n: number) => `${n.toFixed(0)}s`
+				: (n: number) => `${(n * 100).toFixed(1)}pp`;
 		out.push(
 			`    ${r.metric.padEnd(20)} ${signed(r.point, fmt).padStart(10)}   95% [${signed(r.low, fmt)}, ${signed(r.high, fmt)}]   ` +
 				`${r.significant ? "significant" : "NOT significant"}`,
@@ -204,6 +210,7 @@ export function renderBootstrap(report: BootstrapReport, label: string): string 
 	row("tier accuracy", report.tierAccuracy, pct);
 	row("cold premium share", report.coldPremiumShare, pct);
 	row("list cost", report.listEquivalentUsd, usd);
+	row("wall clock", report.wallClockSeconds, (n) => `${n.toFixed(0)}s`);
 	if (report.adoptedLift) row("adopted lift", report.adoptedLift, pct);
 	out.push("");
 	out.push("  a difference smaller than ± is not a result on this pack, however many decimals it has.");

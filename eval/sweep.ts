@@ -350,7 +350,12 @@ export function renderPairedComparisons(comparisons: PairedComparison[], title: 
 	}
 	const quality = comparisons.flatMap((c) => c.results.filter((r) => r.metric === "sessionSuccessRate"));
 	const cost = comparisons.flatMap((c) => c.results.filter((r) => r.metric === "listEquivalentUsd"));
-	out.push(`  ${cost.filter((r) => r.significant).length}/${cost.length} cost differences resolve; ${quality.filter((r) => r.significant).length}/${quality.length} quality differences do.`);
+	const time = comparisons.flatMap((c) => c.results.filter((r) => r.metric === "wallClockSeconds"));
+	out.push(
+		`  ${cost.filter((r) => r.significant).length}/${cost.length} cost differences resolve; ` +
+			`${time.filter((r) => r.significant).length}/${time.length} wall-clock differences resolve; ` +
+			`${quality.filter((r) => r.significant).length}/${quality.length} quality differences do.`,
+	);
 	const widest = quality.reduce((a, b) => (b.halfWidth > a.halfWidth ? b : a));
 	out.push(
 		`  To resolve a 5pp quality difference this pack would need about ` +

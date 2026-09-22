@@ -139,6 +139,7 @@ export const GATED_METRICS: { key: string; kind: "rate" | "relative" | "absolute
 	{ key: "tierAccuracy", kind: "rate", tolerance: 0.02 },
 	{ key: "listEquivalentUsd", kind: "relative", tolerance: 0.05 },
 	{ key: "coldPremiumUsd", kind: "relative", tolerance: 0.05 },
+	{ key: "wallClockSeconds", kind: "relative", tolerance: 0.05 },
 	{ key: "candidate.adoptedLift", kind: "rate", tolerance: 0.02 },
 ];
 

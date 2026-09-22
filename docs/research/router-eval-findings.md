@@ -32,6 +32,47 @@ So, throughout:
 
 ---
 
+## 0. A bug: the router can route to a provider it knows is rate-limited
+
+`npm run eval -- --start-model faux-plan-codex/gpt-6-astra` → **exit 1**,
+`ineligibleChoices: 1`.
+
+`chooseModel`'s low-confidence early return (`src/router.ts:66-75`) hands back the
+current model **without consulting `ledger.isBlocked`**:
+
+```ts
+if (confidence < cfg.switching.minConfidence && current) {
+    return { ..., model: current, switched: false,
+             reason: `confidence ... < ...; keeping ${currentKey}` };
+}
+```
+
+So when the classifier is unsure, the router keeps whatever model the session is on —
+including one the ledger has just put in a 429 cooldown. The same applies to the final
+`"no configured model is available; keeping current"` branch.
+
+**It compounds with the Jev-outage fallback.** `heuristicTier` returns confidence
+**0.34 or 0.4**, and `switching.minConfidence` defaults to **0.5** — so *every* heuristic
+answer takes that branch. When Jev is unavailable the router cannot route at all, and
+while it cannot route it also stops avoiding exhausted providers. The two fallbacks
+cancel each other out: the one for "I don't know what this turn needs" disables the one
+for "this provider is refusing requests".
+
+The observed path: Jev fails → heuristic returns 0.34 → low-confidence branch keeps the
+current model → that model's provider is in a 429 cooldown → the turn is sent to it
+anyway.
+
+**Recommendation.** Check `ledger.isBlocked` before keeping the current model, in both
+branches; fall through to tier selection when it is blocked. Separately, `heuristicTier`
+cannot clear its own bar, which is worth deciding deliberately rather than by accident.
+
+*Found in round 26, by sweeping the starting model — a default that had gone unexamined
+for twenty-five rounds. `ineligibleChoices` was built in round 1 to catch exactly this
+and had read 0 in every profile until the session started on the provider that gets
+rate-limited.*
+
+---
+
 ## 1. Fix the tier table before anything else
 
 `npm run eval -- --audit-config` — published list prices from
