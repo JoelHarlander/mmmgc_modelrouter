@@ -19,6 +19,7 @@ npm run eval -- --sweep pin                   # what a /model pin costs once it 
 npm run eval -- --sweep start                 # does any of this depend on where the session started?
 npm run eval -- --sweep assumptions           # rank every declared constant by how much it moves the answer
 npm run eval -- --sweep paired                # 95% intervals on the comparisons the findings rest on
+npm run eval -- --sweep coverage              # visit ~400 configurations and check the invariants in each
 npm run eval -- --bootstrap 2000              # what a single number from this pack is worth
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
@@ -64,6 +65,7 @@ deltas. `--note "..."` appends a round line to [`results/log.md`](results/log.md
 | `2` | the pack's ground truth is inconsistent with the fleet, or live mode was asked for without `ROUTER_EVAL_LIVE=1` |
 | `3` | `--gate` only: a headline metric regressed past tolerance against the recorded baseline |
 | `4` | `--audit-config` only: the shipped tiers are not a cost ladder, not a capability ladder, or collapse onto one model |
+| `5` | `--sweep coverage` only: an invariant broke in at least one configuration |
 
 `--gate` watches a deliberately small set — `ineligibleChoices` (no tolerance),
 `turnSuccessRate`, `sessionSuccessRate` and `tierAccuracy` (±2pp), `listEquivalentUsd`,
@@ -273,6 +275,21 @@ references a model the catalogue does not price.
 `--audit-local` audits this machine's merged config instead. That is useful and
 deliberately not the default, because its answer differs per machine.
 
+## Invariants, and why they need a sweep
+
+`--sweep coverage` runs the pack across ~400 configurations — starting model ×
+classifier × billing × confidence bar × pin length × an unauthed provider — and checks
+eight invariants in each, reporting every violation with the command that reproduces it.
+
+It exists because of a lesson that cost twenty-five rounds: **a detector only fires in
+the states you enter.** `ineligibleChoices` was built in round 1 to catch the router
+selecting a blocked model, and read 0 in every profile of every round — not because the
+router never did it, but because every profile started the session on the same model.
+`--sweep coverage` finds that case in 1.8 seconds.
+
+A violation is not necessarily a harness bug. The one this finds is a router bug, and is
+reported rather than fixed (§0 of the findings brief).
+
 ## How much a number is worth
 
 The long pack is six tasks; the short one is fifteen. `--bootstrap` resamples the pack's
@@ -338,6 +355,7 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `sweep.ts` | the judge, bias, traffic-profile, oracle, gate, policy, confidence, strategy, pin and start sweeps |
 | `assumptions.ts` | `--sweep assumptions`: what the answer rests on |
 | `bootstrap.ts` | confidence intervals, and the paired comparisons |
+| `coverage.ts` | `--sweep coverage`: invariants across ~400 configurations |
 | `record.ts` | writing a live classifier's answers back into a pack |
 | `probe.ts` | the judge bias probe and its calibration |
 | `calibration.ts` | is the classifier's confidence worth anything? |

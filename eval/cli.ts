@@ -19,6 +19,7 @@ import { execFileSync } from "node:child_process";
 import { JevClient } from "../src/jev.ts";
 import { JevJudge, NoisyJudge } from "./candidates.ts";
 import { auditAssumptions, renderAssumptions } from "./assumptions.ts";
+import { renderCoverage, runCoverage } from "./coverage.ts";
 import { auditConfig, renderAudit } from "./audit.ts";
 import { bootstrap, renderBootstrap } from "./bootstrap.ts";
 import { computeCalibration, renderCalibration } from "./calibration.ts";
@@ -89,7 +90,7 @@ interface Args {
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin" | "start" | "assumptions" | "paired";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin" | "start" | "assumptions" | "paired" | "coverage";
 	exploreTurns?: number;
 	calibration: boolean;
 	bootstrap?: number;
@@ -318,6 +319,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep start          does any of this depend on where the session started?
   --sweep assumptions    vary every declared constant and rank what the answer rests on
   --sweep paired         95% intervals on the comparisons the findings rest on
+  --sweep coverage       visit many configurations and check the invariants in each
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --context-sensitivity <x>  override every task's declared contextSensitivity (0..1)
@@ -421,6 +423,14 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "coverage") {
+			title = `invariant coverage — pack ${pack.id}`;
+			const c = await runCoverage({ pack, loaded });
+			cells = c.violations;
+			rendered = renderCoverage(c, title);
+			if (!args.json) process.stdout.write(rendered);
+			else process.stdout.write(`${JSON.stringify({ title, ...c }, null, "\t")}\n`);
+			return c.violations.length > 0 ? 5 : 0;
 		} else if (args.sweep === "paired") {
 			title = `paired comparisons — pack ${pack.id}, classifier ${args.classifier}, 1000 resamples of the pack's tasks`;
 			const c = await runPairedComparisons({ ...base, candidateN: args.candidatesExplicit ? args.candidates : 3 });

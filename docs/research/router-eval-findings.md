@@ -124,8 +124,11 @@ should not silently downgrade the work.
 
 `npm run eval -- --pack eval/tasks/swe-router-long-v1.json`
 
-- **$73.43 of cold-start premium on a 175-turn run — 49% of routed-turn spend**, across
+- **$39.17 of cold-start premium on a 175-turn run — 49% of routed-turn spend**, across
   90 switches. Money that bought nothing but re-reading context the model already had.
+  **This share is the load-bearing number**: it has survived fleet-skill jitter, the
+  traffic constants, compaction, operator pins, billing mode, the starting model, a
+  tripled pack and a plan 429, always landing between 40% and 60%.
 - **A thinking-level change flushes the cache on its own.** `src/index.ts:128-129`
   re-applies `cfg.thinking[tier]` every turn; a profile that never changes model still
   pays cold starts, all of them `thinking-change`. The cache-cost study found this by
@@ -133,9 +136,13 @@ should not silently downgrade the work.
 - **~98% of that spend is invisible to the ledger**, because subscription routes report
   $0. `planPointsUsed` converts it into the unit that actually runs out.
 
-This survives everything tested: fleet-skill jitter to ±10 (and 4/5 at ±20), the traffic
-constants over a 10× range, compaction, operator pins, billing mode, the starting model,
-and the paired bootstrap.
+**A related claim that does *not* hold unconditionally, and was conflated with it until
+round 27:** whether routing spends more *in total* than never routing depends on which
+models routing still has. With the fleet intact it spends **49% more** ($143.52 against
+$96.47). With the Codex plan 429'd it spends **18% less** ($78.79) — because it is forced
+onto a cheap on-demand model, and it pays 10.8pp of session success for the privilege.
+That is a downgrade, not a saving, and it is the round-2 finding (cheapest-in-tier)
+arriving by a different door.
 
 **Recommendation.** Price a switch against what it buys. The estimator in
 `src/router.ts:140-143` cannot do this today — the cache-cost study showed it

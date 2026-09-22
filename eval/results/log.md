@@ -1671,3 +1671,81 @@ only for the metrics it reports, not for the exit code. Worth remembering that a
 detector only fires in the states you actually visit.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 27 — 2026-09-23 — visit the states, and separate two claims that were one
+
+**Measured.** Round 26's lesson, generalised: *a detector only fires in the states you
+enter*. `ineligibleChoices` existed from round 1, was designed to catch exactly the bug
+round 26 found, and read 0 for twenty-five rounds because every profile started the
+session on the same model.
+
+**Changed.** `--sweep coverage` enumerates a cross-product of the configurations a real
+installation can be in — starting model × classifier × billing × confidence bar × pin
+length × an unauthed provider — and checks seven invariants in each:
+`eligible-route`, `tier-partition`, `no-nan`, `non-negative-cost`, `rate-in-range`,
+`compaction-is-cold`, `cold-costs-more`, `pinned-costs-nothing`. Every violation comes
+with the command that reproduces it. **396 configurations in 1.8 seconds.**
+
+Also: the long pack now 429s the Codex plan partway through one session. It had never
+exercised the quota path at all, so `--sweep coverage` reported zero violations on it —
+not because the router behaved, but because the pack could not reach the state.
+
+**What it found.**
+
+1. **Every structural invariant holds in all 396 configurations.** No NaN, no negative
+   cost, no rate outside 0..1, no warm compaction, no cold turn cheaper than its warm
+   twin, no pinned turn billed for a classifier call, and the tier partition sums to 1
+   everywhere. That is the strongest statement the harness has ever been able to make
+   about itself.
+2. **32 configurations break `eligible-route`** — all the round-26 router bug, and the
+   sweep reproduces it in 1.8 seconds instead of by accident.
+3. **The bug is not heuristic-specific, and the round-12 recommendation interacts with
+   it.** The violations appear at three confidence levels — 0.34, 0.71 and 0.34 against
+   bars of 0.5 and 0.8 — so *any* classifier answer below the bar triggers it. And they
+   are monotone in the bar: **0 violations at 0.0, 16 at 0.5, 16 at 0.8**, with more
+   turns affected at the higher bar. Round 12 recommended raising `minConfidence` to
+   0.6; round 27 adds the caveat that **raising the bar widens the window in which the
+   router can route to a provider it knows is refusing requests.** Fix the block check
+   first, then raise the bar.
+
+---
+
+**And adding the 429 to the long pack separated two claims that had been one since round 4.**
+
+I have been writing "switching is expensive" to mean two different things:
+
+- **A. The cold-start premium is about half of routed-turn spend.** $39.17 of $80.60 here
+  — **49%**.
+- **B. Routing spends more in total than never routing.** $143.52 against $96.47 — **+49%**.
+
+The coincidence of the two numbers did not help. With the plan 429'd, **A holds and B
+inverts**:
+
+| | routing (oracle) | never switching | |
+| --- | ---: | ---: | --- |
+| fleet intact — list $ | $143.52 | $96.47 | routing **+49%** |
+| fleet intact — session | 85.7% | 85.7% | tie |
+| **Codex plan 429'd** — list $ | **$78.79** | $96.47 | routing **−18%** |
+| **Codex plan 429'd** — session | **74.9%** | 85.7% | routing **−10.8pp** |
+| cold premium share, both | 48–49% | — | **A, unchanged** |
+
+Routing does not become *cheaper* when the plan runs out; it becomes **a different
+product**. Forced off `gpt-6-astra` it falls to `glm-5.3`, spends less and does worse —
+which is round 2's cheapest-in-tier and round 14's billing dependence arriving through a
+third door.
+
+**A is the load-bearing result and it has now survived everything this harness can throw
+at it**: fleet-skill jitter, the traffic constants over a 10× range, compaction,
+operator pins, billing mode, the starting model, a tripled pack, and now a plan
+exhaustion — always landing between 40% and 60% of routed-turn spend. **B is
+conditional**, and the log, the index and the brief now say so separately.
+
+**The quality comparison flipped a third time**, from never-switching winning (round 4),
+to routing winning (round 15), to never-switching winning again (round 27, because the
+429 costs routing the model it relied on). Its test no longer asserts a direction at all
+— it takes the 429 out of the pack and requires the comparison to *flip*, which is a
+demonstration that it is not quotable rather than a claim that it is.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

@@ -1,0 +1,167 @@
+{
+	"title": "paired comparisons — pack swe-router-long-v1, classifier scripted, 1000 resamples of the pack's tasks",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"label": "routing (oracle) − never switching (heuristic)",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": -0.1085,
+					"low": -0.3125,
+					"high": 0.0958,
+					"significant": false,
+					"halfWidth": 0.2042,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": -17.68,
+					"low": -81.8964,
+					"high": 87.475,
+					"significant": false,
+					"halfWidth": 84.6857,
+					"tasks": 20
+				},
+				{
+					"metric": "wallClockSeconds",
+					"point": -193,
+					"low": -1450.6,
+					"high": 2189,
+					"significant": false,
+					"halfWidth": 1819.8,
+					"tasks": 20
+				}
+			]
+		},
+		{
+			"label": "fan-out every turn − no fan-out",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": 0.2286,
+					"low": 0.0723,
+					"high": 0.4078,
+					"significant": true,
+					"halfWidth": 0.1678,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": 358.6793,
+					"low": 308.7476,
+					"high": 414.2295,
+					"significant": true,
+					"halfWidth": 52.741,
+					"tasks": 20
+				},
+				{
+					"metric": "wallClockSeconds",
+					"point": 3477.4,
+					"low": 3179.3,
+					"high": 4133.2,
+					"significant": true,
+					"halfWidth": 476.95,
+					"tasks": 20
+				}
+			]
+		},
+		{
+			"label": "tier-top candidate set − the shipped one",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": 0.04,
+					"low": 0,
+					"high": 0.096,
+					"significant": false,
+					"halfWidth": 0.048,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": -219.1412,
+					"low": -252.0338,
+					"high": -189.0934,
+					"significant": true,
+					"halfWidth": 31.4702,
+					"tasks": 20
+				},
+				{
+					"metric": "wallClockSeconds",
+					"point": -2258,
+					"low": -2683.8,
+					"high": -2064.4,
+					"significant": true,
+					"halfWidth": 309.7,
+					"tasks": 20
+				}
+			]
+		},
+		{
+			"label": "explore-3 − fan out every turn",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": -0.0171,
+					"low": -0.1875,
+					"high": 0.0785,
+					"significant": false,
+					"halfWidth": 0.133,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": -244.1272,
+					"low": -353.5768,
+					"high": -176.5415,
+					"significant": true,
+					"halfWidth": 88.5177,
+					"tasks": 20
+				},
+				{
+					"metric": "wallClockSeconds",
+					"point": -2001.2,
+					"low": -4118.2,
+					"high": -897,
+					"significant": true,
+					"halfWidth": 1610.6,
+					"tasks": 20
+				}
+			]
+		},
+		{
+			"label": "fan-out with a 40-point biased judge − no fan-out",
+			"results": [
+				{
+					"metric": "sessionSuccessRate",
+					"point": 0.0915,
+					"low": -0.0752,
+					"high": 0.2654,
+					"significant": false,
+					"halfWidth": 0.1703,
+					"tasks": 20
+				},
+				{
+					"metric": "listEquivalentUsd",
+					"point": 358.6793,
+					"low": 308.7476,
+					"high": 414.2295,
+					"significant": true,
+					"halfWidth": 52.741,
+					"tasks": 20
+				},
+				{
+					"metric": "wallClockSeconds",
+					"point": 3477.4,
+					"low": 3179.3,
+					"high": 4133.2,
+					"significant": true,
+					"halfWidth": 476.95,
+					"tasks": 20
+				}
+			]
+		}
+	]
+}

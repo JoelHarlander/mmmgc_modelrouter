@@ -1,0 +1,67 @@
+{
+	"title": "pin sweep — pack swe-router-long-v1, classifier scripted",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"manualPinTurns": 0,
+			"pinnedTurns": 0,
+			"tierAccuracy": 0.92,
+			"sessionSuccessRate": 0.7257,
+			"switches": 97,
+			"listEquivalentUsd": 86.9353,
+			"coldPremiumUsd": 41.0025,
+			"pinnedWrongTier": 0
+		},
+		{
+			"manualPinTurns": 1,
+			"pinnedTurns": 5,
+			"tierAccuracy": 0.9143,
+			"sessionSuccessRate": 0.7257,
+			"switches": 98,
+			"listEquivalentUsd": 87.0795,
+			"coldPremiumUsd": 41.0785,
+			"pinnedWrongTier": 1
+		},
+		{
+			"manualPinTurns": 2,
+			"pinnedTurns": 10,
+			"tierAccuracy": 0.9029,
+			"sessionSuccessRate": 0.7086,
+			"switches": 96,
+			"listEquivalentUsd": 84.0831,
+			"coldPremiumUsd": 40.4671,
+			"pinnedWrongTier": 5
+		},
+		{
+			"manualPinTurns": 3,
+			"pinnedTurns": 15,
+			"tierAccuracy": 0.88,
+			"sessionSuccessRate": 0.6914,
+			"switches": 90,
+			"listEquivalentUsd": 80.5989,
+			"coldPremiumUsd": 39.166,
+			"pinnedWrongTier": 9
+		},
+		{
+			"manualPinTurns": 5,
+			"pinnedTurns": 23,
+			"tierAccuracy": 0.88,
+			"sessionSuccessRate": 0.68,
+			"switches": 86,
+			"listEquivalentUsd": 74.8706,
+			"coldPremiumUsd": 36.0283,
+			"pinnedWrongTier": 11
+		},
+		{
+			"manualPinTurns": 10,
+			"pinnedTurns": 29,
+			"tierAccuracy": 0.8571,
+			"sessionSuccessRate": 0.68,
+			"switches": 81,
+			"listEquivalentUsd": 70.0568,
+			"coldPremiumUsd": 32.592,
+			"pinnedWrongTier": 16
+		}
+	]
+}

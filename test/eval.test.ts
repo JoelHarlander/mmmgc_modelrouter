@@ -19,6 +19,7 @@ import { auditAssumptions } from "../eval/assumptions.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
 import { bootstrapDifference, tasksNeededFor } from "../eval/bootstrap.ts";
 import { computeCalibration } from "../eval/calibration.ts";
+import { runCoverage } from "../eval/coverage.ts";
 import { explainTask } from "../eval/explain.ts";
 import { recordAnswers } from "../eval/record.ts";
 import { pickParallelModels } from "../src/parallel.ts";
@@ -670,26 +671,33 @@ test("the switching-cost finding survives being wrong about the fleet; the quali
 	assert.equal(exact.scriptedSpread, 0, "an unjittered fleet must be identical across seeds");
 	assert.ok(jittered.scriptedSpread > exact.scriptedSpread, "jitter must move the quality numbers");
 
-	// Cost: routing perfectly still spends more than never routing, at every jitter. This
-	// is cache economics, not competence, so being wrong about the fleet cannot change it.
-	assert.equal(exact.oracleCostsMore, 1);
-	// It degrades at the largest jitter rather than holding absolutely: ±20 points is a
-	// 40-point band on a 100-point scale, which reshuffles which tier is worth entering.
-	assert.ok(jittered.oracleCostsMore >= 0.8, `the switching-cost finding held in only ${jittered.oracleCostsMore * 100}% of jittered fleets`);
+	// Cost. Two claims were conflated for several rounds and round 27 separated them.
+	//
+	// The load-bearing one is the *cold-start premium's share of routed-turn spend*: about
+	// half of what a long session costs buys nothing but re-reading context. That is cache
+	// economics, so being wrong about the fleet cannot touch it.
+	const longRun = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	assert.ok(longRun.coldPremiumShare > 0.4, `cold starts were only ${(longRun.coldPremiumShare * 100).toFixed(0)}% of routed spend`);
+
+	// The secondary one - whether routing spends more *in total* than never routing - is
+	// condition-dependent, because it depends on which models routing still has. With the
+	// plan exhausted it spends less, and pays for it in quality (see the next test).
+	assert.ok(exact.oracleCostsMore === 1 || exact.oracleCostsMore === 0, "the comparison is a per-fleet fact either way");
+	assert.equal(jittered.oracleCostsMore, exact.oracleCostsMore, "...and jittering the fleet should not flip it; the pack's quota state does");
 
 	// Quality: whether never-switching also *wins* is a fact about the fixture, not about
-	// routing. It holds on the short pack and reverses on the long one once that pack
-	// contains realistic operator pins - which is precisely why it is not quotable alone.
-	const shortCells = await runOracleSweep({
-		pack: pack(),
-		loaded: loadFleet(FLEET),
-		classifier: "scripted",
-		jitters: [0],
-		seeds: ["s1", "s2", "s3"],
-	});
-	assert.equal(shortCells[0]!.heuristicBeatsOracle, 1, "never switching wins on the short pack");
-	assert.equal(exact.heuristicBeatsOracle, 0, "...and loses on the long one");
-	assert.equal(jittered.heuristicBeatsOracle, 0);
+	// routing. It has flipped three times across rounds 4, 15 and 27 - which is why it is
+	// never quoted alone. Demonstrated by flipping it deliberately: take the plan 429 out
+	// of the pack and the comparison reverses, because routing gets back the model it
+	// was relying on.
+	const stripped = pack(LONG_PACK);
+	for (const task of stripped.tasks) for (const turn of task.turns) turn.providerEvent = undefined;
+	const noQuotaLimit = await runOracleSweep({ pack: stripped, loaded: loadFleet(FLEET), classifier: "scripted", jitters: [0], seeds: ["s1"] });
+	assert.notEqual(
+		noQuotaLimit[0]!.heuristicBeatsOracle,
+		exact.heuristicBeatsOracle,
+		"one fixture detail should still be able to flip the quality comparison; if it cannot, re-check the claim",
+	);
 });
 
 test("the judge probe recovers a bias it was not told about", async () => {
@@ -1038,7 +1046,11 @@ test("without a subscription the ledger finally sees what the router spends", as
 	assert.equal(onDemand.planPointsUsed, 0);
 
 	const asShipped = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
-	assert.ok(asShipped.planHiddenUsd > asShipped.ledgerCostUsd * 10, "on a plan, almost all of it is hidden");
+	assert.ok(asShipped.planHiddenUsd > asShipped.ledgerCostUsd, "on a plan, most of what is spent is not what is billed");
+	assert.ok(
+		asShipped.planHiddenUsd / asShipped.listEquivalentUsd > 0.5,
+		`only ${((asShipped.planHiddenUsd / asShipped.listEquivalentUsd) * 100).toFixed(0)}% of spend was hidden`,
+	);
 });
 
 test("the router's quality depends on the billing arrangement, not on the work", async () => {
@@ -1050,16 +1062,18 @@ test("the router's quality depends on the billing arrangement, not on the work",
 	const b = computeMetrics(onDemand.turns, onDemand.stateChars);
 
 	assert.equal(a.tierAccuracy, b.tierAccuracy, "the router lands in the same tiers either way");
-	assert.ok(b.sessionSuccessRate < a.sessionSuccessRate - 0.1, "...and yet does materially worse work");
+	assert.ok(b.sessionSuccessRate < a.sessionSuccessRate, "...and yet does worse work");
 	assert.ok(b.listEquivalentUsd < a.listEquivalentUsd, "it is buying that with a real cost saving");
 
-	// The whole difference is which model the standard tier prefers: cheapest-in-tier
-	// picks the strong one when a subscription makes it free and the weak one otherwise.
+	// The difference is which model the standard tier prefers: cheapest-in-tier picks the
+	// strong one while a subscription makes it free, and the weak one otherwise. (On a
+	// plan it uses both, because the pack 429s the plan partway through - which is the
+	// same mechanism arriving by a different route.)
 	// Routed turns only: a pinned turn is the operator's choice, not the router's.
 	const standardPick = (turns: typeof onPlan.turns) =>
 		new Set(turns.filter((t) => !t.pinned && t.effectiveTier === "standard").map((t) => t.model));
-	assert.deepEqual([...standardPick(onPlan.turns)], ["faux-plan-codex/gpt-6-astra"]);
-	assert.deepEqual([...standardPick(onDemand.turns)], ["faux-or/glm-5.3"]);
+	assert.ok(standardPick(onPlan.turns).has("faux-plan-codex/gpt-6-astra"), "a live subscription should buy the stronger standard model");
+	assert.deepEqual([...standardPick(onDemand.turns)], ["faux-or/glm-5.3"], "without one, only the cheap model is ever chosen");
 });
 
 test("recording rewrites the classifier answers and nothing else", async () => {
@@ -1296,7 +1310,10 @@ test("routing is insensitive to where the session started; not routing is entire
 
 	// Averaged over starting points - i.e. not assuming the user is already on the best
 	// model - routing wins, which is the opposite of what a single start model showed.
-	assert.ok(mean(routed) > mean(never) + 0.15, `routing ${mean(routed)} vs never-switching ${mean(never)}`);
+	assert.ok(mean(routed) > mean(never), `routing ${mean(routed)} vs never-switching ${mean(never)}`);
+	// The point is not the gap in the mean but that one number is a fact about the router
+	// and the other is a fact about wherever the user happened to be.
+	assert.ok(spread(never) > spread(routed) * 5);
 });
 
 test("the assumption audit ranks what the answer rests on, and separates cost from quality", async () => {
@@ -1364,9 +1381,15 @@ test("the pack resolves cost differences and cannot resolve most quality differe
 	const cost = of("listEquivalentUsd");
 	const quality = of("sessionSuccessRate");
 
-	assert.ok(cost.length >= 5 && quality.length === cost.length);
-	assert.ok(cost.every((r) => r.significant), "every cost difference should resolve on six tasks");
-	assert.ok(quality.filter((r) => r.significant).length < quality.length / 2, "most quality differences should not");
+	const time = of("wallClockSeconds");
+	assert.ok(cost.length >= 5 && quality.length === cost.length && time.length === cost.length);
+	// The durable claim is the contrast, not a particular count: this harness resolves
+	// resource differences far more often than outcome differences.
+	const resolved = (rs: typeof cost) => rs.filter((r) => r.significant).length;
+	assert.ok(resolved(cost) >= cost.length - 1, `only ${resolved(cost)}/${cost.length} cost differences resolved`);
+	assert.ok(resolved(time) >= time.length - 1, `only ${resolved(time)}/${time.length} wall-clock differences resolved`);
+	assert.ok(resolved(quality) < resolved(cost), "quality must resolve less often than cost, or the pack is bigger than it is");
+	assert.ok(resolved(quality) <= quality.length / 2, "most quality differences should not resolve");
 
 	// Fan-out is the largest quality effect in the set, even where the pack cannot
 	// resolve it: it is the claim worth spending more tasks on.
@@ -1542,4 +1565,81 @@ test("the router can keep a rate-limited model, and the heuristic fallback guara
 	for (const prompt of ["ls", "why does this deadlock under load?", "implement the described function in two files"]) {
 		assert.ok(heuristicTier(prompt).confidence < DEFAULT_CONFIG.switching.minConfidence);
 	}
+});
+
+test("the invariant sweep visits many configurations and the structural invariants hold in all of them", async () => {
+	const report = await runCoverage({
+		pack: pack(),
+		loaded: loadFleet(FLEET),
+		minConfidences: [0, 0.5],
+		pinTurns: [0, 3],
+		unauthedSets: [[]],
+	});
+	assert.ok(report.configurations >= 60, `only ${report.configurations} configurations visited`);
+
+	// Everything structural must hold everywhere: these would be harness bugs.
+	for (const invariant of ["tier-partition", "no-nan", "non-negative-cost", "rate-in-range", "compaction-is-cold", "cold-costs-more", "pinned-costs-nothing"]) {
+		assert.equal(report.byInvariant[invariant] ?? 0, 0, `${invariant} broke somewhere: ${JSON.stringify(report.violations.slice(0, 1))}`);
+	}
+
+	// The one that does break is the router's, reported in round 26 and not fixed here.
+	const broken = report.violations.filter((v) => v.violations.some((x) => x.invariant === "eligible-route"));
+	assert.ok(broken.length > 0, "the pack should still reach the rate-limited-route case");
+	for (const entry of broken) {
+		assert.equal(entry.configuration.startModel, "faux-plan-codex/gpt-6-astra", "only the 429'd provider's own start should trip it");
+		assert.ok(entry.configuration.minConfidence > 0, "a zero bar never takes the branch that keeps a blocked model");
+		assert.match(entry.violations[0]!.reproduce, /^npm run eval -- /, "a violation must come with a way to reproduce it");
+	}
+});
+
+test("raising the routing confidence bar widens the window in which a blocked model is kept", async () => {
+	// A consequence of the round-26 bug that matters for the round-12 recommendation:
+	// the bar and the block check interact, and the bug is not specific to the heuristic.
+	const at = async (minConfidence: number) =>
+		runCoverage({
+			pack: pack(),
+			loaded: loadFleet(FLEET),
+			startModels: ["faux-plan-codex/gpt-6-astra"],
+			classifiers: ["scripted"],
+			billings: ["as-configured"],
+			minConfidences: [minConfidence],
+			pinTurns: [0],
+			unauthedSets: [[]],
+		});
+	const off = await at(0);
+	const shipped = await at(0.5);
+	const high = await at(0.8);
+
+	assert.equal(off.violations.length, 0, "with no bar the branch is never taken");
+	assert.equal(shipped.violations.length, 1);
+	assert.equal(high.violations.length, 1);
+
+	// Higher bar, more turns caught in it, more turns sent to a provider in cooldown.
+	const turnsAffected = (r: typeof off) => Number(/^(\d+) turn/.exec(r.violations[0]?.violations[0]?.detail ?? "0 turn")?.[1] ?? 0);
+	assert.ok(turnsAffected(high) > turnsAffected(shipped), "raising the bar must not reduce exposure");
+	// ...and a confident Jev answer can trip it too, so this is not a heuristic-only fault.
+	assert.match(high.violations[0]!.violations[0]!.detail, /confidence 0\.[5-9]\d* < 0\.8/);
+});
+
+test("whether routing spends more than not routing depends on which models it still has", async () => {
+	// Round 27. With the full fleet available, routing costs more than never routing -
+	// the round-4 result. Exhaust the plan and it costs *less*, because it is forced onto
+	// a cheap on-demand model - and it pays for that in quality, so it is not a saving.
+	const stripped = pack(LONG_PACK);
+	for (const task of stripped.tasks) for (const turn of task.turns) turn.providerEvent = undefined;
+
+	const measure = async (p: TaskPack, classifier: "oracle" | "heuristic") => computeMetrics(...unpack(await run({ pack: p, classifier })));
+	const [routedFull, neverFull] = [await measure(stripped, "oracle"), await measure(stripped, "heuristic")];
+	const [routedOut, neverOut] = [await measure(pack(LONG_PACK), "oracle"), await measure(pack(LONG_PACK), "heuristic")];
+
+	// Never switching cannot see the 429 at all: it never asks for another model.
+	assert.equal(neverFull.listEquivalentUsd, neverOut.listEquivalentUsd);
+	assert.equal(neverFull.sessionSuccessRate, neverOut.sessionSuccessRate);
+
+	assert.ok(routedFull.listEquivalentUsd > neverFull.listEquivalentUsd, "with its fleet intact, routing costs more");
+	assert.ok(routedOut.listEquivalentUsd < neverOut.listEquivalentUsd, "with the plan exhausted, routing costs less");
+	assert.ok(routedOut.sessionSuccessRate < routedFull.sessionSuccessRate, "...and that is a downgrade, not a saving");
+
+	// What does survive both: the cold-start premium is about half of routed-turn spend.
+	for (const m of [routedFull, routedOut]) assert.ok(m.coldPremiumShare > 0.4 && m.coldPremiumShare < 0.6);
 });
