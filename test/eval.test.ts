@@ -1758,3 +1758,64 @@ test("what makes a fan-out bias-robust is the floor of its candidate set, not an
 	}
 	assert.ok(!cells.find((c) => c.policy === "strongest" && c.axis === "length")!.favouredIsStrongest, "robustness here is not alignment");
 });
+
+test("the probe says which axis a judge's bias runs on, not just how big it is", async () => {
+	// Round 29 made the axis the actionable half: a candidate set can be robust to a
+	// presentation bias and actively harmful under a length one.
+	const probe = loadProbePack(PROBE_PACK);
+	const at = async (biasAxis: "price" | "length", bias: number) =>
+		runProbe(new NoisyJudge({ noise: 10, seed: "axis-test", bias, biasAxis }), probe);
+
+	const clean = await at("price", 0);
+	assert.equal(clean.dominantAxis, "none", "an unbiased judge has no axis to place");
+	// Not zero: an unbiased judge still has noise, and the pack has narrow-gap traps it
+	// can lose. What matters is that neither axis carries a signal.
+	for (const axis of ["presentation", "length"] as const) {
+		assert.ok(clean.byAxis[axis].trapRate < 0.1, `an unbiased judge fell for ${clean.byAxis[axis].trapRate} of the ${axis} traps`);
+		assert.equal(clean.byAxis[axis].estimatedBiasPoints, 0);
+	}
+
+	for (const bias of [40, 60]) {
+		const byPresentation = await at("price", bias);
+		const byLength = await at("length", bias);
+		assert.equal(byPresentation.dominantAxis, "presentation", `a presentation-biased judge at ${bias} was mis-attributed`);
+		assert.equal(byLength.dominantAxis, "length", `a length-biased judge at ${bias} was mis-attributed`);
+		// The diagonal must beat the off-diagonal, which is what attribution means.
+		assert.ok(byPresentation.byAxis.presentation.estimatedBiasPoints > byPresentation.byAxis.length.estimatedBiasPoints);
+		assert.ok(byLength.byAxis.length.estimatedBiasPoints > byLength.byAxis.presentation.estimatedBiasPoints);
+		// Magnitude is still recovered on whichever axis is real.
+		assert.ok(Math.abs(byPresentation.byAxis.presentation.estimatedBiasPoints - bias) <= 10);
+		assert.ok(Math.abs(byLength.byAxis.length.estimatedBiasPoints - bias) <= 10);
+	}
+});
+
+test("the probe pack sets length against presentation, because otherwise they cannot be told apart", () => {
+	const probe = loadProbePack(PROBE_PACK);
+	const splits = probe.items.filter((i) => i.kind === "axis-split");
+	assert.ok(splits.length >= 6, "too few axis-split items to separate the axes");
+
+	for (const item of splits) {
+		const [a, b] = item.responses;
+		const better = a.trueSkill > b.trueSkill ? a : b;
+		const flashier = a.flashiness > b.flashiness ? a : b;
+		const longer = a.text.length > b.text.length ? a : b;
+		// The point of a split item: exactly one of the two axes points at the worse answer.
+		assert.notEqual(flashier.key === better.key, longer.key === better.key, `${item.id} does not actually split the axes`);
+		assert.ok(Math.abs(a.text.length - b.text.length) > 200, `${item.id}'s responses are too similar in length to signal on that axis`);
+	}
+	// Both directions must be present, or the probe can only see one kind of mistake.
+	const lengthTraps = splits.filter((i) => {
+		const [a, b] = i.responses;
+		const better = a.trueSkill > b.trueSkill ? a : b;
+		return (a.text.length > b.text.length ? a : b).key !== better.key;
+	});
+	assert.ok(lengthTraps.length >= 3 && splits.length - lengthTraps.length >= 3, "both directions of split are needed");
+
+	// And in the rest of the pack the two axes coincide, which is exactly why the splits
+	// had to be added rather than the existing traps reused.
+	const conflated = probe.items.filter((i) => i.kind !== "axis-split").filter((i) => {
+		const [a, b] = i.responses;
+		return (a.flashiness > b.flashiness ? a : b).key === (a.text.length > b.text.length ? a : b).key;
+	});
+	assert.ok(conflated.length / (probe.items.length - splits.length) > 0.8);
+});

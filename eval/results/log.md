@@ -1803,3 +1803,50 @@ $450 decision.
 **Next.** The probe reports a bias *magnitude* and controls for position, but does not yet
 separate a length bias from a presentation one. That is the obvious next thing, and it is
 what would make the live reading actionable rather than merely alarming.
+
+---
+
+## Round 30 — 2026-09-23 — make the probe say *which* bias, not just how much
+
+**Measured.** Whether the probe could answer the question round 29 had just made the
+expensive one. It could not. Round 29 showed a candidate set can be robust to a
+*presentation* bias and actively harmful under a *length* one — a $450 difference
+between `tier-top` and `strongest` — while the probe reported only a magnitude. Worse,
+checking it: **16 of the probe's 18 items had the flashier response also being the longer
+one**, so the two axes were structurally inseparable.
+
+**Changed.**
+
+- **Verbosity is now the response's own character count** — objective, and nothing extra
+  to declare. Bias runs on a named axis (`price`/presentation, `length`, `position`).
+- **Six `axis-split` items**, which set the axes against each other: three where the
+  worse answer is **long and plain**, three where it is **short and heavily formatted**.
+  Without them the probe can see that a judge is biased and not what it is biased *about*.
+- The report gains per-axis trap rates and estimates, and ends with a **`dominant axis`**
+  line plus the consequence: presentation → prefer `tier-top`; length → alignment will
+  not help, prefer a high floor.
+
+**What the numbers did.** Inject a bias on one axis and the probe attributes it to that
+axis — the diagonal always beats the off-diagonal:
+
+| injected | presentation estimate | length estimate | verdict |
+| --- | ---: | ---: | --- |
+| presentation 40 | **44 pts** | 38 pts | **presentation** ✓ |
+| presentation 60 | **60 pts** | 52 pts | **presentation** ✓ |
+| length 40 | 40 pts | **46 pts** | **length** ✓ |
+| length 60 | 54 pts | **64 pts** | **length** ✓ |
+
+Magnitude is still recovered to within 6 points on whichever axis is real, and an
+unbiased judge places on neither. Two tests hold both properties, and a third holds the
+*pack's* structure — that the split items really do split, in both directions, and that
+the rest of the pack really is conflated, which is why they had to be added rather than
+the existing traps reused.
+
+**The live command is now decisive rather than merely alarming.** Before this round,
+`--probe --live-judge` would have returned "Jev carries N points of bias" and left the
+`tier-top`-versus-`strongest` choice open. It now returns an axis, and the axis picks the
+candidate set. 48 Jev calls, no model inference, under a cent.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`. Thirty rounds have
+been spent making that one command worth running; nothing else offline sharpens it
+further.

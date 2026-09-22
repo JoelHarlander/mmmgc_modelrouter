@@ -16,7 +16,7 @@
  * as having roughly that bias.
  */
 import { readFileSync } from "node:fs";
-import type { Judge, JudgeCandidate } from "./candidates.ts";
+import type { BiasAxis, Judge, JudgeCandidate } from "./candidates.ts";
 import { NoisyJudge } from "./candidates.ts";
 
 export interface ProbeResponse {
@@ -31,8 +31,13 @@ export interface ProbeResponse {
 export interface ProbeItem {
 	id: string;
 	category: string;
-	/** trap = the flashier response is the worse one. aligned = it is the better one. */
-	kind: "trap" | "aligned" | "near-tie";
+	/**
+	 * trap = the flashier response is the worse one; aligned = it is the better one;
+	 * near-tie = there is nothing to choose. `axis-split` items set length and
+	 * presentation against *each other*, which is what makes the two separable: in every
+	 * other item the flashier answer is also the longer one.
+	 */
+	kind: "trap" | "aligned" | "near-tie" | "axis-split";
 	request: string;
 	responses: [ProbeResponse, ProbeResponse];
 	note?: string;
@@ -49,7 +54,18 @@ export interface ProbeItemResult {
 	id: string;
 	kind: ProbeItem["kind"];
 	/** One entry per label order, so position and presentation can be told apart. */
-	picks: { order: "AB" | "BA"; pickedKey: string; correct: boolean; pickedFlashier: boolean; pickedLabel: string; confidence: number }[];
+	picks: {
+		order: "AB" | "BA";
+		pickedKey: string;
+		pickedLabel: string;
+		correct: boolean;
+		pickedFlashier: boolean;
+		pickedLonger: boolean;
+		/** True when the flashier / longer response is the *worse* one on this item. */
+		presentationTrap: boolean;
+		lengthTrap: boolean;
+		confidence: number;
+	}[];
 	costUsd: number;
 }
 
@@ -61,6 +77,21 @@ export interface ProbeReport {
 	accuracy: number;
 	/** Share of *trap* presentations where the judge took the flashier, worse answer. */
 	styleTrapRate: number;
+	/**
+	 * The same rate computed per axis, over the presentations where that axis points at
+	 * the worse answer. Round 29 made this the question that matters: a candidate set can
+	 * be robust to a price-axis bias and actively harmful under a length-axis one, so a
+	 * magnitude alone does not tell you which fan-out to prefer.
+	 */
+	byAxis: Record<"presentation" | "length", { presentations: number; trapRate: number; estimatedBiasPoints: number }>;
+	/**
+	 * Which axis the judge's preference runs on, and by how many points. This is the
+	 * actionable half of the reading: round 29 showed a candidate set can be robust to a
+	 * price/presentation bias and actively harmful under a length one, so the magnitude
+	 * alone does not say which fan-out to prefer. "none" when there is no bias to place.
+	 */
+	dominantAxis: "presentation" | "length" | "none";
+	axisMarginPoints: number;
 	/** Share of *aligned* presentations the judge got right: a control on the above. */
 	alignedAccuracy: number;
 	/** |P(picks label A) - 0.5| across both orders. Non-zero means position, not quality. */
@@ -70,6 +101,11 @@ export interface ProbeReport {
 	meanConfidence: number;
 	costUsd: number;
 	results: ProbeItemResult[];
+}
+
+/** Verbosity is the response's own length: objective, and nothing extra to declare. */
+function toCandidate(r: ProbeResponse, i: number): JudgeCandidate {
+	return { label: String.fromCharCode(65 + i), key: r.key, text: r.text, trueSkill: r.trueSkill, flashiness: r.flashiness, verbosity: r.text.length };
 }
 
 export function loadProbePack(path: string): ProbePack {
@@ -90,23 +126,22 @@ export async function runProbe(judge: Judge, pack: ProbePack): Promise<ProbeRepo
 		// position, not presentation, and the two must not be confused.
 		for (const order of ["AB", "BA"] as const) {
 			const ordered = order === "AB" ? item.responses : ([item.responses[1], item.responses[0]] as const);
-			const candidates: JudgeCandidate[] = ordered.map((r, i) => ({
-				label: String.fromCharCode(65 + i),
-				key: r.key,
-				text: r.text,
-				trueSkill: r.trueSkill,
-				flashiness: r.flashiness,
-			}));
+			const candidates: JudgeCandidate[] = ordered.map(toCandidate);
 			const verdict = await judge.pick(item.request, candidates, { taskId: `${item.id}:${order}`, turn: 1 });
 			const picked = candidates.find((c) => c.label === verdict.pick) ?? candidates[0]!;
 			const best = [...candidates].sort((a, b) => b.trueSkill - a.trueSkill)[0]!;
 			const flashiest = [...candidates].sort((a, b) => (b.flashiness ?? 0) - (a.flashiness ?? 0))[0]!;
+			const longest = [...candidates].sort((a, b) => (b.verbosity ?? 0) - (a.verbosity ?? 0))[0]!;
 			result.picks.push({
 				order,
 				pickedKey: picked.key,
 				pickedLabel: picked.label,
 				correct: picked.key === best.key,
 				pickedFlashier: picked.key === flashiest.key,
+				pickedLonger: picked.key === longest.key,
+				// Which axes actually point away from the better answer here.
+				presentationTrap: flashiest.key !== best.key,
+				lengthTrap: longest.key !== best.key,
 				confidence: verdict.confidence,
 			});
 			result.costUsd += verdict.costUsd;
@@ -122,6 +157,18 @@ export async function runProbe(judge: Judge, pack: ProbePack): Promise<ProbeRepo
 	const aligned = allPicks.filter((p) => p.kind === "aligned");
 	const styleTrapRate = rate(traps.filter((p) => p.pickedFlashier).length, traps.length);
 
+	const axisRate = (which: "presentation" | "length") => {
+		const traps = allPicks.filter((p) => (which === "length" ? p.lengthTrap : p.presentationTrap));
+		const fell = traps.filter((p) => (which === "length" ? p.pickedLonger : p.pickedFlashier)).length;
+		return { presentations: traps.length, trapRate: rate(fell, traps.length) };
+	};
+	const axisReport = {
+		presentation: { ...axisRate("presentation"), estimatedBiasPoints: 0 },
+		length: { ...axisRate("length"), estimatedBiasPoints: 0 },
+	};
+	axisReport.presentation.estimatedBiasPoints = await estimateBiasPoints(pack, axisReport.presentation.trapRate, "price");
+	axisReport.length.estimatedBiasPoints = await estimateBiasPoints(pack, axisReport.length.trapRate, "length");
+
 	return {
 		judge: judge.name,
 		items: pack.items.length,
@@ -130,7 +177,14 @@ export async function runProbe(judge: Judge, pack: ProbePack): Promise<ProbeRepo
 		styleTrapRate,
 		alignedAccuracy: rate(aligned.filter((p) => p.correct).length, aligned.length),
 		positionBias: round(Math.abs(pickedA / Math.max(1, calls) - 0.5), 4),
-		estimatedBiasPoints: await estimateBiasPoints(pack, styleTrapRate),
+		estimatedBiasPoints: await estimateBiasPoints(pack, styleTrapRate, "price"),
+		byAxis: axisReport,
+		dominantAxis: Math.max(...Object.values(axisReport).map((a) => a.estimatedBiasPoints)) === 0
+			? "none"
+			: axisReport.presentation.estimatedBiasPoints >= axisReport.length.estimatedBiasPoints
+				? "presentation"
+				: "length",
+		axisMarginPoints: Math.abs(axisReport.presentation.estimatedBiasPoints - axisReport.length.estimatedBiasPoints),
 		meanConfidence: round(confidenceTotal / Math.max(1, calls), 4),
 		costUsd: round(
 			results.reduce((a, r) => a + r.costUsd, 0),
@@ -145,10 +199,10 @@ export async function runProbe(judge: Judge, pack: ProbePack): Promise<ProbeRepo
  * bias a `NoisyJudge` needs before it falls for the same probe just as often. That is
  * what makes the probe actionable: read a number here, look up what it costs there.
  */
-export async function estimateBiasPoints(pack: ProbePack, observedTrapRate: number, noise = 10): Promise<number> {
+export async function estimateBiasPoints(pack: ProbePack, observedTrapRate: number, axis: BiasAxis = "price", noise = 10): Promise<number> {
 	const candidates: number[] = [];
 	for (let bias = 0; bias <= 80; bias += 2) {
-		const report = await simulateTrapRate(pack, bias, noise);
+		const report = await simulateTrapRate(pack, bias, axis, noise);
 		candidates.push(Math.abs(report - observedTrapRate));
 	}
 	let bestIndex = 0;
@@ -156,36 +210,34 @@ export async function estimateBiasPoints(pack: ProbePack, observedTrapRate: numb
 	return bestIndex * 2;
 }
 
-async function simulateTrapRate(pack: ProbePack, bias: number, noise: number): Promise<number> {
+async function simulateTrapRate(pack: ProbePack, bias: number, axis: BiasAxis, noise: number): Promise<number> {
 	// Averaged over several seeds so the calibration curve is not one draw.
 	const rates: number[] = [];
 	for (const seed of ["c1", "c2", "c3", "c4", "c5"]) {
-		const report = await runProbeRaw(new NoisyJudge({ noise, seed, bias }), pack);
+		const report = await runProbeRaw(new NoisyJudge({ noise, seed, bias, biasAxis: axis }), pack, axis);
 		rates.push(report);
 	}
 	return rates.reduce((a, b) => a + b, 0) / rates.length;
 }
 
-/** Trap rate only, without recursing into calibration. */
-async function runProbeRaw(judge: Judge, pack: ProbePack): Promise<number> {
+/** Trap rate on one axis only, without recursing into calibration. */
+async function runProbeRaw(judge: Judge, pack: ProbePack, axis: BiasAxis): Promise<number> {
 	let traps = 0;
 	let fell = 0;
 	for (const item of pack.items) {
-		if (item.kind !== "trap") continue;
 		for (const order of ["AB", "BA"] as const) {
 			const ordered = order === "AB" ? item.responses : ([item.responses[1], item.responses[0]] as const);
-			const candidates: JudgeCandidate[] = ordered.map((r, i) => ({
-				label: String.fromCharCode(65 + i),
-				key: r.key,
-				text: r.text,
-				trueSkill: r.trueSkill,
-				flashiness: r.flashiness,
-			}));
+			const candidates: JudgeCandidate[] = ordered.map(toCandidate);
 			const verdict = await judge.pick(item.request, candidates, { taskId: `${item.id}:${order}`, turn: 1 });
 			const picked = candidates.find((c) => c.label === verdict.pick) ?? candidates[0]!;
-			const flashiest = [...candidates].sort((a, b) => (b.flashiness ?? 0) - (a.flashiness ?? 0))[0]!;
+			const best = [...candidates].sort((a, b) => b.trueSkill - a.trueSkill)[0]!;
+			const favoured =
+				axis === "length"
+					? [...candidates].sort((a, b) => (b.verbosity ?? 0) - (a.verbosity ?? 0))[0]!
+					: [...candidates].sort((a, b) => (b.flashiness ?? 0) - (a.flashiness ?? 0))[0]!;
+			if (favoured.key === best.key) continue; // not a trap on this axis
 			traps += 1;
-			if (picked.key === flashiest.key) fell += 1;
+			if (picked.key === favoured.key) fell += 1;
 		}
 	}
 	return traps === 0 ? 0 : fell / traps;
@@ -203,13 +255,31 @@ export function renderProbe(report: ProbeReport): string {
 	row("estimated bias", `${report.estimatedBiasPoints} pts`);
 	row("cost", `$${report.costUsd.toFixed(6)}`);
 	out.push("");
+	out.push("  by axis            presentations   trap rate   estimated bias");
+	for (const [name, a] of Object.entries(report.byAxis)) {
+		out.push(`    ${name.padEnd(16)} ${String(a.presentations).padStart(13)}   ${pct(a.trapRate).padStart(9)}   ${`${a.estimatedBiasPoints} pts`.padStart(14)}`);
+	}
+	out.push("");
 	out.push("  per item:");
 	for (const r of report.results) {
 		const picks = r.picks.map((p) => `${p.order}→${p.pickedLabel}${p.correct ? "✓" : "✗"}`).join("  ");
 		out.push(`    ${r.id.padEnd(28)} ${r.kind.padEnd(9)} ${picks}`);
 	}
 	out.push("");
-	out.push(`  read the estimated bias against \`npm run eval -- --sweep bias\` to price it.`);
+	out.push("");
+	if (report.dominantAxis === "none") {
+		out.push("  no bias to place on an axis.");
+	} else {
+		out.push(`  dominant axis: ${report.dominantAxis.toUpperCase()}, by ${report.axisMarginPoints} points.`);
+		out.push(
+			report.dominantAxis === "presentation"
+				? "  a candidate set whose costliest-looking member is also its strongest survives this."
+				: "  alignment will not help: prefer a candidate set with a high floor (see --sweep axis).",
+		);
+	}
+	out.push("");
+	out.push("  price the magnitude with `npm run eval -- --sweep bias`; choose a candidate set");
+	out.push("  that survives the axis with `npm run eval -- --sweep axis`.");
 	out.push("");
 	return `${out.join("\n")}\n`;
 }

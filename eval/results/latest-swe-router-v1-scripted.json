@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T14-47-27-swe-router-v1-scripted-18ff131",
-	"at": "2026-09-22T14:47:27.290Z",
+	"runId": "2026-09-22T14-53-34-swe-router-v1-scripted-9ed44ee",
+	"at": "2026-09-22T14:53:34.674Z",
 	"profile": "swe-router-v1-scripted",
 	"pack": "swe-router-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,7 +11,7 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "18ff131",
+	"git": "9ed44ee",
 	"metrics": {
 		"tasks": 15,
 		"turns": 31,

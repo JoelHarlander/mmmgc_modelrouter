@@ -1,7 +1,7 @@
 {
 	"version": 1,
 	"id": "judge-probe-v1",
-	"description": "Paired responses for measuring a judge's presentation bias. Each item is a real SWE-flavoured request with two written answers whose true quality is declared (`trueSkill`, on the fleet.json ladder) and whose presentation is deliberately opposed (`flashiness`). On a `trap` item the *worse* answer is the confident, well-structured, thoroughly-hedged one — the house style of an expensive model. On an `aligned` item the flashier answer is also the better one, which controls for a judge that has simply learned to distrust formatting. `near-tie` items are there to see what a judge does when there is nothing to choose. Every item is shown in both label orders, so position bias cannot be mistaken for presentation bias. Trap items span a graded range of quality gaps (8 to 55 skill points) so the probe has resolution across the whole band that matters: round 3 showed 20 points of bias is already enough to make fan-out counterproductive, and a probe made only of obvious traps cannot see that far down.",
+	"description": "Paired responses for measuring a judge's presentation bias. Each item is a real SWE-flavoured request with two written answers whose true quality is declared (`trueSkill`, on the fleet.json ladder) and whose presentation is deliberately opposed (`flashiness`). On a `trap` item the *worse* answer is the confident, well-structured, thoroughly-hedged one — the house style of an expensive model. On an `aligned` item the flashier answer is also the better one, which controls for a judge that has simply learned to distrust formatting. `near-tie` items are there to see what a judge does when there is nothing to choose. Every item is shown in both label orders, so position bias cannot be mistaken for presentation bias. Trap items span a graded range of quality gaps (8 to 55 skill points) so the probe has resolution across the whole band that matters: round 3 showed 20 points of bias is already enough to make fan-out counterproductive, and a probe made only of obvious traps cannot see that far down. Six `axis-split` items set length and presentation against each other - three where the worse answer is long and plain, three where it is short and heavily formatted - because in every other item the flashier answer is also the longer one, so without them the two axes cannot be told apart. Round 29 made that separation the question that matters: a candidate set can be robust to a price-axis bias and actively harmful under a length-axis one.",
 	"items": [
 		{
 			"id": "trap-off-by-one",
@@ -371,6 +371,132 @@
 					"trueSkill": 42,
 					"flashiness": 50,
 					"text": "## Cause\n\n`dict.get` performs an eager lookup with a fallback, so the fallback participates in the expression regardless of whether the key is present.\n\n## Fix\n\n```python\ncounts[k] = counts.setdefault(k, expensive()) + 1\n```\n\n## Why `setdefault`\n\nIt performs the lookup and the insert in a single hash operation, which is both faster and atomic with respect to other threads holding the GIL.\n\n## Caveat\n\n`setdefault` mutates the dict, so do not use it in a read-only context."
+				}
+			]
+		},
+		{
+			"id": "split-length-gil",
+			"category": "refactor",
+			"kind": "axis-split",
+			"request": "This CPU-bound loop is slow. Should I use threads?",
+			"note": "Length trap, presentation aligned: the long plain answer is the wrong one.",
+			"responses": [
+				{
+					"key": "long-plain-worse",
+					"trueSkill": 30,
+					"flashiness": 4,
+					"text": "Threading is generally a reasonable approach for this kind of problem and is worth trying before reaching for anything heavier. Python's threading module is part of the standard library, it is well documented, and the API is familiar to most people who have written concurrent code in other languages. You would create a ThreadPoolExecutor, submit the chunks of work to it, and collect the futures as they complete. In practice you will want to tune the number of workers, because too many threads will cause context-switching overhead and too few will leave capacity unused; somewhere around the number of cores is a common starting point. It is also worth measuring before and after, since the speedup you actually get depends heavily on how the work is distributed and on whether any of it is I/O bound. If the results are disappointing you can always revisit the decision later, but threads are the natural first thing to try and they will usually give you a worthwhile improvement on a loop like this one."
+				},
+				{
+					"key": "short-formatted-better",
+					"trueSkill": 74,
+					"flashiness": 55,
+					"text": "No — the GIL serialises CPU-bound Python bytecode, so threads will not help.\n\n```python\nfrom concurrent.futures import ProcessPoolExecutor\nwith ProcessPoolExecutor() as ex:\n    results = list(ex.map(work, chunks))\n```\n\nUse processes. Threads only help when the work releases the GIL (I/O, or C extensions that do)."
+				}
+			]
+		},
+		{
+			"id": "split-length-index",
+			"category": "bugfix",
+			"kind": "axis-split",
+			"request": "`items.remove(x)` inside `for x in items:` skips elements. Why, and what should I do?",
+			"note": "Length trap, presentation aligned.",
+			"responses": [
+				{
+					"key": "long-plain-worse",
+					"trueSkill": 28,
+					"flashiness": 5,
+					"text": "This is one of those situations where the behaviour looks surprising at first but makes sense once you think about what the interpreter is doing underneath. Lists in Python are ordered sequences, and removing from them is an operation that has to shift the remaining elements along, which takes time proportional to the length of the list. Because of that, calling remove in a loop is not especially efficient, and for large collections you may find it becomes a bottleneck. A common suggestion is to use a set instead, since membership tests and removals are close to constant time there, though of course a set will not preserve the ordering of your elements which may or may not matter for your use case. You could also consider collections.deque if you are mostly removing from the ends. The right choice really depends on the access pattern, so it is worth profiling before committing to a particular data structure."
+				},
+				{
+					"key": "short-formatted-better",
+					"trueSkill": 72,
+					"flashiness": 52,
+					"text": "The iterator holds an index into the list. Removing shifts everything left, so the index skips one.\n\n```python\nitems = [x for x in items if not should_drop(x)]\n```\n\nBuild a new list, or iterate over a copy (`for x in items[:]`). Never mutate the sequence you are iterating."
+				}
+			]
+		},
+		{
+			"id": "split-length-except",
+			"category": "security",
+			"kind": "axis-split",
+			"request": "Is `except Exception: pass` around this network call acceptable?",
+			"note": "Length trap, presentation aligned.",
+			"responses": [
+				{
+					"key": "long-plain-worse",
+					"trueSkill": 32,
+					"flashiness": 6,
+					"text": "Exception handling is one of the more debated areas of Python style and reasonable people disagree about how broad a handler should be. The argument in favour of a broad handler is robustness: you do not want a long-running process to fall over because of something transient, and network calls in particular fail for all sorts of reasons that are outside your control, including DNS hiccups, transient connection resets, and upstream services returning malformed responses. Catching broadly means the process keeps running. The argument against is that you lose information. On balance, for a network call specifically, many codebases do end up catching broadly at the boundary, and as long as you are comfortable with the trade-off it is a defensible position to take. It is the pragmatic choice and it is widely used."
+				},
+				{
+					"key": "short-formatted-better",
+					"trueSkill": 78,
+					"flashiness": 50,
+					"text": "No. It swallows `KeyboardInterrupt`'s sibling cases, hides real bugs, and leaves no trace.\n\n```python\nexcept (TimeoutError, ConnectionError) as e:\n    logger.exception(\"upstream call failed\")\n    raise\n```\n\nCatch what you can handle, log with the traceback, re-raise the rest."
+				}
+			]
+		},
+		{
+			"id": "split-presentation-cors",
+			"category": "security",
+			"kind": "axis-split",
+			"request": "The browser blocks my API call with a CORS error. What should I change?",
+			"note": "Presentation trap, length aligned: the short well-formatted answer is the wrong one.",
+			"responses": [
+				{
+					"key": "short-formatted-worse",
+					"trueSkill": 26,
+					"flashiness": 56,
+					"text": "### Fix\n\n```python\nresponse.headers['Access-Control-Allow-Origin'] = '*'\nresponse.headers['Access-Control-Allow-Credentials'] = 'true'\n```\n\nThat clears the error."
+				},
+				{
+					"key": "long-plain-better",
+					"trueSkill": 76,
+					"flashiness": 5,
+					"text": "CORS is enforced by the browser, not by your API, so the error is telling you the server has not opted in to being called from that origin. The fix is to send the right headers from the server, but the two you will see suggested together are mutually exclusive: a wildcard Access-Control-Allow-Origin cannot be combined with Access-Control-Allow-Credentials, and browsers will reject the pair. If your call sends cookies or an Authorization header you need to echo the specific requesting origin, check it against an allowlist you control, and set Vary: Origin so caches do not serve one origin's response to another. If it does not send credentials, a wildcard is fine on its own. You will also need to handle the preflight OPTIONS request for anything other than a simple GET or POST, returning the allowed methods and headers. Reaching for a wildcard plus credentials is the usual mistake here and it will not work."
+				}
+			]
+		},
+		{
+			"id": "split-presentation-jwt",
+			"category": "security",
+			"kind": "axis-split",
+			"request": "Should I store the JWT in localStorage?",
+			"note": "Presentation trap, length aligned.",
+			"responses": [
+				{
+					"key": "short-formatted-worse",
+					"trueSkill": 28,
+					"flashiness": 58,
+					"text": "## Recommended\n\n```js\nlocalStorage.setItem('token', jwt);\n```\n\n- Survives reloads\n- Simple to read back\n- No cookie configuration needed"
+				},
+				{
+					"key": "long-plain-better",
+					"trueSkill": 78,
+					"flashiness": 5,
+					"text": "Anything in localStorage is readable by any JavaScript running on the page, so a single XSS anywhere in your app or in a dependency hands over the token, and a bearer token is enough on its own to impersonate the user until it expires. The usual alternative is an httpOnly, Secure, SameSite cookie, which script cannot read at all; the cost is that you then need CSRF protection, because the browser will attach the cookie automatically to cross-site requests. SameSite=Lax removes most of that risk for navigations and a per-request CSRF token covers the rest. Whichever you choose, keep access tokens short-lived and put the refresh token somewhere script cannot reach, because the refresh token is the one worth stealing. The short answer is no, not for a token that grants access on its own."
+				}
+			]
+		},
+		{
+			"id": "split-presentation-migration",
+			"category": "architecture",
+			"kind": "axis-split",
+			"request": "How should I roll out a column rename on a table the app writes to continuously?",
+			"note": "Presentation trap, length aligned.",
+			"responses": [
+				{
+					"key": "short-formatted-worse",
+					"trueSkill": 30,
+					"flashiness": 57,
+					"text": "### Plan\n\n```sql\nALTER TABLE orders RENAME COLUMN buyer TO customer;\n```\n\nDeploy the migration and the code change together in one release."
+				},
+				{
+					"key": "long-plain-better",
+					"trueSkill": 84,
+					"flashiness": 5,
+					"text": "A rename is not atomic with respect to your running code: between the migration landing and every instance picking up the new build, some process will be writing the old name and some the new one, and one of them will error. The standard approach is to expand, migrate, contract. First add the new column and start writing to both from the application, leaving reads on the old one. Then backfill the existing rows in batches so you do not hold a long transaction on a busy table. Then switch reads to the new column and verify. Only once no deployed version references the old name do you stop writing it and drop it, which is usually a release or two later. Each of those steps is independently reversible, which is the point: a single rename is not, and rolling back a deploy after it has run leaves the old code reading a column that no longer exists."
 				}
 			]
 		}

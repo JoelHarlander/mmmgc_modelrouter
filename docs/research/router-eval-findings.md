@@ -255,10 +255,22 @@ guess about who is good at what — and replaces both with a bet on the judge.
 ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge
 ```
 
-36 Jev calls, **no model inference**, under a cent. It shows Jev 18 pairs of written
+48 Jev calls, **no model inference**, under a cent. It shows Jev 24 pairs of written
 answers whose true quality is declared and whose presentation is deliberately opposed,
 in both label orders, and reports the bias in the same units `--sweep bias` prices. The
 probe is calibrated: it recovers an injected bias to within 8 points.
+
+**It also reports which *axis* the bias runs on**, which after round 29 is the half that
+decides what to do. Six `axis-split` items set length against presentation — three where
+the worse answer is long and plain, three where it is short and heavily formatted —
+because in every other item the flashier answer is also the longer one. The report ends
+with a `dominant axis` line and the consequence:
+
+| Jev's dominant axis | what to prefer |
+| --- | --- |
+| **presentation** | `tier-top` — cheap, fast, and its costliest-looking member is its strongest |
+| **length** | `strongest` — alignment will not help; only a high floor survives |
+| none | either; choose on cost and latency |
 
 Read the answer against `--sweep bias`:
 

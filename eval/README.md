@@ -247,7 +247,7 @@ over what range of judge quality the lift survives and where it turns negative.
 ### `--probe`: how much bias does a judge actually have?
 
 The sweeps price judge bias; they cannot say how much of it a given judge carries.
-`--probe` measures that directly on `tasks/judge-probe-v1.json`: 18 requests with two
+`--probe` measures that directly on `tasks/judge-probe-v1.json`: 24 requests with two
 written answers each, where the true quality is declared and the *presentation* is
 deliberately opposed. On a **trap** item the worse answer is the confident,
 well-formatted, thoroughly-hedged one; on an **aligned** item it is the better one,
@@ -261,8 +261,15 @@ bias` uses, by asking what bias a `NoisyJudge` needs to fall for the probe equal
 often — so you can read a number here and look up what it costs there. A test injects a
 known bias and requires the probe to recover it within 8 points.
 
+It also reports **which axis** the bias runs on. Six `axis-split` items set length
+against presentation — three where the worse answer is long and plain, three where it is
+short and heavily formatted — because in every other item the flashier answer is also the
+longer one. That matters because a candidate set can be robust to one axis and harmful
+under the other (`--sweep axis`): the report ends with a `dominant axis` line and the
+candidate set it implies.
+
 `--probe --live-judge` points the same probe at **real Jev** (needs `ROUTER_EVAL_LIVE=1`).
-It costs 36 Jev calls and no model inference at all — a fraction of a cent — and is the
+It costs 48 Jev calls and no model inference at all — a fraction of a cent — and is the
 one measurement that would settle what candidate selection is actually worth here.
 
 ## `--audit-config`: is the shipped config sound?
