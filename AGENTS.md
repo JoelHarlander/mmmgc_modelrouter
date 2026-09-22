@@ -19,15 +19,18 @@ must live, since a project file may not state them) and the user's real global c
   or model names carry no billing meaning on their own — `src/billing.ts` decides eligibility from live evidence.
 - `src/billing.ts` keeps three questions separate and every explanation should too: the **basis** (what pays), the
   **verification** (how well that is established), and the **eligibility** (what the config permits). Only a
-  verified subscription route is `preferred`. Never let a config label stand in for evidence, and keep `RANK`
-  ordered so verified evidence beats an assumption - confirmed credits before a plan guessed from an OAuth login.
+  verified subscription route is `preferred`. Never let a config label stand in for evidence. `RANK` sorts evidence
+  only within the subscription basis (verified before assumed); it must never put another account's credits ahead
+  of a subscription nothing says is spent, or the turn spends money while included usage sits unused.
 - Quota state is keyed by *credential*, not provider id, but only where that is proven. `credentialOf()` is what
   the config declares - it keys `cfg.scopes` and names the pair worth testing - while `refreshEntitlements`
   resolves both ids' credentials through pi, compares them in memory (never logged, persisted or put in the
   ledger) and tells `Ledger.linkAccount` what it found; `Ledger.accountOf` files and reads quota by that. It runs
-  behind the probe gate and on the probe's own interval - resolving a credential can cost an OAuth refresh on the
-  turn's critical path - and only an answer moves a link: a lookup that resolves nothing leaves the last proven one
-  alone, because splitting a proven account strands the windows already filed under it. Auth *type* or a config
+  behind the probe gate, bounded by `billing.probe.timeoutMs` because it can cost an OAuth refresh on the turn's
+  critical path, and thereafter on the probe's own interval - but a session that has no answer yet always asks,
+  since the links are per-process while `probedAt` is shared, and guessing "not shared" files this account's
+  windows under a second name nothing merges back. Only an answer moves a link: a lookup that resolves nothing
+  leaves the last one alone, because splitting a proven account strands the windows already filed under it. Auth *type* or a config
   declaration is not proof: two ids pi resolves differently stay separate accounts, both for quota and for the
   probe, since a wrong alias removes the paid overflow at the moment it is needed while a missed one costs only a
   second probe. Ids that do share must never grow a second copy of the same account's
@@ -37,8 +40,10 @@ must live, since a project file may not state them) and the user's real global c
   A scoped or overage window governs its own models only. A 429/402 is attributed to the windows *that response*
   reported spent; when it names none but still bounds itself (a `retry-after`, or a meter no route answers to), the
   refusal is the credential's own and is stored as one more account-wide window (`REFUSAL_WINDOWS`) rather than a
-  second kind of state. A 429/402 carrying no quota evidence whatsoever is the entitlement gate, not quota
-  (docs/research/plan-quotas.md §1), and is recorded nowhere — keep it that way, since every earlier attempt to
+  second kind of state. A 429 carrying no quota evidence whatsoever is the entitlement gate, not quota
+  (docs/research/plan-quotas.md §1), and is recorded nowhere - a 402 is never that, since payment required is the
+  credential's own answer about money and the providers that send it report no windows at all (§4, §5), so it is
+  always recorded and never explained away by a window - — keep it that way, since every earlier attempt to
   hold a provider-wide cooldown beside the windows traded one wrong answer for another. An `overage` rejection refuses extra billed
   usage and only that, so it is never what places a refusal. Clearing one is an expired window carrying its own
   `lastSeen`, never a deleted key, so `mergeLedgers` can settle it, and every 2xx writes that marker whether or not

@@ -350,3 +350,23 @@ test("a lookup that resolves nothing leaves a proven link standing", async () =>
 	await refreshEntitlements({ cfg: both, registry: apart, ledger: l, fetchImpl, now: now + 62 * 60_000 });
 	assert.equal(l.accountOf("claude-bridge"), "claude-bridge", "two different credentials are");
 });
+
+test("a session with no answer about identity asks for one inside the probe interval too", async () => {
+	// The links live in this session's memory while `probedAt` lives in the shared file, so a probe
+	// another session already made must not stop this one from learning the account. Guessing "not
+	// shared" files the same credential's windows under a second name, and nothing merges those
+	// halves back.
+	const both = mergeConfig(DEFAULT_CONFIG, { tiers: sharedTiers });
+	const fetchImpl = usageResponse();
+	const now = Date.now();
+	const file = ledgerPath(mkdtempSync(join(tmpdir(), "mr-ent-")));
+
+	const first = new Ledger(file);
+	await refreshEntitlements({ cfg: both, registry: registryWithToken(undefined), ledger: first, fetchImpl, now });
+	first.save();
+	assert.equal(first.accountOf("claude-bridge"), "claude-bridge", "nothing was resolved, so nothing is shared");
+
+	const next = new Ledger(file);
+	await refreshEntitlements({ cfg: both, registry: registryWithToken("oauth"), ledger: next, fetchImpl, now: now + 60_000 });
+	assert.equal(next.accountOf("claude-bridge"), "anthropic", "the next session still learns the account");
+});

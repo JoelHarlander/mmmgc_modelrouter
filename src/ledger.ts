@@ -189,16 +189,20 @@ export class Ledger {
 			// that the router can place already excludes the models it governs and nothing else. A
 			// refusal that places nothing but still bounds itself - a `retry-after`, a meter no route
 			// answers to, or a spent extra-billed pool, which excludes credits and nothing else - is
-			// the credential's own, for as long as it says. A refusal carrying
-			// no quota evidence whatsoever is Anthropic's entitlement gate rather than quota
-			// pressure (docs/research/plan-quotas.md §1), and recording it as exhaustion would back
-			// a healthy account off its own subscription, so nothing is recorded for it.
+			// the credential's own, for as long as it says. A 429 carrying no quota evidence at all
+			// is Anthropic's entitlement gate rather than quota pressure
+			// (docs/research/plan-quotas.md §1), and recording it as exhaustion would back a healthy
+			// account off its own subscription, so nothing is recorded for it. A 402 is never that:
+			// payment required is the credential's own answer about money whatever else it carries,
+			// and the providers that send it (plan-quotas.md §4, §5) report no windows at all.
 			const reported = Object.entries(state.windows).filter(([id, w]) => w.lastSeen === now && REFUSAL_WINDOWS[id] === undefined);
-			const placed = reported.some(
-				([id, w]) => !OVERAGE_WINDOWS.has(id) && windowExhausted(w, cfg, now) !== undefined && windowPlaceable(cfg, scoped, id),
-			);
+			const placed =
+				status !== 402 &&
+				reported.some(
+					([id, w]) => !OVERAGE_WINDOWS.has(id) && windowExhausted(w, cfg, now) !== undefined && windowPlaceable(cfg, scoped, id),
+				);
 			const retryAfter = num(h("retry-after"));
-			if (!placed && (reported.length > 0 || retryAfter !== undefined)) {
+			if (!placed && (status === 402 || reported.length > 0 || retryAfter !== undefined)) {
 				const id = status === 402 ? "budget-exhausted" : "rate-limited";
 				state.windows[id] = {
 					status: "rejected",
@@ -299,15 +303,17 @@ export class Ledger {
 
 	/**
 	 * Record what pi resolved for one provider id: the credential it shares, or itself when the
-	 * two are demonstrably different. Only an answer updates the link - a lookup that could not be
-	 * resolved leaves the last proven one standing, because silently splitting an account strands
-	 * the windows already filed under it.
+	 * two are demonstrably different. Only an answer is recorded - a lookup that could not be
+	 * resolved leaves the last one standing, because silently splitting an account strands the
+	 * windows already filed under it.
 	 */
 	linkAccount(provider: string, account: string): void {
-		const links = new Map(this.accounts);
-		if (account === provider) links.delete(provider);
-		else links.set(provider, account);
-		this.accounts = links;
+		this.accounts = new Map(this.accounts).set(provider, account);
+	}
+
+	/** Whether this session has an answer about a provider's identity at all. */
+	accountResolved(provider: string): boolean {
+		return this.accounts.has(provider);
 	}
 
 	/** The account a provider's quota is filed under: its own id unless identity was proven. */

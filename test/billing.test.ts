@@ -949,10 +949,11 @@ test("an overage-only refusal is the credential's own, not something the extra-b
 	assert.equal(assess(opus, l, cfg, t0 + 611_000).eligibility, "preferred", "included usage is untouched once the refusal lifts");
 });
 
-test("verified credits are preferred over a plan nothing has verified", () => {
-	// The ChatGPT plan is spent but its credits are confirmed, while `xai/*` is a plan only because
-	// pi holds OAuth for it - and the intent records xAI per-request billing as unproven. Evidence
-	// has to outrank an assumption, or the turn overflows onto the guess instead of the credits.
+test("a subscription with no sign of being spent comes before another account's credits", () => {
+	// Two verdicts about two different credentials: the ChatGPT plan is proven spent and would
+	// bill its credits, while nothing says the Anthropic subscription is spent at all - it is
+	// simply unverified. Ordering the credits first would spend money while included usage sits
+	// unused, which is the one thing this ordering exists to prevent.
 	const l = ledger();
 	l.applyEntitlement(
 		"openai-codex",
@@ -960,11 +961,47 @@ test("verified credits are preferred over a plan nothing has verified", () => {
 	);
 
 	const credits = assess(codex, l);
-	const assumed = assess(grok, l);
+	const unspent = assess(opus, l);
 	assert.equal(credits.basis, "extra-credits");
-	assert.equal(credits.verification, "verified");
-	assert.equal(assumed.basis, "subscription");
-	assert.notEqual(assumed.verification, "verified");
-	assert.notEqual(assumed.eligibility, "excluded", "still reachable, just not first");
-	assert.ok(credits.rank < assumed.rank, "verified credits outrank an assumed plan");
+	assert.equal(credits.eligibility, "allowed", "the overflow is available");
+	assert.equal(unspent.basis, "subscription");
+	assert.notEqual(unspent.verification, "verified", "and nothing has verified the alternative");
+	assert.ok(unspent.rank < credits.rank, "included usage still comes first");
+
+	const d = chooseModel({
+		tier: "standard",
+		confidence: 0.9,
+		current: undefined,
+		registry: fakeRegistry(ALL, ["claude-bridge", "openai-codex"]),
+		cfg,
+		ledger: l,
+		contextTokens: 50_000,
+	});
+	assert.equal(d.model?.provider, "claude-bridge", "and it is what the turn is routed to");
+});
+
+test("a bare 402 from a provider that reports no windows still excludes the route", () => {
+	// docs/research/plan-quotas.md §4-§5: OpenRouter and the Vercel gateway answer a spent balance
+	// with a 402 and no quota headers of any kind. Payment required is the credential's own answer
+	// about money, so there is nothing to place it against and nothing to wait for.
+	const l = ledger();
+	l.observeResponse("openrouter", 402, {}, cfg);
+
+	const a = assess(router, l);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /budget exhausted \(402\)/);
+});
+
+test("a 402 is the credential refusing to bill, never spent quota for credits to cover", () => {
+	// The same response carries a spent subscription window, which on a 429 would explain it. It
+	// cannot here: reading "payment required" as exhausted included usage sends the turn back to
+	// the same credential to spend credits on.
+	const l = ledger();
+	l.applyEntitlement("openai-codex", { credits: { hasCredits: true, balance: "9" } });
+	l.observeResponse("openai-codex", 402, { "x-codex-primary-used-percent": "100" }, cfg);
+
+	const a = assess(codex, l);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /budget exhausted \(402\)/);
+	assert.notEqual(a.basis, "extra-credits", "a refusal to bill is not permission to bill");
 });

@@ -50,10 +50,15 @@ export async function refreshEntitlements(opts: ProbeOptions): Promise<void> {
 	if (!cfg.billing.probe.enabled) return;
 	const now = opts.now ?? Date.now();
 	const providers = opts.providers ?? routableProviders(cfg);
-	// Identity first, so a link proven now collapses this turn's probes - and on the probe's own
-	// interval, since resolving a credential can cost an OAuth refresh on the turn's critical path.
+	// Identity first, so a link proven now collapses this turn's probes. The links live in this
+	// session's memory, so a session that has no answer yet asks for one whatever the probe's
+	// interval says: routing on a guess of "not shared" would file this account's windows under a
+	// second name that nothing ever merges back. After that it is asked again only when the probe
+	// is due, since resolving a credential can cost an OAuth refresh on the turn's critical path.
 	await Promise.all(
-		providers.filter((p) => credentialOf(cfg, p) !== p && isDue(ledger, ledger.accountOf(p), cfg, now)).map((p) => resolveAccount(p, opts)),
+		providers
+			.filter((p) => credentialOf(cfg, p) !== p && (!ledger.accountResolved(p) || isDue(ledger, ledger.accountOf(p), cfg, now)))
+			.map((p) => resolveAccount(p, opts)),
 	);
 	const sources = new Map<string, EntitlementSource>();
 	for (const provider of providers) {
@@ -78,7 +83,7 @@ export async function refreshEntitlements(opts: ProbeOptions): Promise<void> {
 async function resolveAccount(provider: string, opts: ProbeOptions): Promise<void> {
 	const { cfg, registry, ledger } = opts;
 	const declared = credentialOf(cfg, provider);
-	const same = await sameCredential(registry, provider, declared);
+	const same = await sameCredential(registry, provider, declared, cfg);
 	if (same !== undefined) ledger.linkAccount(provider, same ? declared : provider);
 }
 
@@ -86,13 +91,32 @@ async function resolveAccount(provider: string, opts: ProbeOptions): Promise<voi
  * Compared in memory and dropped: no credential value is returned, stored, logged or reported.
  * Undefined where pi resolved nothing to compare, which is not evidence either way.
  */
-async function sameCredential(registry: ModelRegistry, provider: string, other: string): Promise<boolean | undefined> {
+async function sameCredential(registry: ModelRegistry, provider: string, other: string, cfg: RouterConfig): Promise<boolean | undefined> {
 	try {
-		const [mine, theirs] = await Promise.all([registry.getApiKeyForProvider(provider), registry.getApiKeyForProvider(other)]);
+		const [mine, theirs] = await Promise.all([credentialOrTimeout(registry, provider, cfg), credentialOrTimeout(registry, other, cfg)]);
 		if (!mine || !theirs) return undefined;
 		return mine === theirs;
 	} catch {
 		return undefined;
+	}
+}
+
+/**
+ * Resolving a credential can take a cross-process store lock and an OAuth refresh, and this runs
+ * before the turn's routing decision: it waits `billing.probe.timeoutMs` like the probe itself and
+ * then gives up, leaving the last answer standing rather than the turn.
+ */
+async function credentialOrTimeout(registry: ModelRegistry, provider: string, cfg: RouterConfig): Promise<string | undefined> {
+	let timer: NodeJS.Timeout | undefined;
+	try {
+		return await Promise.race([
+			registry.getApiKeyForProvider(provider),
+			new Promise<undefined>((resolve) => {
+				timer = setTimeout(() => resolve(undefined), cfg.billing.probe.timeoutMs);
+			}),
+		]);
+	} finally {
+		if (timer) clearTimeout(timer);
 	}
 }
 
@@ -106,7 +130,7 @@ async function probeProvider(account: string, source: EntitlementSource, opts: P
 	const doFetch = opts.fetchImpl ?? fetch;
 	let token: string | undefined;
 	try {
-		token = await registry.getApiKeyForProvider(account);
+		token = await credentialOrTimeout(registry, account, cfg);
 	} catch (err) {
 		ledger.recordProbeError(account, `credential unavailable: ${redact(errText(err))}`, now);
 		return;
