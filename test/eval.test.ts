@@ -1830,3 +1830,37 @@ test("the probe pack sets length against presentation, because otherwise they ca
 	});
 	assert.ok(conflated.length / (probe.items.length - splits.length) > 0.8);
 });
+
+test("a run that changes nothing leaves the baseline alone", async () => {
+	const outcome = await run();
+	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+	const root = mkdtempSync(join(tmpdir(), "router-eval-churn-"));
+	const record: RunRecord = {
+		version: 1,
+		runId: "2026-01-01T00-00-00-churn-aaa1111",
+		at: "2026-01-01T00:00:00.000Z",
+		profile: "churn",
+		pack: "swe-router-v1",
+		fleet: "eval/tasks/fleet.json",
+		classifier: "scripted",
+		candidateN: 0,
+		judge: "none",
+		seed: "s",
+		startModel: outcome.startModel,
+		live: false,
+		metrics,
+		turns: outcome.turns,
+	};
+	writeRun(root, record);
+	const first = readFileSync(latestPath(root, "churn"), "utf8");
+
+	// Same numbers, different run: the baseline must not churn its runId and timestamp.
+	// A working tree that is dirty after running the eval should mean a result changed.
+	writeRun(root, { ...record, runId: "2026-01-02T00-00-00-churn-bbb2222", at: "2026-01-02T00:00:00.000Z" });
+	assert.equal(readFileSync(latestPath(root, "churn"), "utf8"), first, "an identical run rewrote the baseline");
+
+	// A moved number must still update it, or the gate compares against the wrong thing.
+	const moved = { ...metrics, listEquivalentUsd: metrics.listEquivalentUsd * 2 };
+	writeRun(root, { ...record, runId: "2026-01-03T00-00-00-churn-ccc3333", metrics: moved });
+	assert.equal(readRun(latestPath(root, "churn"))?.metrics.listEquivalentUsd, moved.listEquivalentUsd);
+});

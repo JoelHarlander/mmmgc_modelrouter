@@ -56,7 +56,9 @@ Every run writes `eval/results/<timestamp>-<profile>-<git>.json` plus a
 `latest-<profile>.json` the next run automatically compares against, and prints the
 deltas. The per-run file carries the full per-turn detail and is **not committed**; the
 `latest-` baseline carries the **metrics only**, because that is all the gate and
-`--compare` read and the turn records are ~50× larger than the numbers they support. `--note "..."` appends a round line to [`results/log.md`](results/log.md), whose
+`--compare` read and the turn records are ~50× larger than the numbers they support.
+The baseline is rewritten only when a number actually moves, so **a working tree that is
+dirty after running the eval means a result changed.** `--note "..."` appends a round line to [`results/log.md`](results/log.md), whose
 **findings index** lists every claim made so far and what each one rests on.
 
 ### Exit codes

@@ -52,6 +52,13 @@ export function writeRun(root: string, record: RunRecord, options: { updateLates
 	if (options.updateLatest === false) return { runPath };
 	const latest = latestPath(root, record.profile);
 	const { turns: _turns, ...baseline } = record;
+
+	// Only rewrite the baseline when the numbers moved. Otherwise every run churns the
+	// runId, timestamp and git sha of a file whose metrics are identical - and a working
+	// tree that is dirty after running the eval should mean a *result* changed.
+	const existing = readRun(latest);
+	if (existing && JSON.stringify(existing.metrics) === JSON.stringify(record.metrics)) return { runPath, latestPath: latest };
+
 	writeFileSync(latest, `${JSON.stringify(baseline, replacer, "\t")}\n`);
 	return { runPath, latestPath: latest };
 }
