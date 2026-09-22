@@ -66,6 +66,7 @@ interface Args {
 	seed: string;
 	startModel?: string;
 	unauthed: string[];
+	billing: "as-configured" | "all-on-demand" | "all-plan";
 	compare?: string;
 	profile?: string;
 	json: boolean;
@@ -99,6 +100,7 @@ function parseArgs(argv: string[]): Args {
 		judgeNoise: 10,
 		seed: "swe-router-v1",
 		unauthed: [],
+		billing: "as-configured",
 		json: false,
 		noWrite: false,
 		validateOnly: false,
@@ -166,6 +168,9 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--start-model":
 				args.startModel = next();
+				break;
+			case "--billing":
+				args.billing = next() as Args["billing"];
 				break;
 			case "--no-auth":
 				args.unauthed.push(next());
@@ -286,6 +291,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --seed <s>             deterministic seed for the offline judge
   --start-model <key>    model each task session starts on
   --no-auth <key>        mark a fleet model unauthed (repeatable)
+  --billing <mode>       as-configured | all-on-demand | all-plan; all-on-demand is the
+                         no-subscription world, where escalating a tier finally costs
   --compare <file>       compare against this results file instead of latest-<profile>
   --profile <name>       results profile name (default derived from the flags)
   --note <text>          one-line round note appended to eval/results/log.md
@@ -331,7 +338,7 @@ async function main(): Promise<number> {
 	if (args.probe) return runProbeCommand(args);
 
 	const pack = JSON.parse(readFileSync(args.pack, "utf8")) as TaskPack;
-	const loaded = loadFleet(args.fleet, { unauthed: args.unauthed });
+	const loaded = loadFleet(args.fleet, { unauthed: args.unauthed, billing: args.billing });
 	const profile = args.profile ?? defaultProfile(args, pack.id);
 
 	// A pack whose goldTier disagrees with its own requiredSkill punishes a correct
@@ -511,6 +518,7 @@ function defaultProfile(args: Args, packId: string): string {
 	if (args.candidatePolicy && args.candidatePolicy !== "shipped") bits.push(args.candidatePolicy);
 	if (args.callsPerTurn) bits.push(`calls${args.callsPerTurn}`);
 	if (args.unauthed.length) bits.push(`noauth${args.unauthed.length}`);
+	if (args.billing !== "as-configured") bits.push(args.billing);
 	return bits.join("-");
 }
 

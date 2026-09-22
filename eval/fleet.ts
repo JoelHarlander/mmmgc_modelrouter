@@ -24,13 +24,33 @@ export function splitKey(key: string): { provider: string; id: string } {
 	return { provider: key.slice(0, slash), id: key.slice(slash + 1) };
 }
 
-export function loadFleet(path: string, options: { unauthed?: string[]; configPatch?: Partial<RouterConfig> } = {}): LoadedFleet {
+export interface LoadFleetOptions {
+	unauthed?: string[];
+	configPatch?: Partial<RouterConfig>;
+	/**
+	 * Rewrite every model's billing before building. `all-on-demand` is the "no
+	 * subscription" world: nothing prices at $0 at the margin, so escalating a tier
+	 * finally costs something. It isolates the billing variable exactly - same models,
+	 * same prices, same declared competence, one thing changed.
+	 */
+	billing?: "as-configured" | "all-on-demand" | "all-plan";
+}
+
+export function loadFleet(path: string, options: LoadFleetOptions = {}): LoadedFleet {
 	const fleet = JSON.parse(readFileSync(path, "utf8")) as Fleet;
 	if (fleet.version !== 1) throw new Error(`${path}: unsupported fleet version ${fleet.version}`);
 	return buildFleet(fleet, options);
 }
 
-export function buildFleet(fleet: Fleet, options: { unauthed?: string[]; configPatch?: Partial<RouterConfig> } = {}): LoadedFleet {
+/** Same fleet, different billing. Prices, skills and tiers are untouched. */
+export function rebill(fleet: Fleet, billing: NonNullable<LoadFleetOptions["billing"]>): Fleet {
+	if (billing === "as-configured") return fleet;
+	const target = billing === "all-on-demand" ? ("on-demand" as const) : ("plan" as const);
+	return { ...fleet, models: fleet.models.map((m) => ({ ...m, billing: target, oauth: target === "plan" })) };
+}
+
+export function buildFleet(input: Fleet, options: LoadFleetOptions = {}): LoadedFleet {
+	const fleet = rebill(input, options.billing ?? "as-configured");
 	const unauthed = new Set(options.unauthed ?? []);
 	const byKey = new Map<string, FleetModel>();
 	const models: Model<Api>[] = [];

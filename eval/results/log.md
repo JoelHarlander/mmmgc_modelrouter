@@ -29,6 +29,8 @@ Jump to the round that established each claim, and what it rests on.
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
 | **Fan-out as *exploration* is ~20× more cost-effective than fanning out every turn**: +21.3pp for $0.81/solve vs $16.03 | **13** | 5 seeds |
 | …but commitment **amplifies** judge bias: at 20 points, every explore depth is worse than not fanning out at all | **13** | 5 seeds |
+| **The router's quality depends on your billing, not your work**: same config, same tasks, 86.7% → 68.3% when models stop being free | **14** | isolates one variable |
+| On a plan, "never switch" is free and best; **off a plan it is the most expensive option** (2× the router's spend) | **14** | both packs |
 
 **Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
 judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
@@ -838,3 +840,58 @@ measured in thirteen rounds, and the measurement that decides which one we are i
 remains one command and under a cent.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 14 — 2026-09-22 — what the router does for someone with no subscription
+
+**Measured.** Whether any of this holds for a user without a plan. Nearly every finding
+in thirteen rounds leans on plan routes pricing at **$0** at the margin: `planHiddenUsd`
+being 98% of spend, escalation being unpenalised, "never switch" being free. All of that
+is a statement about *one billing arrangement*, and the harness had only ever been run
+in it.
+
+**Changed.** `--billing all-on-demand | all-plan | as-configured` rewrites the fleet's
+billing before building it — **prices, skills and tiers untouched**, so it isolates the
+one variable exactly. Generated from `fleet.json` rather than a second fixture, so it
+cannot drift. A test asserts rebilling changes nothing but `billing` and `oauth`.
+
+**What the numbers did** (`swe-router-long-v1`, session success):
+
+| classifier | billing | session ok | tier acc | switches | **ledger $** | list $ |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| scripted | as shipped | 75.0% | 86.7% | 34 | $1.23 | $69.27 |
+| scripted | **on-demand** | **58.3%** | 86.7% | 34 | **$24.82** | $24.82 |
+| oracle | as shipped | 86.7% | 100% | 34 | $1.21 | $62.45 |
+| oracle | **on-demand** | **68.3%** | 100% | 34 | **$28.69** | $28.69 |
+| heuristic (never switches) | as shipped | 96.7% | 33.3% | 0 | $0.00 | $50.05 |
+| heuristic (never switches) | **on-demand** | 96.7% | 33.3% | 0 | **$50.05** | $50.05 |
+
+**The router's quality depends on the user's billing arrangement, not on the work.**
+With a *perfect* classifier and an unchanged config, session success falls **86.7% →
+68.3%** purely because the models stopped being free. Tier accuracy is identical at
+100% in both — the router lands in exactly the same tiers. The entire difference is
+which model it picks *inside* the standard tier:
+
+| standard tier | on a plan | on-demand |
+| --- | --- | --- |
+| preferred | `gpt-6-astra` (skill 74) | `glm-5.3` (skill 62) |
+
+Cheapest-in-tier picks the strong model when a subscription makes it free, and the weak
+one when it doesn't. Round 2 called this "the strongest model is never chosen"; round 14
+shows the sharper version — **the router silently downgrades the work when the user
+stops having a subscription**, with no signal that anything changed.
+
+**And the "never switch is better" finding flips sides.** On a plan, not switching is
+both best (96.7%) and free ($0 to the ledger) — rounds 4 and 7's result. Off a plan it
+is still best *and now the most expensive thing you can do*: **$50.05 against the
+router's $24.82**, i.e. the router buys a real **50% cost reduction** for 38pp of
+quality. That is a genuine trade a user might want, and on the shipped plan
+configuration it is invisible because both columns read $0.
+
+**A quieter confirmation.** With `all-on-demand`, `planHiddenUsd` is exactly **$0** and
+`ledgerCostUsd == listEquivalentUsd`. The ledger is accurate — for users who have no
+subscription. For everyone else it under-reports by ~50×, which is what rounds 1–13 have
+been saying with a fixture and can now say with the variable isolated.
+
+**Next.** Unchanged: `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

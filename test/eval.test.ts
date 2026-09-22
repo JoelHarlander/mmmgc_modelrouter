@@ -25,7 +25,7 @@ import { runEval } from "../eval/harness.ts";
 import { computeMetrics, PLAN_POINT_USD } from "../eval/metrics.ts";
 import { compareMetrics, GATED_METRICS, gateRegressions, latestPath, readRun, type RunRecord, writeRun } from "../eval/results.ts";
 import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
-import { buildFleet } from "../eval/fleet.ts";
+import { buildFleet, rebill } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
 import {
 	type ConfidenceCell,
@@ -58,11 +58,11 @@ function tmpLedger(): string {
 	return join(mkdtempSync(join(tmpdir(), "router-eval-test-")), "usage.json");
 }
 
-type RunOpts = Partial<Omit<Parameters<typeof runEval>[0], "loaded">> & { unauthed?: string[] };
+type RunOpts = Partial<Omit<Parameters<typeof runEval>[0], "loaded">> & { unauthed?: string[]; billing?: Parameters<typeof loadFleet>[1] extends infer O ? (O extends { billing?: infer B } ? B : never) : never };
 
 async function run(options: RunOpts = {}) {
-	const { unauthed, ...rest } = options;
-	const loaded = loadFleet(FLEET, { unauthed });
+	const { unauthed, billing, ...rest } = options;
+	const loaded = loadFleet(FLEET, { unauthed, billing });
 	return runEval({ pack: pack(), loaded, classifier: "scripted", ledgerFile: tmpLedger(), ...rest });
 }
 
@@ -948,4 +948,47 @@ test("a pinned turn cannot change the thinking level, so it is never charged a c
 		}
 		previous = turn;
 	}
+});
+
+test("rebilling a fleet changes its billing and nothing else", () => {
+	const raw = JSON.parse(readFileSync(FLEET, "utf8")) as Fleet;
+	const rebilled = rebill(raw, "all-on-demand");
+	assert.deepEqual(rebilled.tiers, raw.tiers);
+	assert.equal(rebilled.models.length, raw.models.length);
+	for (const [i, model] of rebilled.models.entries()) {
+		const before = raw.models[i]!;
+		assert.equal(model.billing, "on-demand");
+		assert.equal(model.oauth, false);
+		assert.deepEqual({ ...model, billing: before.billing, oauth: before.oauth }, before, `${model.key}: rebilling touched something else`);
+	}
+	assert.deepEqual(rebill(raw, "as-configured"), raw);
+});
+
+test("without a subscription the ledger finally sees what the router spends", async () => {
+	const onDemand = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), unauthed: [], billing: "all-on-demand" })));
+	assert.equal(onDemand.planHiddenUsd, 0, "nothing is hidden when nothing is on a plan");
+	assert.equal(onDemand.ledgerCostUsd, onDemand.listEquivalentUsd);
+	assert.equal(onDemand.planPointsUsed, 0);
+
+	const asShipped = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	assert.ok(asShipped.planHiddenUsd > asShipped.ledgerCostUsd * 10, "on a plan, almost all of it is hidden");
+});
+
+test("the router's quality depends on the billing arrangement, not on the work", async () => {
+	// Identical config, identical tasks, a perfect classifier. The only thing that
+	// changes is whether the models are free at the margin.
+	const onPlan = await run({ pack: pack(LONG_PACK), classifier: "oracle" });
+	const onDemand = await run({ pack: pack(LONG_PACK), classifier: "oracle", billing: "all-on-demand" });
+	const a = computeMetrics(onPlan.turns, onPlan.stateChars);
+	const b = computeMetrics(onDemand.turns, onDemand.stateChars);
+
+	assert.equal(a.tierAccuracy, b.tierAccuracy, "the router lands in the same tiers either way");
+	assert.ok(b.sessionSuccessRate < a.sessionSuccessRate - 0.1, "...and yet does materially worse work");
+	assert.ok(b.listEquivalentUsd < a.listEquivalentUsd, "it is buying that with a real cost saving");
+
+	// The whole difference is which model the standard tier prefers: cheapest-in-tier
+	// picks the strong one when a subscription makes it free and the weak one otherwise.
+	const standardPick = (turns: typeof onPlan.turns) => new Set(turns.filter((t) => t.effectiveTier === "standard").map((t) => t.model));
+	assert.deepEqual([...standardPick(onPlan.turns)], ["faux-plan-codex/gpt-6-astra"]);
+	assert.deepEqual([...standardPick(onDemand.turns)], ["faux-or/glm-5.3"]);
 });
