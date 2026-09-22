@@ -30,8 +30,11 @@ must live, since a project file may not state them) and the user's real global c
   reported spent; when it names none, the refusal is the credential's own and is stored as one more account-wide
   window (`REFUSAL_WINDOWS`) rather than a second kind of state — keep it that way, since every earlier attempt to
   hold a provider-wide cooldown beside the windows traded one wrong answer for another. Clearing one is an expired
-  window carrying its own `lastSeen`, never a deleted key, so `mergeLedgers` can settle it. A spent meter that matches
-  no routable model is carried as uncertainty, never as account-wide exhaustion.
+  window carrying its own `lastSeen`, never a deleted key, so `mergeLedgers` can settle it. Such a refusal reaches
+  `assess` as `refused`, not `exhaustedAccount`: it excludes every route on the credential whatever the basis, and
+  must never be read as spent subscription quota that extra credits may cover. A spent meter that matches
+  no routable model (`windowPlaceable`) is carried as uncertainty, never as account-wide exhaustion, and can never
+  absorb a refusal either — a 429 whose only spent meter is unplaceable is the credential's own.
   `docs/research/plan-quotas.md` is the authority for header names, JSON shapes and value scales — note especially
   that Anthropic utilization is 0..1 in headers but 0..100 from `/api/oauth/usage`.
 - `src/entitlement.ts` may only call read-only usage endpoints. Nothing here may send inference or log a credential.

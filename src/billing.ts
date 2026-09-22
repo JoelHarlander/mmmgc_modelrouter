@@ -102,6 +102,14 @@ function assessRoute(args: AssessArgs, key: string, quota: QuotaAssessment, now:
 	}
 	if (quota.plan) evidence.push(`provider reports plan "${quota.plan}"`);
 
+	// The credential refused a call and said nothing about which window: it is out for every route
+	// it backs, whatever the basis, and extra billed credits are not a way around its own refusal.
+	if (quota.refused.length > 0) {
+		const refused = quota.refused.map((w) => w.reason).join(", ");
+		evidence.push(`credential refused (${refused})`);
+		return excluded(labelBasis(billing), billing, freshness, `${model.provider} is refusing calls on this credential (${refused})`, evidence, uncertainty);
+	}
+
 	// A spent model-scoped window excludes the route whatever the basis is.
 	if (quota.exhaustedScoped.length > 0) {
 		const w = quota.exhaustedScoped[0]!;

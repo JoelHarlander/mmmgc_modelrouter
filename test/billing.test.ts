@@ -57,7 +57,7 @@ const ALL = [opus, fable, codex, grok, claudeApi, router, routerFree, gateway];
 const cfg: RouterConfig = mergeConfig(DEFAULT_CONFIG, {
 	tiers: {
 		light: ["openrouter/z-ai/glm-5.3"],
-		standard: ["claude-bridge/claude-opus-5", "openrouter/z-ai/glm-5.3"],
+		standard: ["claude-bridge/claude-opus-5", "openai-codex/gpt-6-astra", "openrouter/z-ai/glm-5.3"],
 		heavy: ["claude-bridge/claude-fable-5-1", "claude-bridge/claude-opus-5"],
 	},
 	billing: { ...DEFAULT_CONFIG.billing, probe: { ...DEFAULT_CONFIG.billing.probe, enabled: false } },
@@ -681,7 +681,7 @@ test("a Fable-only rejection seen on a 200 excludes Fable and leaves Opus usable
 	const l = ledger();
 	l.observeResponse("claude-bridge", 200, FABLE_ONLY_REJECTED, cfg);
 
-	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).exhaustedAccount, [], "the credential itself was not refused");
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).refused, [], "the credential itself was not refused");
 	assert.equal(assess(opus, l).eligibility, "preferred");
 	assert.equal(assess(fable, l).eligibility, "excluded");
 });
@@ -692,7 +692,7 @@ test("the same rejection arriving as a 429 with retry-after still only excludes 
 	const l = ledger();
 	l.observeResponse("claude-bridge", 429, { ...FABLE_ONLY_REJECTED, "retry-after": String(5 * 24 * 60 * 60) }, cfg);
 
-	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).exhaustedAccount, [], "a scoped refusal never cools the credential");
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).refused, [], "a scoped refusal never cools the credential");
 	assert.equal(assess(opus, l).eligibility, "preferred");
 	const fableVerdict = assess(fable, l);
 	assert.equal(fableVerdict.eligibility, "excluded");
@@ -718,6 +718,7 @@ test("a per-family Codex refusal leaves the rest of the credential usable", () =
 	const registry = fakeRegistry([...ALL, sibling], ["claude-bridge", "openai-codex", "xai"]);
 
 	assert.deepEqual(l.assess("openai-codex", "openai-codex/gpt-6-mini", cfg).exhaustedAccount, []);
+	assert.deepEqual(l.assess("openai-codex", "openai-codex/gpt-6-mini", cfg).refused, [], "a family meter answered for the refusal");
 	assert.notEqual(assessBilling({ model: sibling, cfg, registry, ledger: l }).eligibility, "excluded");
 	assert.equal(assessBilling({ model: codex, cfg, registry, ledger: l }).eligibility, "excluded", "only the family that filled its meter is out");
 });
@@ -730,7 +731,7 @@ test("a scoped window spent days ago does not suppress a later unrelated refusal
 	l.observeResponse("claude-bridge", 429, {}, cfg, Date.now() + 60_000);
 
 	const cooled = l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, Date.now() + 60_000);
-	assert.match(cooled.exhaustedAccount.map((w) => w.reason).join(","), /rate limited \(429\)/, "the credential's own refusal still cools it");
+	assert.match(cooled.refused.map((w) => w.reason).join(","), /rate limited \(429\)/, "the credential's own refusal still cools it");
 	assert.equal(assess(opus, l, cfg, Date.now() + 60_000).eligibility, "excluded");
 });
 
@@ -769,10 +770,10 @@ test("a bare entitlement-gate 429 still cools the credential briefly", () => {
 	assert.match(assess(opus, l, cfg, t0 + 1_000).reason, /rate limited \(429\)/);
 	// Brief: gone once billing.plan.cooldownMinutesOn429 has passed.
 	const later = t0 + cfg.plan.cooldownMinutesOn429 * 60_000 + 5_000;
-	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, later).exhaustedAccount, [], "and it lifts on its own");
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, later).refused, [], "and it lifts on its own");
 
 	l.observeResponse("claude-bridge", 200, {}, cfg, t0 + 2_000);
-	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0 + 2_000).exhaustedAccount, [], "a success clears it early");
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0 + 2_000).refused, [], "a success clears it early");
 	assert.equal(assess(opus, l, cfg, t0 + 2_000).eligibility, "preferred");
 });
 
@@ -840,4 +841,33 @@ test("a spent meter no configured route answers to is disclosed rather than igno
 	lFree.observeResponse("ds4", 200, { "x-codex-primary-used-percent": "20", "x-codex-premium-primary-used-percent": "100" }, cfg);
 	const free = assessBilling({ model: local, cfg, registry: fakeRegistry([local]), ledger: lFree });
 	assert.equal(free.rank, assessBilling({ model: local, cfg, registry: fakeRegistry([local]), ledger: ledger() }).rank, "but a quota meter cannot demote a zero-cost route");
+});
+
+test("a refusal the response placed nowhere is not an exhausted subscription credits may cover", () => {
+	// `openai-codex/*` is in billing.allowExtraBilled with credits to spend, so reading the bare
+	// entitlement-gate 429 as spent subscription quota would move the turn onto paid credits and
+	// send it straight back to the provider that is refusing.
+	const l = ledger();
+	l.applyEntitlement("openai-codex", { credits: { hasCredits: true, balance: "12" } });
+	l.observeResponse("openai-codex", 429, {}, cfg);
+
+	const a = assess(codex, l);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /rate limited \(429\)/);
+	assert.notEqual(a.basis, "extra-credits", "a refusal is not permission to spend credits");
+});
+
+test("a 429 whose only spent meter is one nothing can place still cools the credential", () => {
+	// docs/research/plan-quotas.md records `codex_other` as a real normalized limit id that is not
+	// a model name: a meter the router cannot place cannot be what the provider refused for.
+	const l = ledger();
+	l.observeResponse("openai-codex", 429, { "x-codex-codex_other-primary-used-percent": "100" }, cfg);
+
+	const a = assess(codex, l);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /rate limited \(429\)/, "the refusal is the credential's own");
+	assert.ok(a.uncertainty.some((u) => /spent meter no configured route answers to/.test(u)), "and the meter is still disclosed");
+
+	const q = l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg);
+	assert.match(q.unattributed.map((w) => w.id).join(","), /codex_other:primary/);
 });

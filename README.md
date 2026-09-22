@@ -104,9 +104,12 @@ both evidence paths then name the same meter, and a later poll refreshes what a 
 A scoped window speaks only for its own models: a Fable-only or overage rejection excludes the models that window
 governs and nothing else, whether it arrives on a 200 or on a 429 with `retry-after`. Only the windows *that*
 response reported spent can answer whose refusal it is; a window stored hours ago cannot. A refusal the response
-attributes to no window of its own is the credential's own, and is recorded as one more account-wide window —
-`rate limited (429)` or `budget exhausted (402)` — that expires after the `retry-after` it came with or
-`plan.cooldownMinutesOn429`, and that the credential's next successful answer clears. And when a provider reports a spent
+attributes to no window of its own — or attributes only to a meter that governs no route you can reach — is the
+credential's own, and is recorded as one more account-wide window — `rate limited (429)` or
+`budget exhausted (402)` — that expires after the `retry-after` it came with or `plan.cooldownMinutesOn429`, and
+that the credential's next successful answer clears. While it stands it excludes every route on that credential
+whatever pays for them: a credential refusing calls is not a spent subscription window, so extra billed credits are
+never a way around it. And when a provider reports a spent
 meter that names no route your config can reach, the router neither ignores it nor calls the whole credential
 spent — it carries it as uncertainty on every route of that provider and stops calling those verdicts `verified`.
 

@@ -88,6 +88,8 @@ const REFUSAL_WINDOWS: Record<string, string> = {
 export interface QuotaAssessment {
 	/** Account-wide windows that are exhausted (the whole credential is spent). */
 	exhaustedAccount: ExhaustedWindow[];
+	/** Refusals the response attributed to no window of its own: the credential itself said no. */
+	refused: ExhaustedWindow[];
 	/** Model-scoped windows governing this model that are exhausted. */
 	exhaustedScoped: ExhaustedWindow[];
 	/** Spent windows that name a meter no configured route answers to. Evidence, not a verdict. */
@@ -175,7 +177,7 @@ export class Ledger {
 			// names one, that window already excludes the models it governs and nothing else. When
 			// it names none, the refusal is the credential's own (the bare entitlement gate,
 			// docs/research/plan-quotas.md §1) and is recorded as an account-wide window.
-			if (!reportedSpentWindow(state, cfg, now)) {
+			if (!reportedSpentWindow(state, cfg, credentialOf(cfg, provider), now)) {
 				const retryAfter = num(h("retry-after"));
 				const id = status === 402 ? "budget-exhausted" : "rate-limited";
 				state.windows[id] = {
@@ -222,7 +224,7 @@ export class Ledger {
 	 * against `modelKey` through `cfg.scopes`, so an exhausted scoped quota excludes only its models.
 	 */
 	assess(provider: string, modelKey: string | undefined, cfg: RouterConfig, now = Date.now()): QuotaAssessment {
-		const out: QuotaAssessment = { exhaustedAccount: [], exhaustedScoped: [], unattributed: [], accountWindows: [], sources: [] };
+		const out: QuotaAssessment = { exhaustedAccount: [], exhaustedScoped: [], refused: [], unattributed: [], accountWindows: [], sources: [] };
 		const account = credentialOf(cfg, provider);
 		const state = this.data.providers[account];
 		if (!state) return out;
@@ -235,11 +237,12 @@ export class Ledger {
 			sources.add(w.source);
 			newest = Math.max(newest ?? 0, w.lastSeen);
 			if (REFUSAL_WINDOWS[id] !== undefined) {
-				// The credential's own refusal is account-wide exhaustion like any other: it says the
-				// whole credential is spent until it resets, and it is never quota evidence about a
-				// window the provider reported, so it stays out of `accountWindows`.
+				// The credential refusing is not a spent subscription window: it keeps every route on
+				// the credential out until it resets, and extra billed credits cannot buy past it. It
+				// is never quota evidence about a window the provider reported either, so it stays
+				// out of `accountWindows`.
 				if (windowExhausted(w, cfg, now) !== undefined) {
-					out.exhaustedAccount.push({ id, reason: `${REFUSAL_WINDOWS[id]} until ${new Date(w.resetAt!).toLocaleTimeString()}` });
+					out.refused.push({ id, reason: `${REFUSAL_WINDOWS[id]} until ${new Date(w.resetAt!).toLocaleTimeString()}` });
 				}
 				continue;
 			}
@@ -251,9 +254,7 @@ export class Ledger {
 			const spent = windowExhausted(w, cfg, now);
 			if (scope !== undefined) {
 				if (!(modelKey && anyGlobMatch(scope.globs, modelKey))) {
-					if (spent && !scope.declared && !routableModels(cfg).some((key) => anyGlobMatch(scope.globs, key))) {
-						out.unattributed.push({ id, reason: `${id} ${spent}` });
-					}
+					if (spent && !windowPlaceable(cfg, account, id)) out.unattributed.push({ id, reason: `${id} ${spent}` });
 					continue;
 				}
 				if (spent) out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
@@ -386,10 +387,25 @@ export function windowExhausted(w: WindowState, cfg: RouterConfig, now: number):
 	return undefined;
 }
 
-/** Whether the response just folded in named a window of its own as spent. */
-function reportedSpentWindow(state: ProviderState, cfg: RouterConfig, now: number): boolean {
+/**
+ * Whether a window governs anything the router can act on: account-wide, named by `cfg.scopes`, or
+ * a runtime `<model>:<role>` meter whose model the config can actually route to. A window that
+ * places nothing is evidence the router cannot use, so it can neither absorb a refusal nor stand
+ * as a verdict about the account.
+ */
+function windowPlaceable(cfg: RouterConfig, account: string, windowId: string): boolean {
+	const scope = scopeGlobs(cfg, account, windowId);
+	return scope === undefined || scope.declared || routableModels(cfg).some((key) => anyGlobMatch(scope.globs, key));
+}
+
+/** Whether the response just folded in named a window of its own, that the router can place, as spent. */
+function reportedSpentWindow(state: ProviderState, cfg: RouterConfig, account: string, now: number): boolean {
 	return Object.entries(state.windows).some(
-		([id, w]) => w.lastSeen === now && REFUSAL_WINDOWS[id] === undefined && windowExhausted(w, cfg, now) !== undefined,
+		([id, w]) =>
+			w.lastSeen === now &&
+			REFUSAL_WINDOWS[id] === undefined &&
+			windowExhausted(w, cfg, now) !== undefined &&
+			windowPlaceable(cfg, account, id),
 	);
 }
 
