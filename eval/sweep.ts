@@ -304,6 +304,64 @@ export function renderPolicySweep(cells: PolicyCell[], title: string): string {
 	return `${out.join("\n")}\n`;
 }
 
+export interface StartCell {
+	startModel: string;
+	classifier: string;
+	sessionSuccessRate: number;
+	tierAccuracy: number;
+	switches: number;
+	listEquivalentUsd: number;
+	coldPremiumUsd: number;
+	compactions: number;
+}
+
+/**
+ * Does any of this depend on where the session happened to start?
+ *
+ * Every "never switching wins" result in this log was taken with the session starting on
+ * the strongest plan model, because that is where the cache-cost study found this machine
+ * sitting. A profile that never switches therefore never leaves the best model in the
+ * fleet, which flatters it enormously. This sweeps the starting point instead of assuming it.
+ */
+export async function runStartSweep(options: SweepOptions & { startModels?: string[]; classifiers?: ClassifierMode[] }): Promise<StartCell[]> {
+	const starts = options.startModels ?? [...options.loaded.byKey.keys()];
+	const classifiers = options.classifiers ?? (["scripted", "heuristic", "oracle"] as ClassifierMode[]);
+	const cells: StartCell[] = [];
+	for (const startModel of starts) {
+		for (const classifier of classifiers) {
+			const outcome = await runEval({ pack: options.pack, loaded: options.loaded, classifier, startModel });
+			const m = computeMetrics(outcome.turns, outcome.stateChars);
+			cells.push({
+				startModel,
+				classifier,
+				sessionSuccessRate: m.sessionSuccessRate,
+				tierAccuracy: m.tierAccuracy,
+				switches: m.switches,
+				listEquivalentUsd: m.listEquivalentUsd,
+				coldPremiumUsd: m.coldPremiumUsd,
+				compactions: m.compactions,
+			});
+		}
+	}
+	return cells;
+}
+
+export function renderStartSweep(cells: StartCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  start model                          classifier   session ok   tier acc   switches      list $   cold prem   compactions");
+	let last = "";
+	for (const c of cells) {
+		if (c.startModel !== last && last !== "") out.push("");
+		last = c.startModel;
+		out.push(
+			`  ${c.startModel.padEnd(34)}   ${c.classifier.padEnd(10)}   ${pct(c.sessionSuccessRate).padStart(10)}   ${pct(c.tierAccuracy).padStart(8)}   ` +
+				`${String(c.switches).padStart(8)}   ${usd(c.listEquivalentUsd).padStart(9)}   ${usd(c.coldPremiumUsd).padStart(9)}   ${String(c.compactions).padStart(11)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
 export interface PinCell {
 	manualPinTurns: number;
 	pinnedTurns: number;

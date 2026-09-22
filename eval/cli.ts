@@ -42,6 +42,7 @@ import {
 import {
 	renderConfidenceSweep,
 	renderPinSweep,
+	renderStartSweep,
 	renderStrategySweep,
 	renderGateSweep,
 	renderOracleSweep,
@@ -50,6 +51,7 @@ import {
 	renderTrafficSweep,
 	runConfidenceSweep,
 	runPinSweep,
+	runStartSweep,
 	runStrategySweep,
 	runJudgeSweep,
 	runOracleSweep,
@@ -82,7 +84,7 @@ interface Args {
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin" | "start";
 	exploreTurns?: number;
 	calibration: boolean;
 	explain?: string;
@@ -298,6 +300,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep confidence     sweep switching.minConfidence, the routing bar
   --sweep strategy       fan out every turn, or only to learn a winner then commit?
   --sweep pin            sweep switching.manualPinTurns, how long a /model pin holds
+  --sweep start          does any of this depend on where the session started?
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --calibration          is the classifier's confidence worth anything?
@@ -399,6 +402,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "start") {
+			title = `start sweep — pack ${pack.id}, every fleet model as the session's starting point`;
+			const c = await runStartSweep(base);
+			cells = c;
+			rendered = renderStartSweep(c, title);
 		} else if (args.sweep === "pin") {
 			title = `pin sweep — pack ${pack.id}, classifier ${args.classifier}`;
 			const c = await runPinSweep(base);

@@ -47,6 +47,7 @@ import {
 	runConfidenceSweep,
 	runOracleSweep,
 	runPinSweep,
+	runStartSweep,
 	runPolicySweep,
 	runStrategySweep,
 	runTrafficSweep,
@@ -1251,4 +1252,33 @@ test("asking to explain a task that is not in the run says which ones are", asyn
 	const text = explainTask(outcome.turns, "nope__nope-1");
 	assert.match(text, /no task "nope__nope-1" in this run/);
 	for (const id of new Set(outcome.turns.map((t) => t.taskId))) assert.ok(text.includes(id), `${id} not offered as an alternative`);
+});
+
+test("routing is insensitive to where the session started; not routing is entirely determined by it", async () => {
+	const loaded = loadFleet(FLEET);
+	const cells = await runStartSweep({ pack: pack(LONG_PACK), loaded, classifier: "scripted" });
+	const of = (classifier: string) => cells.filter((c) => c.classifier === classifier).map((c) => c.sessionSuccessRate);
+	const spread = (values: number[]) => Math.max(...values) - Math.min(...values);
+	const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
+
+	const routed = of("oracle");
+	const never = of("heuristic");
+	assert.equal(routed.length, loaded.byKey.size, "every fleet model should be tried as a starting point");
+
+	// This is what a router is *for*: it corrects a bad starting point.
+	assert.ok(spread(routed) < 0.1, `routing varied by ${(spread(routed) * 100).toFixed(1)}pp across starting models`);
+	assert.ok(spread(of("scripted")) < 0.1);
+	// Never switching cannot correct anything, so it inherits whatever it started on.
+	assert.ok(spread(never) > 0.35, `never-switching varied by only ${(spread(never) * 100).toFixed(1)}pp; the sweep is not biting`);
+
+	// ...and its ranking follows the starting model's competence, not the work.
+	const byStart = new Map(cells.filter((c) => c.classifier === "heuristic").map((c) => [c.startModel, c.sessionSuccessRate]));
+	const weakest = loaded.byKey.get("faux-or/glm-5.3-flash")!;
+	const strongest = loaded.byKey.get("faux-gw/claude-fable-5-1")!;
+	assert.ok(weakest.skill < strongest.skill);
+	assert.ok(byStart.get(weakest.key)! < byStart.get(strongest.key)!);
+
+	// Averaged over starting points - i.e. not assuming the user is already on the best
+	// model - routing wins, which is the opposite of what a single start model showed.
+	assert.ok(mean(routed) > mean(never) + 0.15, `routing ${mean(routed)} vs never-switching ${mean(never)}`);
 });

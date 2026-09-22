@@ -16,6 +16,7 @@ npm run eval -- --sweep gate                  # does the shipped confidence bar 
 npm run eval -- --sweep policy                # what the inherited candidate set costs vs alternatives
 npm run eval -- --sweep strategy              # fan out every turn, or only to learn a winner then commit?
 npm run eval -- --sweep pin                   # what a /model pin costs once it outlives its question
+npm run eval -- --sweep start                 # does any of this depend on where the session started?
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --explain <task id>           # the turn-by-turn trace behind one task's score

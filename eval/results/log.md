@@ -16,7 +16,8 @@ Jump to the round that established each claim, and what it rests on.
 | Cheapest-in-tier means the strongest model is never chosen, in any profile | 2 | — |
 | At realistic context, **switching costs ~half of a long session's spend** (50.2% of it; $24.94 after r16 corrected r4's $34.26) | 4, **16** | ±20pt fleet jitter (r7), traffic constants (r5) |
 | A profile that never changes model still pays 14 cold starts, all `thinking-change` | 4 | — |
-| Never switching *also* wins on quality | 4 | **not robust — REVERSED in r15** once the pack contains operator pins (5/5 → 0/5) |
+| ~~Never switching *also* wins on quality~~ | 4 | **WITHDRAWN in r19.** It was an artefact of starting the session on the strongest model. Averaged over starting points, routing wins 65.8% to 41.7%. |
+| **Routing's value is insensitive to the starting model** (5pp spread across six starts); not routing varies by **45pp** and simply inherits whatever it began on | **19** | every fleet model as a start |
 | Fan-out costs 2.9× more per extra solve at realistic context ($4.94 → $14.28) | 4 | traffic constants (r5) |
 | Candidate selection is worth **~+15pp** when the judge is good | 3 | traffic constants (r5) |
 | **~20 points of judge bias makes fan-out worse than not running it** | 3 | 5 seeds × 3 widths |
@@ -1160,5 +1161,60 @@ Turn 2 is round 2's `inTierMisses` in one line: the classification was right, th
 was right, and the router picked the cheapest member of that tier, which was four skill
 points short. Turn 3 is rounds 4 and 14 together: a correct escalation that cost
 **$1.1442 against $0.4123 warm** — and billed the ledger **$0.00**.
+
+**Next.** `--classifier live --record` and `--probe --live-judge`.
+
+---
+
+## Round 19 — 2026-09-23 — the confound underneath the biggest finding
+
+**Measured.** Where the session starts. `--start-model` has existed since round 1 and
+has never been anything but its default, `faux-plan-anthropic/claude-opus-5` — chosen
+because the cache-cost study found this machine sitting on Opus. Every comparison
+involving the never-switching profile has therefore been run with that profile parked on
+**the strongest plan model in the fleet**, which flatters it enormously and which nobody
+had questioned for eighteen rounds.
+
+**Changed.** `--sweep start` runs every fleet model as the session's starting point,
+across all three classifiers.
+
+**What the numbers did** (`swe-router-long-v1`, session success):
+
+| start model | skill | `oracle` (routes) | `scripted` (routes) | `heuristic` (never switches) |
+| --- | ---: | ---: | ---: | ---: |
+| `glm-5.3-flash` | 46 | 65.0% | 56.7% | **20.0%** |
+| `deepseek-v4.1-flash` | 49 | 70.0% | 60.0% | 21.7% |
+| `glm-5.3` | 62 | 65.0% | 56.7% | 35.0% |
+| `gpt-6-astra` | 74 | 65.0% | 56.7% | 46.7% |
+| `claude-opus-5` (the default every round used) | 86 | 65.0% | 56.7% | **61.7%** |
+| `claude-fable-5-1` | 91 | 65.0% | 56.7% | **65.0%** |
+| **mean** | | **65.8%** | 57.2% | **41.7%** |
+| **spread** | | **5.0pp** | **3.3pp** | **45.0pp** |
+
+**The "never switching also wins on quality" finding is withdrawn.** It was an artefact
+of the starting model. Not switching cannot correct anything, so it simply inherits
+whatever the session began on: 20.0% from the weakest model, 65.0% from the strongest,
+and it only ties routing at the very top of the fleet — which is where every previous
+round happened to put it. Averaged over starting points, routing wins **65.8% to 41.7%**.
+
+**And the inverse is the actual case for the router.** `oracle` varies by **5.0pp**
+across six starting models and `scripted` by **3.3pp**, against never-switching's
+**45.0pp**. That is precisely what a router is for, and it is the first unambiguously
+*positive* finding about the shipped switcher in nineteen rounds: **its value is that the
+outcome stops depending on where you happened to be.**
+
+The cost picture flips with it. Never-switching's spend ranges from **$2.67** (parked on
+a flash model, achieving 21.7%) to **$55.54** (parked on Astra, achieving 46.7%);
+routing costs $46.49–$49.77 for 56.7–60.0% wherever it starts. The cheap end of that
+range is not a saving, it is a different product.
+
+**What this says about the earlier rounds.** Round 4 reported never-switching beating
+perfect routing; round 7 swept the fleet and flagged the quality half as not robust;
+round 15 saw it reverse under operator pins; round 19 finds the confound that produced it
+in the first place. The **cost** half — that switching is expensive and that the router
+spends more than not moving does — has now survived fleet jitter, the traffic constants,
+compaction, operator pins, billing mode, and the starting model. It is the load-bearing
+result. The quality half never was one, and the findings index now says so with a
+strikethrough rather than a caveat.
 
 **Next.** `--classifier live --record` and `--probe --live-judge`.
