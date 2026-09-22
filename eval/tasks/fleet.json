@@ -1,0 +1,83 @@
+{
+	"version": 1,
+	"note": "Offline fleet. Prices are the published list prices recorded in docs/research + the cache-cost study (USD per 1M tokens). `skill` is a declared competence used by the offline oracle; it is a stated assumption of the harness, not a measurement of any real model. Provider names are deliberately synthetic (faux-*) so a fixture can never reach a real endpoint.",
+	"models": [
+		{
+			"key": "faux-or/glm-5.3-flash",
+			"name": "GLM 5.3 Flash (faux, OpenRouter-priced)",
+			"tier": "light",
+			"billing": "on-demand",
+			"oauth": false,
+			"cost": { "input": 0.15, "output": 0.5, "cacheRead": 0.05, "cacheWrite": 0.15 },
+			"skill": 34,
+			"skillByCategory": { "lookup": 14, "test-writing": 4, "concurrency": -14, "architecture": -18, "security": -12 },
+			"capability": 30,
+			"contextWindow": 200000
+		},
+		{
+			"key": "faux-gw/deepseek-v4.1-flash",
+			"name": "DeepSeek v4.1 Flash (faux, gateway-priced)",
+			"tier": "light",
+			"billing": "on-demand",
+			"oauth": false,
+			"cost": { "input": 0.28, "output": 0.42, "cacheRead": 0.028, "cacheWrite": 0.28 },
+			"skill": 38,
+			"skillByCategory": { "lookup": 10, "refactor": 4, "concurrency": -12, "architecture": -16 },
+			"capability": 34,
+			"contextWindow": 128000
+		},
+		{
+			"key": "faux-or/glm-5.3",
+			"name": "GLM 5.3 (faux, OpenRouter-priced)",
+			"tier": "standard",
+			"billing": "on-demand",
+			"oauth": false,
+			"cost": { "input": 0.84, "output": 2.64, "cacheRead": 0.156, "cacheWrite": 0.84 },
+			"skill": 58,
+			"skillByCategory": { "test-writing": 6, "architecture": -10, "concurrency": -6 },
+			"capability": 55,
+			"contextWindow": 200000
+		},
+		{
+			"key": "faux-plan-codex/gpt-6-astra",
+			"name": "GPT-6 Astra (faux, Codex plan)",
+			"tier": "standard",
+			"billing": "plan",
+			"oauth": true,
+			"cost": { "input": 10.0, "output": 50.0, "cacheRead": 1.0, "cacheWrite": 12.5 },
+			"skill": 72,
+			"skillByCategory": { "concurrency": 4, "architecture": -4 },
+			"capability": 72,
+			"contextWindow": 272000
+		},
+		{
+			"key": "faux-plan-anthropic/claude-opus-5",
+			"name": "Claude Opus 5 (faux, Max plan)",
+			"tier": "heavy",
+			"billing": "plan",
+			"oauth": true,
+			"cost": { "input": 5.0, "output": 25.0, "cacheRead": 0.5, "cacheWrite": 6.25 },
+			"skill": 84,
+			"skillByCategory": { "architecture": 4, "security": 4, "lookup": -2 },
+			"capability": 84,
+			"contextWindow": 400000
+		},
+		{
+			"key": "faux-gw/claude-fable-5-1",
+			"name": "Claude Fable 5.1 (faux, gateway on-demand)",
+			"tier": "heavy",
+			"billing": "on-demand",
+			"oauth": false,
+			"cost": { "input": 10.0, "output": 50.0, "cacheRead": 0.25, "cacheWrite": 12.5 },
+			"skill": 90,
+			"skillByCategory": { "architecture": 6, "concurrency": 6, "lookup": -4 },
+			"capability": 90,
+			"contextWindow": 400000
+		}
+	],
+	"tiers": {
+		"light": ["faux-or/glm-5.3-flash", "faux-gw/deepseek-v4.1-flash"],
+		"standard": ["faux-plan-codex/gpt-6-astra", "faux-or/glm-5.3"],
+		"heavy": ["faux-plan-anthropic/claude-opus-5", "faux-gw/claude-fable-5-1"]
+	}
+}

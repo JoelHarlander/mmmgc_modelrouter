@@ -1,0 +1,332 @@
+{
+	"version": 1,
+	"id": "swe-router-v1",
+	"description": "SWE-bench-style routing pack. Task ids and repositories are taken from the public SWE-bench Verified/Lite instance namespace; the prompts are short paraphrases of the issue each instance describes, written for this harness. `goldTier` and `requiredSkill` are hand-declared ground truth: they say what the work needs, so the router's choice can be scored. `jev` is the classifier answer the fixture expects, written against the criteria in src/state.ts; `npm run eval -- --record` overwrites it with what live Jev actually says.",
+	"tasks": [
+		{
+			"id": "sympy__sympy-20590",
+			"repo": "sympy/sympy",
+			"category": "lookup",
+			"requiredSkill": 40,
+			"startContextTokens": 9000,
+			"contextGrowthPerTurn": 4000,
+			"callsPerTurn": 2,
+			"note": "A question, not a change. The cheapest model should take it.",
+			"turns": [
+				{
+					"prompt": "Symbol instances started having a __dict__ in 1.7 but not in 1.6.2. Which commit or class change would explain that? Just tell me where to look.",
+					"goldTier": "light",
+					"jev": { "tier": "light", "confidence": 0.86, "needsTools": 0.25, "stakes": 0.4 }
+				}
+			]
+		},
+		{
+			"id": "pylint-dev__pylint-7228",
+			"repo": "pylint-dev/pylint",
+			"category": "bugfix",
+			"requiredSkill": 44,
+			"startContextTokens": 11000,
+			"contextGrowthPerTurn": 5000,
+			"callsPerTurn": 3,
+			"turns": [
+				{
+					"prompt": "rxg regex with \\p{Han} in the rcfile raises 'bad escape \\p'. Swap the re module for regex in the config parsing so unicode property escapes work.",
+					"goldTier": "light",
+					"jev": { "tier": "light", "confidence": 0.71, "needsTools": 0.95, "stakes": 1.0 }
+				}
+			]
+		},
+		{
+			"id": "psf__requests-2317",
+			"repo": "psf/requests",
+			"category": "bugfix",
+			"requiredSkill": 46,
+			"startContextTokens": 13000,
+			"contextGrowthPerTurn": 5000,
+			"callsPerTurn": 3,
+			"turns": [
+				{
+					"prompt": "method = builtin_str(method) turns a binary string b'GET' into the literal \"b'GET'\" on Python 3, so the request 404s. Fix the conversion in sessions.py.",
+					"goldTier": "light",
+					"jev": { "tier": "standard", "confidence": 0.58, "needsTools": 0.96, "stakes": 1.2 }
+				},
+				{
+					"prompt": "Add a regression test for the binary-method case.",
+					"goldTier": "light",
+					"requiredSkill": 42,
+					"jev": { "tier": "light", "confidence": 0.74, "needsTools": 0.94, "stakes": 0.8 }
+				}
+			]
+		},
+		{
+			"id": "django__django-11039",
+			"repo": "django/django",
+			"category": "bugfix",
+			"requiredSkill": 58,
+			"startContextTokens": 22000,
+			"contextGrowthPerTurn": 9000,
+			"turns": [
+				{
+					"prompt": "sqlmigrate wraps its output in BEGIN/COMMIT even when the database doesn't support transactional DDL. The check should consider connection.features.can_rollback_ddl as well as migration.atomic.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.79, "needsTools": 0.93, "stakes": 1.4 }
+				},
+				{
+					"prompt": "Now update the sqlmigrate tests so they cover a backend that cannot roll back DDL.",
+					"goldTier": "standard",
+					"requiredSkill": 52,
+					"jev": { "tier": "standard", "confidence": 0.68, "needsTools": 0.95, "stakes": 1.1 }
+				}
+			]
+		},
+		{
+			"id": "astropy__astropy-12907",
+			"repo": "astropy/astropy",
+			"category": "bugfix",
+			"requiredSkill": 60,
+			"startContextTokens": 26000,
+			"contextGrowthPerTurn": 10000,
+			"turns": [
+				{
+					"prompt": "separability_matrix returns the wrong result for nested CompoundModels: the inputs stop being reported as separable once you wrap a compound model inside another one. Work out why _cstack/_coord_matrix mis-handle the nested case and fix it.",
+					"goldTier": "standard",
+					"jev": { "tier": "heavy", "confidence": 0.64, "needsTools": 0.9, "stakes": 1.7 }
+				},
+				{
+					"prompt": "Add the nested-compound case to the separability tests.",
+					"goldTier": "light",
+					"requiredSkill": 44,
+					"jev": { "tier": "light", "confidence": 0.7, "needsTools": 0.95, "stakes": 0.9 }
+				}
+			]
+		},
+		{
+			"id": "scikit-learn__scikit-learn-13779",
+			"repo": "scikit-learn/scikit-learn",
+			"category": "bugfix",
+			"requiredSkill": 60,
+			"startContextTokens": 30000,
+			"contextGrowthPerTurn": 11000,
+			"turns": [
+				{
+					"prompt": "VotingClassifier.fit raises AttributeError when one of the estimators has been set to None via set_params and sample_weight is passed. Skip the None estimators in the sample_weight check.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.81, "needsTools": 0.94, "stakes": 1.5 }
+				},
+				{
+					"prompt": "What other estimators in the ensemble module have the same None-estimator assumption?",
+					"goldTier": "standard",
+					"requiredSkill": 55,
+					"jev": { "tier": "standard", "confidence": 0.55, "needsTools": 0.6, "stakes": 1.2 }
+				}
+			]
+		},
+		{
+			"id": "matplotlib__matplotlib-23913",
+			"repo": "matplotlib/matplotlib",
+			"category": "feature",
+			"requiredSkill": 57,
+			"startContextTokens": 24000,
+			"contextGrowthPerTurn": 9000,
+			"turns": [
+				{
+					"prompt": "Add a draggable keyword to Axes.legend so a legend can be made draggable at construction time instead of calling set_draggable afterwards.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.76, "needsTools": 0.93, "stakes": 1.1 }
+				},
+				{
+					"prompt": "Document the new keyword in the legend docstring.",
+					"goldTier": "light",
+					"requiredSkill": 40,
+					"jev": { "tier": "light", "confidence": 0.83, "needsTools": 0.9, "stakes": 0.5 }
+				}
+			]
+		},
+		{
+			"id": "sphinx-doc__sphinx-8721",
+			"repo": "sphinx-doc/sphinx",
+			"category": "feature",
+			"requiredSkill": 62,
+			"startContextTokens": 28000,
+			"contextGrowthPerTurn": 10000,
+			"turns": [
+				{
+					"prompt": "viewcode creates module pages for epub even when viewcode_enable_epub is False. Make the builder check honour that setting.",
+					"goldTier": "standard",
+					"jev": { "tier": "light", "confidence": 0.52, "needsTools": 0.92, "stakes": 1.3 }
+				},
+				{
+					"prompt": "Good. Now make sure the singlehtml builder is unaffected by the change and add a test for both builders.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.72, "needsTools": 0.94, "stakes": 1.4 }
+				}
+			]
+		},
+		{
+			"id": "django__django-15790",
+			"repo": "django/django",
+			"category": "test-writing",
+			"requiredSkill": 56,
+			"startContextTokens": 20000,
+			"contextGrowthPerTurn": 8000,
+			"turns": [
+				{
+					"prompt": "check_for_template_tags_with_the_same_name reports a duplicate when the same library appears once in TEMPLATES['OPTIONS']['libraries'] and once by autodiscovery. Write the failing test first.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.69, "needsTools": 0.95, "stakes": 1.2 }
+				},
+				{
+					"prompt": "Now make it pass by de-duplicating the module paths before the count.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.74, "needsTools": 0.95, "stakes": 1.3 }
+				}
+			]
+		},
+		{
+			"id": "psf__requests-1142",
+			"repo": "psf/requests",
+			"category": "security",
+			"requiredSkill": 80,
+			"startContextTokens": 34000,
+			"contextGrowthPerTurn": 12000,
+			"turns": [
+				{
+					"prompt": "requests adds Content-Length: 0 to every GET, which some servers reject and which leaks intent through proxies. Decide whether dropping it for bodyless methods can break request smuggling assumptions downstream, then implement whichever behaviour is safe.",
+					"goldTier": "heavy",
+					"jev": { "tier": "heavy", "confidence": 0.77, "needsTools": 0.85, "stakes": 2.4 }
+				},
+				{
+					"prompt": "Write the tests that pin the decision, including the redirect path.",
+					"goldTier": "standard",
+					"requiredSkill": 58,
+					"jev": { "tier": "standard", "confidence": 0.66, "needsTools": 0.95, "stakes": 1.6 }
+				}
+			]
+		},
+		{
+			"id": "django__django-16379",
+			"repo": "django/django",
+			"category": "concurrency",
+			"requiredSkill": 86,
+			"startContextTokens": 40000,
+			"contextGrowthPerTurn": 14000,
+			"note": "The classic TOCTOU: has_key stats the file then opens it. Under-routing this is the expensive mistake.",
+			"turns": [
+				{
+					"prompt": "FileBasedCache.has_key is racy: it checks os.path.exists then opens the file, so a concurrent cull between the two raises FileNotFoundError. Work out every caller that shares the assumption and fix the race properly.",
+					"goldTier": "heavy",
+					"jev": { "tier": "standard", "confidence": 0.61, "needsTools": 0.9, "stakes": 2.1 }
+				},
+				{
+					"prompt": "Does _is_expired have the same problem when it deletes the file it just read?",
+					"goldTier": "heavy",
+					"jev": { "tier": "heavy", "confidence": 0.73, "needsTools": 0.55, "stakes": 2.2 }
+				},
+				{
+					"prompt": "Write a test that actually reproduces the race under threads.",
+					"goldTier": "heavy",
+					"requiredSkill": 82,
+					"jev": { "tier": "standard", "confidence": 0.59, "needsTools": 0.96, "stakes": 1.9 }
+				}
+			]
+		},
+		{
+			"id": "pytest-dev__pytest-11143",
+			"repo": "pytest-dev/pytest",
+			"category": "architecture",
+			"requiredSkill": 88,
+			"startContextTokens": 46000,
+			"contextGrowthPerTurn": 15000,
+			"callsPerTurn": 7,
+			"turns": [
+				{
+					"prompt": "Assertion rewriting crashes with 'TypeError: argument of type int is not iterable' when a test module's first expression is a number rather than a docstring. The docstring detection in rewrite.py assumes too much about module structure. Redesign that detection so it is correct for every module shape, not just this one.",
+					"goldTier": "heavy",
+					"jev": { "tier": "heavy", "confidence": 0.82, "needsTools": 0.88, "stakes": 2.5 }
+				},
+				{
+					"prompt": "Walk me through the consequences for plugins that install their own rewrite hooks.",
+					"goldTier": "heavy",
+					"jev": { "tier": "heavy", "confidence": 0.45, "needsTools": 0.3, "stakes": 2.0 }
+				},
+				{
+					"prompt": "Now write the fix and its tests.",
+					"goldTier": "heavy",
+					"jev": { "tier": "heavy", "confidence": 0.78, "needsTools": 0.96, "stakes": 2.3 }
+				}
+			]
+		},
+		{
+			"id": "django__django-14672",
+			"repo": "django/django",
+			"category": "refactor",
+			"requiredSkill": 64,
+			"startContextTokens": 32000,
+			"contextGrowthPerTurn": 11000,
+			"note": "Exercises the plan-exhaustion path: the Codex plan 429s before turn 2.",
+			"turns": [
+				{
+					"prompt": "ManyToManyRel.identity includes through_fields, which can be a list and therefore unhashable, so make_hashable needs to be applied to it like it already is elsewhere in the related descriptors.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.75, "needsTools": 0.94, "stakes": 1.4 },
+					"providerEvent": { "provider": "faux-plan-codex", "status": 429, "headers": { "retry-after": "1800" } }
+				},
+				{
+					"prompt": "Sweep the rest of the related-field identity properties for the same unhashable-member problem and fix any you find.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.71, "needsTools": 0.95, "stakes": 1.5 }
+				}
+			]
+		},
+		{
+			"id": "pydata__xarray-4094",
+			"repo": "pydata/xarray",
+			"category": "bugfix",
+			"requiredSkill": 66,
+			"startContextTokens": 29000,
+			"contextGrowthPerTurn": 10000,
+			"note": "Exercises the manual pin: the operator pins a light model on turn 2 and the router must respect it for manualPinTurns.",
+			"turns": [
+				{
+					"prompt": "to_unstacked_dataset fails with 'MergeError: conflicting values for variable' when the stacked variables are single-dimension. Find out what to_stacked_array wrote into the index that round-trips wrongly.",
+					"goldTier": "heavy",
+					"jev": { "tier": "heavy", "confidence": 0.68, "needsTools": 0.9, "stakes": 1.9 }
+				},
+				{
+					"prompt": "Just print the MultiIndex levels for me.",
+					"goldTier": "light",
+					"requiredSkill": 38,
+					"manualPin": "faux-or/glm-5.3-flash",
+					"jev": { "tier": "light", "confidence": 0.88, "needsTools": 0.92, "stakes": 0.3 }
+				},
+				{
+					"prompt": "Right, now implement the round-trip fix.",
+					"goldTier": "heavy",
+					"jev": { "tier": "heavy", "confidence": 0.74, "needsTools": 0.95, "stakes": 2.0 }
+				}
+			]
+		},
+		{
+			"id": "mwaskom__seaborn-3010",
+			"repo": "mwaskom/seaborn",
+			"category": "bugfix",
+			"requiredSkill": 50,
+			"startContextTokens": 18000,
+			"contextGrowthPerTurn": 7000,
+			"note": "Exercises the Jev-outage path: the classifier fails and the heuristic fallback has to route.",
+			"turns": [
+				{
+					"prompt": "PolyFit is not robust to missing data: np.polyfit raises LinAlgError when x or y contains NaN. Drop the missing pairs before fitting.",
+					"goldTier": "standard",
+					"jev": { "tier": "standard", "confidence": 0.73, "needsTools": 0.94, "stakes": 1.2, "fail": true }
+				},
+				{
+					"prompt": "why does this still return an empty fit when every point is missing?",
+					"goldTier": "standard",
+					"requiredSkill": 52,
+					"jev": { "tier": "standard", "confidence": 0.62, "needsTools": 0.8, "stakes": 1.3 }
+				}
+			]
+		}
+	]
+}

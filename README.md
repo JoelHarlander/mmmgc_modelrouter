@@ -78,8 +78,9 @@ Billing defaults: an explicit `models` override wins; otherwise zero-cost models
 ```bash
 npm install
 npm run check   # tsc
-npm test        # node --test (router, ledger, config)
+npm test        # node --test (router, ledger, config, eval harness)
 npm run smoke   # end-to-end on pi's faux provider: no tokens spent
+npm run eval    # SWE-bench-style router eval: offline, deterministic, no tokens spent
 ```
 
 Verified on pi 0.85.1: `pi.setModel()` inside `before_agent_start` applies to the same turn, so the switch
@@ -88,3 +89,22 @@ happens before the first provider request. The interactive surfaces (`/router` c
 the faux provider with live Jev; they are not part of the automated suite.
 
 Research behind the defaults lives in `docs/research/` (benchmarks, operational stats, plan quotas, preference data).
+
+## Eval
+
+`npm run eval` scores the switcher on a SWE-bench-style task pack and writes a results file the next run
+compares against, so a change can be called better or worse rather than described. It is offline and
+deterministic by default — no network, no credential, no spend — and reports quality and cost side by side:
+tier accuracy, task resolve rate, ledger cost vs list-equivalent cost (subscription routes bill the ledger
+$0 but still consume a plan), and the cache consequence of every switch.
+
+```bash
+npm run eval                            # scripted classifier, single routed model per turn
+npm run eval -- --classifier heuristic  # score the no-credential fallback
+npm run eval -- --candidates 3          # 2+ responses per turn, judge picks the best
+npm run eval -- --classifier live       # real Jev; also needs ROUTER_EVAL_LIVE=1
+```
+
+The harness measures the shipped router; it does not change how it routes or how `/duo` adopts an answer.
+What it declares rather than measures, how the cost model is derived, and how to read each metric are in
+[`eval/README.md`](eval/README.md). Round-by-round results are in [`eval/results/log.md`](eval/results/log.md).
