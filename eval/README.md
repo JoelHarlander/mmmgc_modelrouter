@@ -18,6 +18,8 @@ npm run eval -- --sweep strategy              # fan out every turn, or only to l
 npm run eval -- --sweep pin                   # what a /model pin costs once it outlives its question
 npm run eval -- --sweep start                 # does any of this depend on where the session started?
 npm run eval -- --sweep assumptions           # rank every declared constant by how much it moves the answer
+npm run eval -- --sweep paired                # 95% intervals on the comparisons the findings rest on
+npm run eval -- --bootstrap 2000              # what a single number from this pack is worth
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --explain <task id>           # the turn-by-turn trace behind one task's score
@@ -260,6 +262,19 @@ references a model the catalogue does not price.
 `--audit-local` audits this machine's merged config instead. That is useful and
 deliberately not the default, because its answer differs per machine.
 
+## How much a number is worth
+
+The long pack is six tasks; the short one is fifteen. `--bootstrap` resamples the pack's
+**tasks** with replacement and reports 95% intervals, and `--sweep paired` does the same
+for the *differences* the findings actually rest on — paired, because every claim is
+"A beats B on the same tasks", which cancels the shared task-difficulty variance.
+
+The result is worth knowing before reading any number here: **5 of 5 cost differences
+resolve at 95% and 1 of 5 quality differences does.** Resolving a 5pp quality difference
+would need about 113 tasks of this shape and 2pp about 705 — SWE-bench Verified is 500,
+which is not a coincidence. Quality findings in the round log are labelled
+*under-powered* where the pack cannot resolve them.
+
 ## What the answer rests on
 
 `npm run eval -- --sweep assumptions` varies every declared constant one at a time and
@@ -303,6 +318,7 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `explain.ts` | `--explain`: the trace behind one task's score |
 | `sweep.ts` | the judge, bias, traffic-profile, oracle, gate, policy, confidence, strategy, pin and start sweeps |
 | `assumptions.ts` | `--sweep assumptions`: what the answer rests on |
+| `bootstrap.ts` | confidence intervals, and the paired comparisons |
 | `record.ts` | writing a live classifier's answers back into a pack |
 | `probe.ts` | the judge bias probe and its calibration |
 | `calibration.ts` | is the classifier's confidence worth anything? |

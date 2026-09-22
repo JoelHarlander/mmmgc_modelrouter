@@ -7,6 +7,13 @@ Runs are reproduced with `npm run eval -- <flags>`; the JSON for each is in this
 
 Jump to the round that established each claim, and what it rests on.
 
+> **Read round 21 first.** A paired bootstrap over the pack's tasks shows that **5 of 5
+> cost differences resolve at 95% and only 1 of 5 quality differences does**. Cost claims
+> below are supported by the pack; quality claims marked *under-powered* are directional
+> and would need ~113 tasks to resolve at 5pp, ~705 at 2pp. The one quality claim that
+> does resolve is that running several candidates and adopting the judge's pick beats not
+> doing it: **+28.3pp [+11.1, +50.0]**.
+
 | Finding | Round | Robust to |
 | --- | :---: | --- |
 | The router never picks an ineligible model — `ineligibleChoices` is 0 in every profile, including after a plan 429 | 1 | everything swept |
@@ -17,18 +24,18 @@ Jump to the round that established each claim, and what it rests on.
 | At realistic context, **switching costs ~half of a long session's spend** (50.2% of it; $24.94 after r16 corrected r4's $34.26) | 4, **16** | ±20pt fleet jitter (r7), traffic constants (r5) |
 | A profile that never changes model still pays 14 cold starts, all `thinking-change` | 4 | — |
 | ~~Never switching *also* wins on quality~~ | 4 | **WITHDRAWN in r19.** It was an artefact of starting the session on the strongest model. Averaged over starting points, routing wins 65.8% to 41.7%. |
-| **Routing's value is insensitive to the starting model** (5pp spread across six starts); not routing varies by **45pp** and simply inherits whatever it began on | **19** | every fleet model as a start |
+| *(under-powered)* **Routing's value is insensitive to the starting model** (5pp spread across six starts); not routing varies by **45pp** and simply inherits whatever it began on | **19** | every fleet model as a start |
 | Fan-out costs 2.9× more per extra solve at realistic context ($4.94 → $14.28) | 4 | traffic constants (r5) |
-| Candidate selection is worth **~+15pp** when the judge is good | 3 | traffic constants (r5) |
+| **Candidate selection is worth +28.3pp [+11.1, +50.0]** — the only quality claim here the pack resolves | 3, **21** | traffic constants (r5); **paired bootstrap** |
 | **~20 points of judge bias makes fan-out worse than not running it** | 3 | 5 seeds × 3 widths |
 | Random judge error is far more forgiving than systematic bias; noise partly cancels bias | 3 | 5 seeds |
 | The shipped **confidence gate does not defend against bias** — a biased judge is confidently wrong | 8 | 5 seeds × 3 bias levels |
-| The **shipped candidate set is the worst of five**: `tier-top` gets +21.7pp for 40% of the spend and is bias-immune | 9 | 5 seeds; bias-immunity is model-dependent |
+| *(under-powered)* The **shipped candidate set is the worst of five**: `tier-top` gets +21.7pp for 40% of the spend and is bias-immune | 9 | 5 seeds; bias-immunity is model-dependent |
 | The fan-out's fragility to bias is the **tier price inversion** (r2) propagating into `pickParallelModels` | 9 | fleet prices |
 | The shipped routing confidence bar (0.50) is **nearly inert** — 1 turn in 60 falls below it | **12** | both packs |
 | Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
-| **Fan-out as *exploration* is ~20× more cost-effective than fanning out every turn**: +21.3pp for $0.81/solve vs $16.03 | **13** | 5 seeds |
+| *(cost: resolved; quality: under-powered)* **Fan-out as *exploration* is ~20× more cost-effective than fanning out every turn**: +21.3pp for $0.81/solve vs $16.03 | **13** | 5 seeds |
 | …but commitment **amplifies** judge bias: at 20 points, every explore depth is worse than not fanning out at all | **13** | 5 seeds |
 | **The router's quality depends on your billing, not your work**: same config, same tasks, 86.7% → 68.3% when models stop being free | **14** | isolates one variable |
 | On a plan, "never switch" is free and best; **off a plan it is the most expensive option** (2× the router's spend) | **14** | both packs |
@@ -1303,3 +1310,71 @@ survives being wrong.
 
 **Next.** `--classifier live --record` and `--probe --live-judge`, and after round 20 the
 second one is not one loose end among many — it is the loose end.
+
+---
+
+## Round 21 — 2026-09-23 — how much is one of these numbers worth?
+
+**Measured.** The obvious objection to twenty rounds of findings: the long pack is six
+tasks and the short one fifteen, and every round has quoted rates to one decimal place
+off that. This round answers the objection instead of deflecting it.
+
+**Changed.** `--bootstrap <n>` resamples the pack's **tasks** with replacement and
+reports 95% intervals on the headline metrics. Tasks are the sampling unit because turns
+within a session are not independent — a session that goes wrong early goes on being
+wrong, which is exactly the correlation a turn-level bootstrap would hide. `--sweep
+paired` does the thing the findings actually need: every claim in this log is "A beats B
+**on the same tasks**", which is a *paired* comparison, so resampling tasks and taking
+A − B within each resample cancels the shared task-difficulty variance. Both resample
+what a run recorded, so neither costs extra runs.
+
+**What a single number is worth** (`swe-router-long-v1`, 2000 resamples of 6 tasks):
+
+| metric | point | 95% interval | ± |
+| --- | ---: | ---: | ---: |
+| session success | 56.7% | 25.0% – 88.9% | **±31.9pp** |
+| tier accuracy | 76.7% | 70.0% – 87.5% | ±8.8pp |
+| cold premium share | 50.2% | 29.0% – 62.8% | ±16.9pp |
+| list cost | $49.77 | $38.40 – $58.53 | ±$10.07 |
+
+**And what a comparison is worth** — the number that matters, because nothing here is
+quoted alone:
+
+| comparison | session success | list cost |
+| --- | --- | --- |
+| routing (oracle) − never switching | +3.3pp [−10.0, +27.3] **ns** | **+$18.91 [+$1.98, +$44.36]** |
+| **fan-out every turn − no fan-out** | **+28.3pp [+11.1, +50.0]** ✓ | **+$123.21 [+$110.83, +$138.87]** |
+| `tier-top` set − the shipped one | +3.3pp [0.0, +9.1] **ns** | **−$74.76 [−$84.76, −$67.15]** |
+| `explore-3` − fan out every turn | −3.3pp [−33.3, +10.0] **ns** | **−$98.11 [−$131.08, −$64.31]** |
+| fan-out with a 40-pt biased judge − none | +8.3pp [−11.1, +25.0] **ns** | **+$123.21 [+$110.83, +$138.87]** |
+
+**5 of 5 cost differences resolve. 1 of 5 quality differences does.**
+
+That single sentence is the most useful thing twenty-one rounds produced, and it
+retrospectively explains the whole log. Every finding that survived every sweep was a
+cost finding. Every one that wobbled, flipped, or had to be withdrawn — rounds 4, 7, 15,
+19 — was a quality finding. There is now a statistical reason for that pattern rather
+than a narrative one: **on a pack this size the harness can resolve money and cannot
+resolve quality.**
+
+**The one quality claim that does resolve is the captain's own idea.** Running several
+candidates and adopting the judge's pick beats not doing it by **+28.3pp, interval
+[+11.1, +50.0]**, and it costs **+$123.21** to do. Both halves resolve. That is the
+finding to act on; it is also the finding whose value collapses if Jev carries
+presentation bias, which round 20 showed is the single loudest assumption once fan-out
+is on, and which `--probe --live-judge` would settle.
+
+**How much bigger would the pack have to be?** A 95% half-width shrinks as 1/√n, so
+resolving a **5pp** quality difference needs about **113 tasks** of this shape, and
+**2pp** needs about **705**. SWE-bench Verified is 500 instances. That is not a
+coincidence — it is roughly what it takes to tell two coding agents apart, and this
+harness now says so out loud instead of implying precision it does not have.
+
+**What changed in the index.** Quality claims are marked *under-powered* where the pack
+cannot resolve them. They are still worth having — they are directional, they agree
+across sweeps, and they were arrived at honestly — but they are now labelled as what
+they are.
+
+**Next.** `--probe --live-judge`, which round 20 identified as *the* input and round 21
+prices the consequence of: the one resolvable quality win in this log is a bet on the
+judge, and nobody has measured the judge.

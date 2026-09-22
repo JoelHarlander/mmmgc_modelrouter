@@ -20,6 +20,7 @@ import { JevClient } from "../src/jev.ts";
 import { JevJudge, NoisyJudge } from "./candidates.ts";
 import { auditAssumptions, renderAssumptions } from "./assumptions.ts";
 import { auditConfig, renderAudit } from "./audit.ts";
+import { bootstrap, renderBootstrap } from "./bootstrap.ts";
 import { computeCalibration, renderCalibration } from "./calibration.ts";
 import { explainTask } from "./explain.ts";
 import { loadProbePack, renderProbe, runProbe } from "./probe.ts";
@@ -43,6 +44,7 @@ import {
 import {
 	renderConfidenceSweep,
 	renderPinSweep,
+	renderPairedComparisons,
 	renderStartSweep,
 	renderStrategySweep,
 	renderGateSweep,
@@ -52,6 +54,7 @@ import {
 	renderTrafficSweep,
 	runConfidenceSweep,
 	runPinSweep,
+	runPairedComparisons,
 	runStartSweep,
 	runStrategySweep,
 	runJudgeSweep,
@@ -86,9 +89,10 @@ interface Args {
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin" | "start" | "assumptions";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin" | "start" | "assumptions" | "paired";
 	exploreTurns?: number;
 	calibration: boolean;
+	bootstrap?: number;
 	explain?: string;
 	record: boolean;
 	candidatePolicy?: string;
@@ -220,6 +224,9 @@ function parseArgs(argv: string[]): Args {
 			case "--calibration":
 				args.calibration = true;
 				break;
+			case "--bootstrap":
+				args.bootstrap = Number(next());
+				break;
 			case "--explain":
 				args.explain = next();
 				break;
@@ -310,11 +317,13 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep pin            sweep switching.manualPinTurns, how long a /model pin holds
   --sweep start          does any of this depend on where the session started?
   --sweep assumptions    vary every declared constant and rank what the answer rests on
+  --sweep paired         95% intervals on the comparisons the findings rest on
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --context-sensitivity <x>  override every task's declared contextSensitivity (0..1)
   --calibration          is the classifier's confidence worth anything?
   --explain <task id>    print the turn-by-turn trace behind one task's score
+  --bootstrap <n>        resample tasks n times and report 95% intervals on the metrics
   --record               write the classifier's real answers back into the task pack
                          (needs --classifier live; rewrites turns[].jev and nothing else)
   --candidate-policy <p> shipped | strongest | cheapest | spread | tier-top
@@ -412,6 +421,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "paired") {
+			title = `paired comparisons — pack ${pack.id}, classifier ${args.classifier}, 1000 resamples of the pack's tasks`;
+			const c = await runPairedComparisons({ ...base, candidateN: args.candidatesExplicit ? args.candidates : 3 });
+			cells = c;
+			rendered = renderPairedComparisons(c, title);
 		} else if (args.sweep === "assumptions") {
 			title = `assumption audit — pack ${pack.id}, classifier ${args.classifier}, fan-out ${args.candidatesExplicit && args.candidates < 2 ? "off" : `n=${args.candidatesExplicit ? args.candidates : 3}`}`;
 			const candidateN = args.candidatesExplicit ? args.candidates : 3;
@@ -503,6 +517,13 @@ async function main(): Promise<number> {
 		const result = recordAnswers(pack, outcome.turns);
 		writeFileSync(args.pack, `${JSON.stringify(result.pack, null, "\t")}\n`);
 		process.stdout.write(renderRecord(result, args.pack.replace(`${ROOT}/`, "")));
+		return 0;
+	}
+
+	if (args.bootstrap) {
+		const report = bootstrap(outcome.turns, args.bootstrap);
+		if (args.json) process.stdout.write(`${JSON.stringify(report, null, "\t")}\n`);
+		else process.stdout.write(renderBootstrap(report, `${pack.id}, classifier ${args.classifier}${args.candidates >= 2 ? `, n=${args.candidates}` : ""}`));
 		return 0;
 	}
 

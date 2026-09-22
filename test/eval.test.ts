@@ -17,6 +17,7 @@ import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, mergeConfig, modelKey } from "../src/config.ts";
 import { auditAssumptions } from "../eval/assumptions.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
+import { bootstrapDifference, tasksNeededFor } from "../eval/bootstrap.ts";
 import { computeCalibration } from "../eval/calibration.ts";
 import { explainTask } from "../eval/explain.ts";
 import { recordAnswers } from "../eval/record.ts";
@@ -47,6 +48,7 @@ import {
 	runJudgeSweep,
 	runConfidenceSweep,
 	runOracleSweep,
+	runPairedComparisons,
 	runPinSweep,
 	runStartSweep,
 	runPolicySweep,
@@ -1322,4 +1324,45 @@ test("turning on fan-out moves the answer's dependency from the router to the ju
 	assert.ok(spread(withFanout, "judge bias") > 0.2, "judge bias should dominate once fan-out is on");
 	assert.ok(spread(withFanout, "judge bias") > spread(withFanout, "starting model") * 5);
 	assert.ok(spread(withFanout, "starting model") < spread(routingOnly, "starting model"), "fan-out absorbs a bad starting point");
+});
+
+test("a run compared against itself shows no difference, and the comparison is deterministic", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const self = bootstrapDifference(outcome.turns, outcome.turns);
+	for (const r of self) {
+		assert.equal(r.point, 0);
+		assert.equal(r.low, 0);
+		assert.equal(r.high, 0);
+		assert.equal(r.significant, false, "a run cannot significantly differ from itself");
+	}
+	assert.deepEqual(bootstrapDifference(outcome.turns, outcome.turns), self);
+
+	const other = await run({ pack: pack(LONG_PACK), classifier: "heuristic" });
+	assert.deepEqual(bootstrapDifference(outcome.turns, other.turns), bootstrapDifference(outcome.turns, other.turns));
+	assert.throws(() => bootstrapDifference(outcome.turns, []), /share no tasks/);
+});
+
+test("the pack resolves cost differences and cannot resolve most quality differences", async () => {
+	const comparisons = await runPairedComparisons({ pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted" });
+	const of = (metric: string) => comparisons.flatMap((c) => c.results.filter((r) => r.metric === metric));
+	const cost = of("listEquivalentUsd");
+	const quality = of("sessionSuccessRate");
+
+	assert.ok(cost.length >= 5 && quality.length === cost.length);
+	assert.ok(cost.every((r) => r.significant), "every cost difference should resolve on six tasks");
+	assert.ok(quality.filter((r) => r.significant).length < quality.length / 2, "most quality differences should not");
+
+	// The one quality claim the pack does support is the captain's own idea.
+	const fanout = comparisons.find((c) => c.label.startsWith("fan-out every turn"))!;
+	const fanoutQuality = fanout.results.find((r) => r.metric === "sessionSuccessRate")!;
+	assert.ok(fanoutQuality.significant, "running several candidates and adopting should be a resolvable win");
+	assert.ok(fanoutQuality.point > 0.15);
+});
+
+test("the sample-size estimate scales the way an interval does", () => {
+	// Half-width shrinks as 1/sqrt(n), so the tasks needed grow as 1/target².
+	assert.equal(tasksNeededFor(0.1, 0.2, 6), 24);
+	assert.equal(tasksNeededFor(0.05, 0.2, 6), 96);
+	assert.equal(tasksNeededFor(0.2, 0.2, 6), 6, "a target equal to the current half-width needs no more tasks");
+	assert.equal(tasksNeededFor(0, 0.2, 6), Number.POSITIVE_INFINITY);
 });

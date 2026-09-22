@@ -104,6 +104,7 @@ npm run eval:all -- --gate              # every profile, failing on a regression
 npm run eval                            # scripted classifier, single routed model per turn
 npm run eval -- --classifier heuristic  # score the no-credential fallback
 npm run eval -- --candidates 3          # 2+ responses per turn, judge picks the best
+npm run eval -- --sweep paired          # 95% intervals on the comparisons the findings rest on
 npm run eval -- --audit-config          # price the shipped tiers from docs/data; no simulation
 npm run eval -- --classifier live       # real Jev; also needs ROUTER_EVAL_LIVE=1
 ```

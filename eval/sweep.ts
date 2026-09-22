@@ -10,6 +10,7 @@
  * Every cell is the mean over several seeds, with the spread reported, so a cell can
  * be read as a result rather than a coincidence.
  */
+import { bootstrapDifference, renderPaired, tasksNeededFor } from "./bootstrap.ts";
 import { CANDIDATE_POLICIES, NoisyJudge } from "./candidates.ts";
 import { buildFleet, type LoadedFleet } from "./fleet.ts";
 import { mergeConfig } from "../src/config.ts";
@@ -300,6 +301,62 @@ export function renderPolicySweep(cells: PolicyCell[], title: string): string {
 				`${usd(c.fanoutListEquivalentUsd).padStart(9)}  ${usd(c.listUsdPerExtraSolve).padStart(9)}`,
 		);
 	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
+export interface PairedComparison {
+	label: string;
+	results: import("./bootstrap.ts").PairedResult[];
+}
+
+/**
+ * The canonical comparisons this log rests on, each with a paired 95% interval, so a
+ * reader can tell which of twenty rounds' claims the pack is actually large enough to
+ * support. Paired because every claim is "A beats B on the same tasks", which cancels
+ * the shared task-difficulty variance.
+ */
+export async function runPairedComparisons(options: SweepOptions & { candidateN?: number }): Promise<PairedComparison[]> {
+	const { pack, loaded } = options;
+	const n = options.candidateN ?? 3;
+	const seed = "paired";
+	const judge = () => new NoisyJudge({ noise: 10, seed });
+	const run = (patch: Partial<Parameters<typeof runEval>[0]>) =>
+		runEval({ pack, loaded, classifier: options.classifier, startModel: options.startModel, seed, ...patch });
+
+	const routed = await run({});
+	const oracle = await run({ classifier: "oracle" });
+	const heuristic = await run({ classifier: "heuristic" });
+	const fanout = await run({ candidateN: n, judge: judge() });
+	const tierTop = await run({ candidateN: n, candidatePolicy: "tier-top", judge: judge() });
+	const explore = await run({ candidateN: n, exploreTurns: 3, judge: judge() });
+	const biased = await run({ candidateN: n, judge: new NoisyJudge({ noise: 10, seed, bias: 40 }) });
+
+	const pairs: [string, typeof routed, typeof routed][] = [
+		["routing (oracle) − never switching (heuristic)", oracle, heuristic],
+		["fan-out every turn − no fan-out", fanout, routed],
+		["tier-top candidate set − the shipped one", tierTop, fanout],
+		["explore-3 − fan out every turn", explore, fanout],
+		["fan-out with a 40-point biased judge − no fan-out", biased, routed],
+	];
+	return pairs.map(([label, a, b]) => ({ label, results: bootstrapDifference(a.turns, b.turns) }));
+}
+
+export function renderPairedComparisons(comparisons: PairedComparison[], title: string): string {
+	const out: string[] = ["", title, ""];
+	for (const c of comparisons) {
+		out.push(renderPaired(c.results, c.label));
+		out.push("");
+	}
+	const quality = comparisons.flatMap((c) => c.results.filter((r) => r.metric === "sessionSuccessRate"));
+	const cost = comparisons.flatMap((c) => c.results.filter((r) => r.metric === "listEquivalentUsd"));
+	out.push(`  ${cost.filter((r) => r.significant).length}/${cost.length} cost differences resolve; ${quality.filter((r) => r.significant).length}/${quality.length} quality differences do.`);
+	const widest = quality.reduce((a, b) => (b.halfWidth > a.halfWidth ? b : a));
+	out.push(
+		`  To resolve a 5pp quality difference this pack would need about ` +
+			`${tasksNeededFor(0.05, widest.halfWidth, widest.tasks)} tasks of this shape; 2pp needs about ` +
+			`${tasksNeededFor(0.02, widest.halfWidth, widest.tasks)}.`,
+	);
 	out.push("");
 	return `${out.join("\n")}\n`;
 }
