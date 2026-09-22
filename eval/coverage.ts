@@ -52,6 +52,8 @@ export interface CoverageOptions {
 	minConfidences?: number[];
 	pinTurns?: number[];
 	unauthedSets?: string[][];
+	/** Simulate the section-0 fix while sweeping, to predict what it removes. */
+	blockedAwareKeep?: boolean;
 }
 
 export async function runCoverage(options: CoverageOptions): Promise<CoverageReport> {
@@ -77,7 +79,7 @@ export async function runCoverage(options: CoverageOptions): Promise<CoverageRep
 								...base,
 								config: mergeConfig(base.config, { switching: { ...base.config.switching, minConfidence, manualPinTurns } }),
 							};
-							const outcome = await runEval({ pack: options.pack, loaded, classifier, startModel });
+							const outcome = await runEval({ pack: options.pack, loaded, classifier, startModel, blockedAwareKeep: options.blockedAwareKeep });
 							const metrics = computeMetrics(outcome.turns, outcome.stateChars);
 							report.configurations += 1;
 

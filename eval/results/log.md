@@ -43,6 +43,8 @@ Jump to the round that established each claim, and what it rests on.
 | ~~The cause is `needs_tools`~~ | 35, 36 | **REFUTED in r37.** Removing it from the request changes nothing. The cause is the `light` criterion's own words: *"answer a factual question, explain a snippet"*. |
 | **The router cannot fix it**: the stakes override reaches **0 of 15** under-routed light turns, because Jev rates their stakes low too | **37** | live, 5 override variants |
 | **Jev's judging noise is ≤5** (42/42 on non-tie probe items), so the candidate-set floor is insurance against a risk that is not present → **use `tier-top`** | **37** | live probe + 4 policies × 4 noise levels |
+| A candidate rewrite of the `light` criterion **closes 30% of the phrasing gap** and lifts question accuracy 33.3% → 50.0%; a partial fix, not a fix | **38** | live, deterministic on 12 pairs |
+| The §0 fix, simulated: **32 of 396 broken configurations → 0**, byte-identical where nothing is blocked | **38** | exact |
 | Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
 | *(cost: resolved; quality: under-powered)* **Fan-out as *exploration* is ~20× more cost-effective than fanning out every turn**: +21.3pp for $0.81/solve vs $16.03 | **13** | 5 seeds |
@@ -2331,3 +2333,92 @@ $5.00 across every live run in this session.
 
 **Next.** Both open findings are now decisions with acceptance tests attached. Back to
 my own judgement.
+
+---
+
+## Round 38 — 2026-09-23 — say what each fix will do, before it lands
+
+**Asked for.** Three product changes are queued off these findings. For each: what the
+harness predicts, as a number with a tolerance, plus the command that checks it — and
+name anything the packs cannot resolve rather than inventing a figure. The point is that
+when the fixes land, the eval verifies them instead of someone arguing about them.
+
+Two of the three turned out to be simulable rather than guessable, so the predictions are
+measurements rather than estimates.
+
+### A — stop keeping a blocked model (§0)
+
+`--blocked-aware-keep` simulates the fix without touching `src/`: when `chooseModel`
+would return `current` and the ledger has it blocked, re-ask with the confidence gate
+satisfied, which is what "fall through to tier selection" means.
+
+| | before | after |
+| --- | ---: | ---: |
+| `ineligibleChoices`, short pack, starting on the 429'd provider | 2 | **0** |
+| `ineligibleChoices`, long pack, same start | 9 | **0** |
+| `--sweep coverage` configurations breaking `eligible-route` | **32 of 396** | **0 of 396** |
+| spend, long pack, same start | $77.56 | **$65.52** |
+| anything, when the session starts elsewhere | — | **byte-identical** |
+
+All exact — deterministic, not sampled. **The inertness row is half the prediction**: a
+correctness fix that moves anything else has reached further than intended, and
+`eval:all --gate` is the check. Two tests pin both halves.
+
+### B — rewrite the `light` criterion (§0b)
+
+Rather than predict what a rewrite would do, I wrote one and measured it.
+`proposedRoutingQuestions()` lives in `eval/phrasing.ts`, deliberately outside `src/`: it
+removes the output-shape framing from `light` ("answer a factual question, explain a
+snippet") and says once, in `heavy`, that explaining can be as hard as doing.
+
+| | shipped | proposed |
+| --- | ---: | ---: |
+| mean tier gap | 0.83 | **0.58** (−30%) |
+| classified the same both ways | 50.0% | **58.3%** |
+| **question reaches the correct tier** | 33.3% | **50.0%** |
+| instruction reaches the correct tier | 66.7% | 66.7% (unchanged) |
+
+It fixes `column-rename` and `offset-pagination` outright and makes `race-condition`
+far more confident (0.75 → 0.98). It does **not** fix `token-storage`, `rewrite-hook` or
+`swap-dims-alias`.
+
+**How exact this is, and where it stops.** Two identical runs of the proposed wording
+returned figures identical to every decimal — **Jev is deterministic on this pack**, so
+the comparison has no sampling error and the 0.83 → 0.58 movement is real. What is *not*
+established is generalisation: twelve pairs, three pairs' worth of movement, and nothing
+here bounds the effect on prompts outside the pack. The brief says so.
+
+**It is a partial fix and is labelled one.** 0.58 is still a gap. The probe is the loop
+to iterate against — 24 calls, $0.00, reproduces exactly.
+
+### C — fan out and let the judge pick (§5)
+
+Nothing to simulate; the harness already measures it. What this round added is the
+interval on every number and an explicit list of what does not resolve:
+
+| prediction (long pack, 175 turns) | value | 95% interval | resolves? |
+| --- | ---: | --- | --- |
+| session success, fan-out vs none | **+25.7pp** | [+6.9, +46.5] | **yes** |
+| spend, fan-out vs none | **+$360.61** | [+$308, +$421] | **yes** |
+| wall-clock, fan-out vs none | **+3477s** | [+3179, +4133] | **yes** |
+| spend, `tier-top` vs the shipped set | **−$220.03** | [−$256, −$189] | **yes** |
+| wall-clock, `tier-top` vs the shipped set | **−2258s** | [−2684, −2065] | **yes** |
+| session success, `tier-top` vs the shipped set | +5.7pp | [0.0, +14.8] | **no** |
+| `explore-3` vs fanning out every turn, quality | +0.0pp | [−17.7, +11.0] | **no** |
+| `explore-3` vs fanning out every turn, spend | **−$238.37** | [−$323, −$175] | **yes** |
+
+**Acceptance** is the interval, not the point estimate: fan-out's quality gain must clear
+**+6.9pp** and its spend must land inside **[+$308, +$421]**. Spend outside that band
+means the candidate set or the cache assumptions differ from what was modelled, and
+`--explain <task>` says which.
+
+**Named as not resolvable:** which candidate set is better *on quality*. §5 chooses
+`tier-top` on cost and wall-clock, which are resolved, and treats the +5.7pp as a bonus.
+
+---
+
+**Also fixed this round:** the phrasing probe's own summary still blamed `needs_tools`,
+which round 37 refuted. It now names the criteria text.
+
+**Spend.** 72 live calls (proposed wording twice, plus the determinism re-run). **$0.00**;
+gateway credits unchanged at $5.00 across every live run in this session.

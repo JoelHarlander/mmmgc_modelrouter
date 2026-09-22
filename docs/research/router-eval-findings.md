@@ -474,6 +474,133 @@ run here: the authorisation was scoped to the judge probe.
 
 ---
 
+## 9. Predictions: what the eval expects each fix to do
+
+Three product changes are queued off these findings. For each, this is what the harness
+**predicts before the change lands**, the exact command that checks it afterwards, and —
+stated rather than papered over — which parts of the prediction these packs cannot
+resolve. Anything marked *not resolvable* is directional: real, consistent across sweeps,
+and not something to hold the change to.
+
+---
+
+### A. Stop keeping a model the ledger has blocked (§0)
+
+**The change.** In `chooseModel`'s low-confidence branch and its final fallback, consult
+`ledger.isBlocked` before returning `current`; fall through to tier selection when it is
+blocked.
+
+**Simulated in the harness** with `--blocked-aware-keep`, which re-asks `chooseModel`
+with the confidence gate satisfied whenever the model it would keep is blocked.
+
+| prediction | before | after | resolvable? |
+| --- | ---: | ---: | --- |
+| `ineligibleChoices`, short pack, session starting on the 429'd provider | **2** | **0** | **exact** — deterministic, not sampled |
+| `ineligibleChoices`, long pack, same start | **9** | **0** | **exact** |
+| configurations breaking `eligible-route` in `--sweep coverage` | **32 of 396** | **0 of 396** | **exact** |
+| `listEquivalentUsd`, long pack, same start | $77.56 | **$65.52** (−16%) | directional — single configuration, no interval |
+| everything, when the session does **not** start on a blocked provider | — | **byte-identical** | **exact** — the fix must be inert otherwise |
+
+**Check it with:**
+
+```bash
+npm run eval -- --start-model faux-plan-codex/gpt-6-astra          # expect ineligibleChoices 0, exit 0
+npm run eval -- --pack eval/tasks/swe-router-long-v1.json --start-model faux-plan-codex/gpt-6-astra
+npm run eval -- --sweep coverage                                    # expect 0 of 396, exit 0
+npm run eval:all -- --gate                                          # expect no regression elsewhere
+```
+
+**Acceptance:** `ineligibleChoices` is 0 and `--sweep coverage` exits 0. The inertness
+row matters as much as the fix: if `eval:all --gate` moves at all, the change reached
+further than intended.
+
+**Not resolvable:** the quality effect. Session success moved 64.6% → 64.0% on the long
+pack, which is one configuration and well inside noise. Do not hold the fix to a quality
+number; it is a correctness fix.
+
+---
+
+### B. Rewrite the `light` tier criterion (§0b)
+
+**The change.** Take output shape out of the `light` criterion and say in `heavy` that
+explaining can be as hard as doing.
+
+**A candidate wording is already written and measured** — `proposedRoutingQuestions()` in
+`eval/phrasing.ts`, deliberately outside `src/`. Against live Jev:
+
+| | shipped | proposed | change |
+| --- | ---: | ---: | ---: |
+| mean tier gap (instruction − question) | 0.83 | **0.58** | **−30%** |
+| pairs classified the same both ways | 50.0% | **58.3%** | +8.3pp |
+| pairs where the instruction is rated heavier | 6 of 12 | **5 of 12** | −1 |
+| **question reaches the correct tier** | 33.3% | **50.0%** | **+16.7pp** |
+| instruction reaches the correct tier | 66.7% | 66.7% | unchanged |
+
+Individually it fixes `column-rename` (light → heavy) and `offset-pagination`
+(light → heavy), and makes `race-condition` far more confident (heavy 0.75 → 0.98). It
+does **not** fix `token-storage`, `rewrite-hook` or `swap-dims-alias`.
+
+**Check it with:**
+
+```bash
+ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --probe-phrasing   # 24 calls, $0.00
+```
+
+**Acceptance:** mean tier gap **at or below 0.58**, question accuracy **at or above
+50.0%**, and instruction accuracy **not below 66.7%** — the last one guards against
+"fixing" it by over-routing everything.
+
+**How exact these numbers are.** Jev is deterministic on this pack: two identical runs of
+the proposed wording returned identical figures to every decimal. So the comparison is
+exact *on these twelve pairs*. What is **not** established is that twelve pairs
+generalise — the movement is three pairs' worth, and nothing here bounds the effect on
+prompts outside the pack.
+
+**This is a partial fix, and the brief says so.** A gap of 0.58 is still a gap. If the
+owning task wants better, the probe is the loop to iterate against: 24 calls, free, and
+it reproduces exactly.
+
+---
+
+### C. Fan out and let the judge pick (§5)
+
+**The change.** Use judge selection for a turn's answer, with the `tier-top` candidate
+set rather than `pickParallelModels`'s.
+
+| prediction (long pack, 175 turns) | value | 95% interval | resolvable? |
+| --- | ---: | --- | --- |
+| session success, fan-out vs none | **+25.7pp** | [+6.9, +46.5] | **yes** |
+| spend, fan-out vs none | **+$360.61** | [+$308, +$421] | **yes** |
+| wall-clock, fan-out vs none | **+3477s** | [+3179, +4133] | **yes** |
+| spend, `tier-top` vs the shipped set | **−$220.03** | [−$256, −$189] | **yes** |
+| wall-clock, `tier-top` vs the shipped set | **−2258s** | [−2684, −2065] | **yes** |
+| session success, `tier-top` vs the shipped set | +5.7pp | [0.0, +14.8] | **no** |
+
+**Check it with:**
+
+```bash
+npm run eval -- --pack eval/tasks/swe-router-long-v1.json --candidates 3 --candidate-policy tier-top
+npm run eval -- --pack eval/tasks/swe-router-long-v1.json --sweep paired    # the intervals above
+npm run eval -- --pack eval/tasks/swe-router-long-v1.json --sweep policy    # tier-top vs the rest
+```
+
+**Acceptance:** fan-out's quality gain clears **+6.9pp** (the interval's lower bound) and
+its spend lands inside **[+$308, +$421]** per 175 turns. If spend lands outside that, the
+candidate set or the cache assumptions differ from what was modelled — `--explain <task>`
+will say which.
+
+**Not resolvable:** *which* candidate set is better on quality. `tier-top` measures
++5.7pp over the shipped set with an interval touching zero. Choose it for the cost and
+time, which are resolved, and treat the quality edge as a bonus — that is exactly the
+argument §5 makes.
+
+**Also worth predicting:** `--explore-turns 3` reaches the same quality as fanning out
+every turn (+0.0pp, [−17.7, +11.0] — *not resolvable*) for **−$238.37** [−$323, −$175]
+and **−1818s** [−3153, −1085], both resolved. If spend matters more than the last point
+of quality, that is the cheaper shape of the same change.
+
+---
+
 ## What would make the quality half measurable
 
 Not a bigger fixture — round 22 tested that. It needs real tasks executed by real models:

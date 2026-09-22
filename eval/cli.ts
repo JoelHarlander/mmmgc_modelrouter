@@ -126,11 +126,12 @@ interface Args {
 	judgeMinConfidence?: number;
 	compactionPenalty?: number;
 	contextSensitivity?: number;
+	blockedAwareKeep: boolean;
 	callsPerTurn?: number;
 	probe: boolean;
 	probePhrasing: boolean;
 	phrasingPack: string;
-	phrasingQuestions: "shipped" | "tier-only";
+	phrasingQuestions: "shipped" | "tier-only" | "proposed";
 	probePack: string;
 	liveJudge: boolean;
 	judgeBias: number;
@@ -150,6 +151,7 @@ function parseArgs(argv: string[]): Args {
 		billing: "as-configured",
 		json: false,
 		noWrite: false,
+		blockedAwareKeep: false,
 		validateOnly: false,
 		auditConfig: false,
 		calibration: false,
@@ -253,6 +255,9 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--validate":
 				args.validateOnly = true;
+				break;
+			case "--blocked-aware-keep":
+				args.blockedAwareKeep = true;
 				break;
 			case "--context-sensitivity":
 				args.contextSensitivity = Number(next());
@@ -404,6 +409,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --context-sensitivity <x>  override every task's declared contextSensitivity (0..1)
+  --blocked-aware-keep   simulate the section-0 fix: do not keep a model the ledger has
+                         blocked. Predicts what that change will do before it lands.
   --calibration          is the classifier's confidence worth anything?
   --explain <task id>    print the turn-by-turn trace behind one task's score
   --bootstrap <n>        resample tasks n times and report 95% intervals on the metrics
@@ -418,7 +425,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --probe-phrasing       does wording the same work as a question change its tier?
                          (needs --classifier live; 2 calls per pair, no model inference)
   --phrasing-pack <file> phrasing pack (default eval/tasks/phrasing-probe-v1.json)
-  --phrasing-questions <s>  shipped | tier-only; tier-only drops needs_tools and stakes
+  --phrasing-questions <s>  shipped | tier-only | proposed; tier-only drops needs_tools/stakes,
                          from the request, to test whether asking them moves the tier
   --seed <s>             deterministic seed for the offline judge
   --start-model <key>    model each task session starts on
@@ -531,7 +538,7 @@ async function main(): Promise<number> {
 			rendered = renderAxisSweep(c, title);
 		} else if (args.sweep === "coverage") {
 			title = `invariant coverage — pack ${pack.id}`;
-			const c = await runCoverage({ pack, loaded });
+			const c = await runCoverage({ pack, loaded, blockedAwareKeep: args.blockedAwareKeep });
 			cells = c.violations;
 			rendered = renderCoverage(c, title);
 			if (!args.json) process.stdout.write(rendered);
@@ -624,6 +631,7 @@ async function main(): Promise<number> {
 		exploreTurns: args.exploreTurns,
 		compactionPenalty: args.compactionPenalty,
 		contextSensitivity: args.contextSensitivity,
+		blockedAwareKeep: args.blockedAwareKeep,
 		seed: args.seed,
 		jev,
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,

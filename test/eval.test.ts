@@ -19,7 +19,8 @@ import { auditAssumptions } from "../eval/assumptions.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
 import { bootstrapDifference, tasksNeededFor } from "../eval/bootstrap.ts";
 import { computeCalibration } from "../eval/calibration.ts";
-import { type Classify, loadPhrasingPack, renderPhrasing, runPhrasingProbe } from "../eval/phrasing.ts";
+import { type Classify, loadPhrasingPack, proposedRoutingQuestions, renderPhrasing, runPhrasingProbe } from "../eval/phrasing.ts";
+import { routingQuestions } from "../src/state.ts";
 import { runCoverage } from "../eval/coverage.ts";
 import { explainTask } from "../eval/explain.ts";
 import { recordAnswers } from "../eval/record.ts";
@@ -1984,4 +1985,55 @@ test("the harness applies src/index.ts's stakes override unless told otherwise",
 	assert.equal(applyStakesOverride("light", 1.9, STAKES_OVERRIDES["two-step"]), "heavy");
 	assert.equal(applyStakesOverride("light", 1.6, STAKES_OVERRIDES["two-step"]), "standard");
 	assert.equal(applyStakesOverride("light", 2, STAKES_OVERRIDES.off), "light");
+});
+
+test("prediction A: the simulated section-0 fix removes every ineligible route and is otherwise inert", async () => {
+	const onBlocked = "faux-plan-codex/gpt-6-astra";
+	const measure = async (p: TaskPack, startModel: string, blockedAwareKeep: boolean) =>
+		computeMetrics(...unpack(await run({ pack: p, startModel, blockedAwareKeep })));
+
+	for (const p of [pack(), pack(LONG_PACK)]) {
+		// Starting on the provider the pack 429s: the fix is the whole point.
+		const before = await measure(p, onBlocked, false);
+		const after = await measure(p, onBlocked, true);
+		assert.ok(before.ineligibleChoices > 0, `${p.id} no longer reaches the blocked-route case`);
+		assert.equal(after.ineligibleChoices, 0, `${p.id}: the fix must remove every ineligible route`);
+		assert.ok(after.listEquivalentUsd < before.listEquivalentUsd, "...and routing away from a refused plan model should cost less");
+
+		// Starting anywhere else: the fix must change nothing at all.
+		const untouched = await measure(p, "faux-plan-anthropic/claude-opus-5", false);
+		const untouchedFixed = await measure(p, "faux-plan-anthropic/claude-opus-5", true);
+		assert.deepEqual(untouchedFixed, untouched, `${p.id}: the fix leaked into a session with nothing blocked`);
+	}
+});
+
+test("prediction A: the fix clears the invariant sweep it was found by", async () => {
+	const args = { pack: pack(), loaded: loadFleet(FLEET), minConfidences: [0, 0.5], pinTurns: [0], unauthedSets: [[]] };
+	const shipped = await runCoverage(args);
+	const fixed = await runCoverage({ ...args, blockedAwareKeep: true });
+	assert.equal(shipped.configurations, fixed.configurations);
+	assert.ok((shipped.byInvariant["eligible-route"] ?? 0) > 0, "the sweep should still find the bug without the fix");
+	assert.equal(fixed.byInvariant["eligible-route"] ?? 0, 0, "and none with it");
+	assert.deepEqual(fixed.violations, [], "the fix must not trade one invariant for another");
+});
+
+test("prediction B: the proposed criteria change the tier question and nothing else", () => {
+	const shipped = routingQuestions();
+	const proposed = proposedRoutingQuestions();
+
+	assert.deepEqual(Object.keys(proposed).sort(), Object.keys(shipped).sort(), "the proposal must not add or drop questions");
+	for (const key of ["needs_tools", "stakes"]) {
+		assert.deepEqual(proposed[key], shipped[key], `the proposal changed ${key}, which it has no business touching`);
+	}
+
+	const tier = (qs: typeof shipped) => qs.tier as unknown as { criteria: Record<string, string>; instructions: Record<string, string> };
+	assert.deepEqual(Object.keys(tier(proposed).criteria).sort(), ["heavy", "light", "standard"]);
+	assert.equal(tier(proposed).criteria.standard, tier(shipped).criteria.standard, "only light and heavy needed changing");
+
+	// The specific defect: the light band described as output shape rather than difficulty.
+	assert.match(tier(shipped).criteria.light!, /answer a factual question, explain a snippet/);
+	assert.doesNotMatch(tier(proposed).criteria.light!, /answer a factual question|explain a snippet/);
+	// And the specific addition: heavy work stays heavy when asked about.
+	assert.match(tier(proposed).criteria.heavy!, /asks \*about\* such work|explaining why a race condition/);
+	assert.match(tier(proposed).instructions.note!, /text or as an edit/);
 });

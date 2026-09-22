@@ -22,6 +22,7 @@ npm run eval -- --sweep paired                # 95% intervals on the comparisons
 npm run eval -- --sweep coverage              # visit ~400 configurations and check the invariants in each
 npm run eval -- --sweep axis                  # does a candidate set's bias-immunity survive another bias axis?
 npm run eval -- --sweep override              # can the stakes override reach the classifier's blind spot?
+npm run eval -- --blocked-aware-keep          # simulate the section-0 fix before it lands
 npm run eval -- --bootstrap 2000              # what a single number from this pack is worth
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
@@ -52,7 +53,9 @@ flawless), so `medianTaskTurnSuccess` and `turnSuccessRate` carry the quality si
 
 The findings, distilled for whoever acts on them, are in
 [`docs/research/router-eval-findings.md`](../docs/research/router-eval-findings.md); a test re-measures its
-load-bearing numbers and fails if the brief and the harness disagree.
+load-bearing numbers and fails if the brief and the harness disagree. **§9 of that brief
+predicts what each queued fix will do**, with the command that checks it and an explicit
+list of what these packs cannot resolve.
 
 Every run writes `eval/results/<timestamp>-<profile>-<git>.json` plus a
 `latest-<profile>.json` the next run automatically compares against, and prints the
@@ -382,6 +385,12 @@ four times in six, at mean confidence **0.87**. See §0b of the findings brief.
 `--phrasing-questions tier-only` drops `needs_tools` and `stakes` from the request, which
 is how round 37 ruled out the mechanism round 36 proposed: the gap is unchanged without
 them. The cause is the `light` criterion's own wording in `src/state.ts`.
+
+`--phrasing-questions proposed` runs a **candidate rewrite** of that criterion
+(`proposedRoutingQuestions()`, kept in `eval/` because this harness does not edit `src/`)
+so a wording can be measured before it is adopted. It closes 30% of the gap and lifts
+question accuracy from 33.3% to 50.0% — a partial fix, measured rather than argued. See
+§9B of the findings brief for the acceptance numbers.
 
 Offline it takes any `Classify` function, which is how the probe itself is tested: a
 phrasing-blind classifier must report no gap, and a tools-keyed one must report the full

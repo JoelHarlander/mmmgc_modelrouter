@@ -17,7 +17,7 @@
 import { readFileSync } from "node:fs";
 import type { Tier } from "../src/config.ts";
 import { TIERS } from "../src/config.ts";
-import type { JevChoiceAnswer, JevNoulAnswer, JevScoreAnswer } from "../src/jev.ts";
+import type { JevChoiceAnswer, JevNoulAnswer, JevQuestion, JevScoreAnswer } from "../src/jev.ts";
 import { routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "../src/state.ts";
 import type { JevLike } from "./candidates.ts";
 
@@ -93,13 +93,55 @@ export type Classify = (prompt: string) => Promise<Classified>;
  * narrows when the question is removed, the gap is caused by *asking* it alongside the
  * tier question rather than by anything the router does with the answer.
  */
-export type QuestionSet = "shipped" | "tier-only";
+export type QuestionSet = "shipped" | "tier-only" | "proposed";
+
+/**
+ * A candidate rewrite of the tier criteria, for section 0b.
+ *
+ * The shipped `light` criterion lists "answer a factual question, explain a snippet",
+ * which describes the *shape of the output* rather than the difficulty of arriving at
+ * it - so Jev correctly files "why does this deadlock under load?" as light. This
+ * version says the same things about difficulty, removes the output-shape framing, and
+ * says once, explicitly, that explaining can be as hard as doing.
+ *
+ * It lives here rather than in `src/state.ts` because this task does not edit `src/`.
+ * Its purpose is to let the owning task see a measured effect before adopting wording.
+ */
+export function proposedRoutingQuestions(): Record<string, JevQuestion> {
+	const base = routingQuestions();
+	const tier = base[TIER_QUESTION_KEY] as { type: "choice"; instructions: Record<string, string>; criteria: Record<string, string> };
+	return {
+		...base,
+		[TIER_QUESTION_KEY]: {
+			type: "choice",
+			instructions: {
+				...tier.instructions,
+				note:
+					"Judge how hard it is to work out the answer, not the length of the message and not whether " +
+					"the result is delivered as text or as an edit. A question can be as hard as the change it asks about.",
+			},
+			criteria: {
+				light:
+					"A small, well-specified step whose answer is already known or can be read off directly: rename or move " +
+					"something, write a one-line command, read or list files, recall a documented fact, look something up, " +
+					"greetings or acknowledgements. A fast, cheap model will do this correctly.",
+				standard: tier.criteria.standard!,
+				heavy:
+					"Hard or high-stakes work: design or architecture decisions, multi-file or cross-cutting refactors, " +
+					"debugging with unclear cause, security or concurrency reasoning, reviewing large diffs, ambiguous " +
+					"requirements that need judgment, or anything where a wrong answer is expensive. This applies equally " +
+					"when the user asks *about* such work rather than asking for a change: explaining why a race condition " +
+					"happens needs the same reasoning as fixing it. Needs the strongest available model.",
+			},
+		},
+	};
+}
 
 /** The live classifier: the real questions, against a state shaped like the router's. */
 export function jevClassifier(jev: JevLike, questionSet: QuestionSet = "shipped"): Classify {
 	return async (prompt: string) => {
 		const state = { request: prompt, recent: [], session: { turn: 1, context_tokens: 0, current_model: "none", recent_tools: [] } };
-		const all = routingQuestions();
+		const all = questionSet === "proposed" ? proposedRoutingQuestions() : routingQuestions();
 		const questions = questionSet === "tier-only" ? { [TIER_QUESTION_KEY]: all[TIER_QUESTION_KEY]! } : all;
 		const res = await jev.ask(state, questions);
 		const tier = res.answers[TIER_QUESTION_KEY] as JevChoiceAnswer | undefined;
@@ -186,8 +228,10 @@ export function renderPhrasing(report: PhrasingReport, label: string): string {
 	row("cost", `$${report.costUsd.toFixed(6)}`);
 	out.push("");
 	if (report.meanTierGap > 0.25) {
-		out.push("  the instruction is systematically rated heavier than the identical work asked as");
-		out.push("  a question. `needs_tools` is the difference between them, and src/state.ts asks it.");
+		out.push("  the instruction is systematically rated heavier than the identical work asked as a");
+		out.push("  question. The cause is the tier criteria in src/state.ts: the light band is described");
+		out.push("  as output shape - \"answer a factual question, explain a snippet\" - rather than as");
+		out.push("  difficulty. Dropping the needs_tools question does not change it (round 37).");
 	} else if (report.meanTierGap < -0.25) {
 		out.push("  the question is systematically rated heavier, which is the opposite of round 35's");
 		out.push("  hypothesis and worth explaining before acting on it.");

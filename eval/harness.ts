@@ -80,6 +80,16 @@ export interface RunOptions {
 	contextSensitivity?: number;
 	/** Which stakes-override variant to apply. Defaults to the shipped one. */
 	stakesOverride?: StakesOverride;
+	/**
+	 * Simulate the §0 fix: when the router would keep the current model but the ledger
+	 * has that provider blocked, fall through to tier selection instead.
+	 *
+	 * `chooseModel`'s low-confidence branch returns `current` without consulting
+	 * `ledger.isBlocked`, so this re-asks it with the confidence gate satisfied - which is
+	 * what "fall through to tier selection when blocked" means. Nothing in src/ changes;
+	 * this exists so the harness can predict what the fix will do before it lands.
+	 */
+	blockedAwareKeep?: boolean;
 	signal?: AbortSignal;
 }
 
@@ -238,6 +248,13 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 				ledger,
 				contextTokens,
 			});
+			// The §0 fix, simulated: a kept model that the ledger has blocked is not kept.
+			if (options.blockedAwareKeep && decision.model && !decision.switched) {
+				const held = checkEligibility(decision.model, loaded, ledger, cfg);
+				if (!held.eligible) {
+					decision = chooseModel({ tier: requestedTier, confidence: 1, current: session.model, registry, cfg, ledger, contextTokens });
+				}
+			}
 			if (decision.model && decision.switched) session.model = decision.model;
 		}
 
