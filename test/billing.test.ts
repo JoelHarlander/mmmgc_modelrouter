@@ -11,7 +11,7 @@ import { test } from "node:test";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { assessBilling, describeBasis } from "../src/billing.ts";
-import { DEFAULT_CONFIG, mergeConfig, type RouterConfig } from "../src/config.ts";
+import { DEFAULT_CONFIG, mergeConfig, modelKey, type RouterConfig } from "../src/config.ts";
 import { parseEntitlement } from "../src/entitlement.ts";
 import { Ledger } from "../src/ledger.ts";
 import { chooseModel } from "../src/router.ts";
@@ -297,16 +297,17 @@ test("a prepaid balance is spendable to its last cent, not to the plan utilizati
 	assert.equal(a.eligibility, "allowed");
 });
 
-test("a spent prepaid balance leaves the free variants it never paid for usable", () => {
+test("a spent prepaid balance excludes every route the config labels billed", () => {
 	const l = ledger();
 	l.applyEntitlement(
 		"openrouter",
 		parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 0, free_model_daily_requests: { used: 5, limit: 50 } } }),
 	);
-	assert.equal(assess(router, l).eligibility, "excluded");
-	const free = assess(routerFree, l);
-	assert.notEqual(free.eligibility, "excluded");
-	assert.equal(free.basis, "free");
+	for (const m of [router, routerFree]) {
+		const a = assess(m, l);
+		assert.equal(a.eligibility, "excluded", modelKey(m));
+		assert.match(a.reason, /cannot pay for this route \(no credits\)/);
+	}
 });
 
 test("a gateway with nothing left to spend is excluded on its credit evidence", () => {
@@ -416,33 +417,29 @@ test("with every route billing-ineligible the decision names the current model a
 	assert.match(d.ineligibleCurrent ?? "", /denied/);
 });
 
-test("preferVerifiedSubscription false falls back to pure cost ordering", () => {
-	const costOnly = mergeConfig(cfg, {
-		billing: { ...cfg.billing, preferVerifiedSubscription: false },
-		models: { ...cfg.models, "claude-bridge/*": { billing: "plan" } },
-		tiers: { ...cfg.tiers, standard: ["claude-bridge/claude-opus-5", "ds4/free"] },
-	});
-	const free = model("ds4", "free");
+test("a verified subscription outranks a cheaper billed route, with no way to switch that off", () => {
+	const l = ledger();
+	l.observeResponse("claude-bridge", 200, HEALTHY_ANTHROPIC, cfg);
+	const both = mergeConfig(cfg, { tiers: { ...cfg.tiers, standard: ["openrouter/z-ai/glm-5.3", "claude-bridge/claude-opus-5"] } });
 	const d = chooseModel({
 		tier: "standard",
 		confidence: 0.9,
 		current: undefined,
-		registry: fakeRegistry([...ALL, free], ["claude-bridge"]),
-		cfg: costOnly,
-		ledger: ledger(),
+		registry: fakeRegistry(ALL, ["claude-bridge"]),
+		cfg: both,
+		ledger: l,
 		contextTokens: 10_000,
 	});
-	// Both estimate $0, so capability and config order decide rather than the billing rank.
 	assert.equal(d.model?.provider, "claude-bridge");
+	assert.equal(d.billing?.eligibility, "preferred");
+	const billed = d.candidates.find((c) => c.key === "openrouter/z-ai/glm-5.3")!;
+	assert.ok(billed.costUsd > 0, "the billed route really was the cheaper-looking one on price alone");
 });
 
 test("extra billed usage is priced as money, so a cheaper billed route can win on cost", () => {
 	const l = ledger();
 	l.observeResponse("openai-codex", 200, CODEX_EXHAUSTED_WITH_CREDITS, cfg);
-	const costOnly = mergeConfig(cfg, {
-		tiers: { ...cfg.tiers, standard: ["openai-codex/gpt-6-astra", "openrouter/z-ai/glm-5.3"] },
-		billing: { ...cfg.billing, preferVerifiedSubscription: false },
-	});
+	const costOnly = mergeConfig(cfg, { tiers: { ...cfg.tiers, standard: ["openai-codex/gpt-6-astra", "openrouter/z-ai/glm-5.3"] } });
 	const d = chooseModel({
 		tier: "standard",
 		confidence: 0.9,
@@ -456,7 +453,7 @@ test("extra billed usage is priced as money, so a cheaper billed route can win o
 	assert.equal(extra.assessment?.basis, "extra-credits");
 	assert.ok(extra.costUsd > 0, "credit spend is estimated as real money");
 	assert.ok(extra.switchPenaltyUsd > 0, "re-reading context on credits costs money too");
-	assert.equal(d.model?.provider, "openrouter", "the genuinely cheaper billed route wins on cost");
+	assert.equal(d.model?.provider, "openrouter", "pay-per-token outranks spending credits on top of a spent plan");
 });
 
 test("a free label the catalog price contradicts is still costed as money", () => {
@@ -478,23 +475,32 @@ test("a free label the catalog price contradicts is still costed as money", () =
 	assert.ok(c.costUsd > 0, "an unresolved basis at a non-zero list price is not free");
 });
 
-test("a genuinely zero-priced model is free even where a provider-wide label says on-demand", () => {
-	// `openrouter/*` is labelled on-demand by the defaults; the `:free` variant costs nothing.
-	const a = assess(routerFree, ledger());
+test("a configured billed label decides, whatever the catalog price says", () => {
+	// A catalog zero also means "price not published": pi ships `openrouter/auto` at cost 0 and it bills.
+	const auto = model("openrouter", "auto");
+	const a = assessBilling({ model: auto, cfg, registry: fakeRegistry([auto]), ledger: ledger() });
+	assert.equal(a.basis, "pay-per-token");
+	assert.equal(a.eligibility, "allowed");
+
+	// And the same route is held to the gates a billed route is held to.
+	const l = ledger();
+	l.applyEntitlement("openrouter", parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 0 } }));
+	assert.equal(assessBilling({ model: auto, cfg, registry: fakeRegistry([auto]), ledger: l }).eligibility, "excluded");
+});
+
+test("a zero catalog price decides only where no label claims the route", () => {
+	const local = model("some-local-runtime", "tiny");
+	const a = assessBilling({ model: local, cfg, registry: fakeRegistry([local]), ledger: ledger() });
 	assert.equal(a.basis, "free");
 	assert.equal(a.eligibility, "preferred");
-	assert.equal(a.rank, assess(model("ds4", "deepseek-v4-flash"), ledger()).rank);
 	assert.ok(a.evidence.some((e) => /catalog list price is zero/.test(e)), a.evidence.join(" | "));
-
-	// A label written for that exact model still wins: it is a statement about one known price.
-	const named = mergeConfig(cfg, { models: { ...cfg.models, "openrouter/z-ai/glm-5.3:free": { billing: "on-demand" } } });
-	assert.equal(assess(routerFree, ledger(), named).basis, "pay-per-token");
 });
 
 test("a free route in billing.denyPaid is excluded, not quietly preferred", () => {
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: [...cfg.billing.denyPaid, "openrouter/*"] } });
-	const a = assess(routerFree, ledger(), denied);
+	const local = model("ds4", "deepseek-v4-flash");
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: [...cfg.billing.denyPaid, "ds4/*"] } });
+	const a = assessBilling({ model: local, cfg: denied, registry: fakeRegistry([local]), ledger: ledger() });
 	assert.equal(a.basis, "free");
 	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /denied for openrouter\/z-ai\/glm-5.3:free by billing\.denyPaid/);
+	assert.match(a.reason, /denied for ds4\/deepseek-v4-flash by billing\.denyPaid/);
 });

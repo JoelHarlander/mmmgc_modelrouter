@@ -1,7 +1,8 @@
 /**
  * The project-local configuration layer. `<cwd>/.pi/modelrouter.json` arrives with whatever
  * repository is open, so it may set routing policy but not a section that names an endpoint or a
- * credential: the merge is an allowlist, and every section outside it keeps the global value.
+ * credential: nothing it says is taken unless the key is named as project-settable, and a
+ * safeguard it does name may only be tightened.
  */
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -10,7 +11,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import { assessBilling } from "../src/billing.ts";
-import { DEFAULT_CONFIG, loadConfig, mergeConfig, PROJECT_OVERRIDABLE, type RouterConfig } from "../src/config.ts";
+import { DEFAULT_CONFIG, loadConfig, mergeConfig, type RouterConfig } from "../src/config.ts";
 import { JevClient, type JsonValue } from "../src/jev.ts";
 import { Ledger, ledgerPath } from "../src/ledger.ts";
 
@@ -25,31 +26,6 @@ function projectDir(config: unknown): string {
 function baseline(): RouterConfig {
 	return loadConfig(mkdtempSync(join(tmpdir(), "mr-empty-"))).config;
 }
-
-/** The same shape with every string replaced, so a section the project layer won is visible. */
-function hostile(value: unknown): unknown {
-	if (typeof value === "string") return "https://attacker.example";
-	if (Array.isArray(value)) return value.map(hostile);
-	if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, hostile(v)]));
-	return value;
-}
-
-const sections = Object.keys(DEFAULT_CONFIG) as (keyof RouterConfig)[];
-
-test("a project config may set the allowlisted sections and no others", () => {
-	const base = baseline();
-	const patch: Record<string, unknown> = { tiers: { light: ["faux/a"], standard: ["faux/a"], heavy: ["faux/a"] } };
-	for (const section of sections) {
-		if (!PROJECT_OVERRIDABLE.includes(section)) patch[section] = hostile(base[section]);
-	}
-	const cfg = loadConfig(projectDir(patch)).config;
-
-	assert.deepEqual(cfg.tiers.light, ["faux/a"], "an allowlisted section still applies");
-	for (const section of sections) {
-		if (PROJECT_OVERRIDABLE.includes(section)) continue;
-		assert.deepEqual(cfg[section], base[section], `${section} must not be settable from a project config`);
-	}
-});
 
 test("a project config cannot redirect the Jev call that carries the gateway credential", async () => {
 	const base = baseline();
@@ -81,69 +57,76 @@ test("a project config cannot redirect the Jev call that carries the gateway cre
 	);
 });
 
-// ---- safeguards may only move towards spending less ------------------------
+// ---- nothing is taken from a project unless it is named settable ----------
 
-/** The shipped defaults are the global layer here, so the policy under test is the shipped one. */
+/** The shipped defaults stand in for the global layer, so the policy under test is the shipped one. */
 function withProject(patch: unknown): RouterConfig {
 	return mergeConfig(DEFAULT_CONFIG, patch as Partial<RouterConfig>, "project");
 }
 
-test("a project config cannot empty, replace or widen the paid-inference deny list", () => {
-	const cfg = withProject({ billing: { denyPaid: [], allowPayPerToken: ["*"], allowExtraBilled: ["*"] } });
-	for (const glob of DEFAULT_CONFIG.billing.denyPaid) assert.ok(cfg.billing.denyPaid.includes(glob), glob);
-	assert.deepEqual(cfg.billing.allowPayPerToken, [], "a broader allow list narrows to nothing rather than widening");
-	assert.deepEqual(cfg.billing.allowExtraBilled, []);
+/** The same shape with every string replaced, so a section the project layer won is visible. */
+function hostile(value: unknown): unknown {
+	if (typeof value === "string") return "https://attacker.example";
+	if (Array.isArray(value)) return value.map(hostile);
+	if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, hostile(v)]));
+	return value;
+}
+
+test("a section a project config is not named for is ignored, including one nobody has added yet", () => {
+	const base = baseline();
+	const patch: Record<string, unknown> = { futureSafeguard: { spendCapUsd: 0, endpoint: "https://attacker.example" } };
+	for (const section of ["jev", "entitlement", "scopes", "plan", "models"] as (keyof RouterConfig)[]) {
+		patch[section] = hostile(base[section]);
+	}
+	const cfg = loadConfig(projectDir(patch)).config;
+
+	assert.equal("futureSafeguard" in cfg, false, "a section the policy has never heard of does not enter the config");
+	for (const section of ["jev", "entitlement", "scopes", "plan", "models"] as (keyof RouterConfig)[]) {
+		assert.deepEqual(cfg[section], base[section], section);
+	}
 });
 
-test("a project config may tighten the same safeguards", () => {
-	const cfg = withProject({
-		billing: {
-			denyPaid: ["openrouter/*"],
-			allowPayPerToken: ["openrouter/z-ai/glm-5.3"],
-			allowUnverifiedSubscription: false,
-			evidenceMaxAgeMinutes: 5,
-		},
-		plan: { utilizationCeiling: 0.5, cooldownMinutesOn429: 120 },
-	});
-	assert.deepEqual(cfg.billing.denyPaid, [...DEFAULT_CONFIG.billing.denyPaid, "openrouter/*"]);
-	assert.deepEqual(cfg.billing.allowPayPerToken, ["openrouter/z-ai/glm-5.3"]);
-	assert.equal(cfg.billing.allowUnverifiedSubscription, false);
-	assert.equal(cfg.billing.evidenceMaxAgeMinutes, 5);
-	assert.equal(cfg.plan.utilizationCeiling, 0.5);
-	assert.equal(cfg.plan.cooldownMinutesOn429, 120);
-});
-
-test("a project config cannot relax the safeguards it is allowed to tighten", () => {
-	const strict = mergeConfig(DEFAULT_CONFIG, {
-		billing: { ...DEFAULT_CONFIG.billing, allowUnverifiedSubscription: false, evidenceMaxAgeMinutes: 5 },
-		plan: { utilizationCeiling: 0.5, cooldownMinutesOn429: 120 },
-	});
+test("a project config cannot neutralise a quota scope or re-enable disabled routing", () => {
+	const off = mergeConfig(DEFAULT_CONFIG, { enabled: false });
 	const cfg = mergeConfig(
-		strict,
-		{
-			billing: { allowUnverifiedSubscription: true, requireVerifiedExtraBilled: false, preferVerifiedSubscription: false, evidenceMaxAgeMinutes: 600 },
-			plan: { utilizationCeiling: 1, cooldownMinutesOn429: 0 },
-			parallel: { requireRoutingEnabled: false },
-		} as Partial<RouterConfig>,
+		off,
+		{ enabled: true, scopes: { "claude-bridge:7d": ["zzz/*"], "claude-bridge:7d_opus": ["zzz/*"] } } as Partial<RouterConfig>,
 		"project",
 	);
-	assert.equal(cfg.billing.allowUnverifiedSubscription, false);
+	assert.equal(cfg.enabled, false, "a repository may switch routing off, never back on");
+	assert.equal(cfg.scopes["claude-bridge:7d"], undefined, "an account-wide window cannot be given a scope that skips it");
+	assert.deepEqual(cfg.scopes["claude-bridge:7d_opus"], DEFAULT_CONFIG.scopes["claude-bridge:7d_opus"]);
+});
+
+test("a project config can only add to the paid-inference deny list", () => {
+	const cfg = withProject({
+		billing: { denyPaid: ["openrouter/*"], allowPayPerToken: ["*"], allowExtraBilled: ["*"], requireVerifiedExtraBilled: false, allowUnverifiedSubscription: true },
+	});
+	assert.deepEqual(cfg.billing.denyPaid, [...DEFAULT_CONFIG.billing.denyPaid, "openrouter/*"]);
+	assert.deepEqual(cfg.billing.allowPayPerToken, DEFAULT_CONFIG.billing.allowPayPerToken);
+	assert.deepEqual(cfg.billing.allowExtraBilled, DEFAULT_CONFIG.billing.allowExtraBilled);
 	assert.equal(cfg.billing.requireVerifiedExtraBilled, true);
-	assert.equal(cfg.billing.preferVerifiedSubscription, true);
-	assert.equal(cfg.billing.evidenceMaxAgeMinutes, 5);
-	assert.equal(cfg.plan.utilizationCeiling, 0.5);
-	assert.equal(cfg.plan.cooldownMinutesOn429, 120);
-	assert.equal(cfg.parallel.requireRoutingEnabled, true);
+
+	const emptied = withProject({ billing: { denyPaid: [] } });
+	for (const glob of DEFAULT_CONFIG.billing.denyPaid) assert.ok(emptied.billing.denyPaid.includes(glob), glob);
 });
 
-test("a safeguard key that declares no safe direction is global-only", () => {
-	const cfg = withProject({ billing: { probe: { enabled: false, minIntervalMinutes: 1440, timeoutMs: 60_000 } } });
-	assert.equal(cfg.billing.probe.enabled, false, "switching probing off is a project's to make");
-	assert.equal(cfg.billing.probe.minIntervalMinutes, DEFAULT_CONFIG.billing.probe.minIntervalMinutes);
-	assert.equal(cfg.billing.probe.timeoutMs, DEFAULT_CONFIG.billing.probe.timeoutMs);
+test("a project config states its routing preferences and may switch probing off", () => {
+	const cfg = withProject({
+		tiers: { light: ["ds4/deepseek-v4-flash"], standard: ["ds4/deepseek-v4-flash"], heavy: ["ds4/deepseek-v4-flash"] },
+		thinking: { light: "high" },
+		switching: { minConfidence: 0.3, manualPinTurns: 0 },
+		billing: { probe: { enabled: false, minIntervalMinutes: 1440 } },
+	});
+	assert.deepEqual(cfg.tiers.light, ["ds4/deepseek-v4-flash"]);
+	assert.equal(cfg.thinking.light, "high");
+	assert.equal(cfg.switching.minConfidence, 0.3);
+	assert.equal(cfg.switching.manualPinTurns, 0);
+	assert.equal(cfg.billing.probe.enabled, false);
+	assert.equal(cfg.billing.probe.minIntervalMinutes, DEFAULT_CONFIG.billing.probe.minIntervalMinutes, "an unnamed key beside a named one stays global");
 });
 
-test("a project config cannot route paid Anthropic inference by any of its allowed sections", () => {
+test("a project config cannot route paid Anthropic inference by any means open to it", () => {
 	const cfg = withProject({
 		tiers: { light: ["anthropic/claude-opus-5"], standard: ["anthropic/claude-opus-5"], heavy: ["anthropic/claude-opus-5"] },
 		models: { "anthropic/*": { billing: "free", capability: 99 } },
@@ -159,6 +142,5 @@ test("a project config cannot route paid Anthropic inference by any of its allow
 
 	assert.equal(a.eligibility, "excluded");
 	assert.match(a.reason, /denied for anthropic\/claude-opus-5/);
-	assert.equal(cfg.models["anthropic/*"]?.billing, DEFAULT_CONFIG.models["anthropic/*"]?.billing, "a project may not assert what pays for a model");
-	assert.equal(cfg.models["anthropic/*"]?.capability, 99, "but it may still rank models");
+	assert.deepEqual(cfg.models["anthropic/*"], DEFAULT_CONFIG.models["anthropic/*"], "a project may not assert what pays for a model");
 });

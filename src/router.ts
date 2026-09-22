@@ -3,8 +3,10 @@
  *
  * Billing eligibility (see billing.ts) is an input here, not an afterthought: a candidate is
  * only selectable when its billing basis is permitted, and verified subscription-backed routes
- * outrank anything that bills extra. The basis and its remaining uncertainty travel with the
- * decision so `/router explain` can state the footing instead of asserting a conclusion.
+ * outrank anything that bills extra. Every path through this module assesses the model it ends
+ * on, including the one that keeps the current model below the confidence floor. The basis and
+ * its remaining uncertainty travel with the decision so `/router explain` can state the footing
+ * instead of asserting a conclusion.
  */
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
@@ -68,19 +70,26 @@ export interface ChooseArgs {
 }
 
 export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "jevModel" | "needsTools" | "stakes"> {
-	const { tier, confidence, current, registry, cfg, ledger, contextTokens } = args;
+	const { tier, confidence, current, cfg } = args;
 	const currentKey = current ? modelKey(current) : undefined;
 
+	// Below the confidence floor the router keeps what the session is on - but only once the
+	// billing gate has said it may. An ineligible route is never kept for want of confidence.
 	if (confidence < cfg.switching.minConfidence && current) {
-		return {
-			requestedTier: tier,
-			tier,
-			confidence,
-			model: current,
-			switched: false,
-			reason: `confidence ${confidence.toFixed(2)} < ${cfg.switching.minConfidence}; keeping ${currentKey}`,
-			candidates: [],
-		};
+		const held = evaluateCandidate(currentKey!, args, currentKey);
+		if (!held.skipped) {
+			const basis = held.assessment ? describeBasis(held.assessment) : (held.billing ?? "unknown");
+			return {
+				requestedTier: tier,
+				tier,
+				confidence,
+				model: current,
+				switched: false,
+				billing: held.assessment,
+				reason: `confidence ${confidence.toFixed(2)} < ${cfg.switching.minConfidence}; keeping ${currentKey} (${basis})`,
+				candidates: [held],
+			};
+		}
 	}
 
 	// Try the requested tier, then escalate, then de-escalate.
@@ -101,7 +110,7 @@ export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "
 		collect(candidates);
 		const viable = candidates.filter((c) => !c.skipped);
 		if (viable.length === 0) continue;
-		viable.sort((a, b) => compareCandidates(a, b, cfg));
+		viable.sort(compareCandidates);
 		const best = viable[0]!;
 		const switched = best.key !== currentKey;
 		const basis = best.assessment ? describeBasis(best.assessment) : (best.billing ?? "unknown");
@@ -123,6 +132,7 @@ export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "
 	// Nothing is eligible. Keeping the current model is a fallback, not an endorsement: say so,
 	// and name why the current model itself was not selectable when it was a candidate.
 	const blocked = current ? evaluateCandidate(currentKey!, args, currentKey).skipped : undefined;
+
 	return {
 		requestedTier: tier,
 		tier,
@@ -179,12 +189,10 @@ export function evaluateCandidate(key: string, args: ChooseArgs, currentKey?: st
  * Billing rank first, so verified subscription-backed usage wins over anything billed even when
  * the billed route estimates cheaper. Then cheapest, then higher capability, then config order.
  */
-function compareCandidates(a: Candidate, b: Candidate, cfg: RouterConfig): number {
-	if (cfg.billing.preferVerifiedSubscription) {
-		const ra = a.assessment?.rank ?? 2;
-		const rb = b.assessment?.rank ?? 2;
-		if (ra !== rb) return ra - rb;
-	}
+function compareCandidates(a: Candidate, b: Candidate): number {
+	const ra = a.assessment?.rank ?? 2;
+	const rb = b.assessment?.rank ?? 2;
+	if (ra !== rb) return ra - rb;
 	const ca = a.costUsd + a.switchPenaltyUsd;
 	const cb = b.costUsd + b.switchPenaltyUsd;
 	if (Math.abs(ca - cb) > 1e-6) return ca - cb;

@@ -148,3 +148,26 @@ test("glob and heuristics", () => {
 	assert.equal(heuristicTier("why does this deadlock under load?").tier, "heavy");
 	assert.equal(choiceConfidence({ a: 0.9, b: 0.06, c: 0.04 }).toFixed(2), "0.85");
 });
+
+test("a low-confidence turn keeps the current model only once billing has cleared it", () => {
+	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[2], registry: fakeRegistry(models), cfg, ledger: ledger(), contextTokens: 0 });
+	assert.equal(d.model?.id, "mid", "an eligible model is still kept below the confidence floor");
+	assert.equal(d.switched, false);
+	assert.equal(d.billing?.basis, "subscription", "and its basis travels with the decision");
+	assert.ok(d.candidates.some((c) => c.key === "plan/mid"));
+});
+
+test("a low-confidence turn routes away from a current model the billing gate refuses", () => {
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: ["plan/*"] } });
+	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[2], registry: fakeRegistry(models), cfg: denied, ledger: ledger(), contextTokens: 0 });
+	assert.notEqual(d.model?.provider, "plan", "an ineligible route is not kept for want of confidence");
+	assert.equal(d.switched, true);
+	assert.notEqual(d.billing?.eligibility, "excluded");
+});
+
+test("a low-confidence turn with nothing eligible names the current model as ineligible", () => {
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: ["*"] } });
+	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[2], registry: fakeRegistry(models), cfg: denied, ledger: ledger(), contextTokens: 0 });
+	assert.equal(d.model?.id, "mid", "there is nowhere else to go, so the session stays put");
+	assert.match(d.ineligibleCurrent ?? "", /denied/, "but it is never kept silently");
+});

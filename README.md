@@ -61,7 +61,6 @@ heuristic, which by default keeps the current model.
   },
   "plan": { "utilizationCeiling": 0.85, "cooldownMinutesOn429": 30 },
   "billing": {
-    "preferVerifiedSubscription": true,
     "allowUnverifiedSubscription": true,
     "allowExtraBilled": ["openai-codex/*"],
     "requireVerifiedExtraBilled": true,
@@ -76,7 +75,7 @@ heuristic, which by default keeps the current model.
 }
 ```
 
-Billing labels: an explicit `models` override wins; otherwise zero-cost models are `free`, OAuth providers are
+Billing labels: a `models` label wins wherever one matches, glob or not; only where no label claims the route does a zero catalog price make it `free`, OAuth providers are
 `plan`, everything else is `on-demand`. **A label is not evidence.** It decides which billing question gets asked;
 live quota headers and the read-only usage endpoints in `src/entitlement.ts` decide the answer.
 
@@ -84,7 +83,6 @@ live quota headers and the read-only usage endpoints in `src/entitlement.ts` dec
 
 | Key | Effect |
 | --- | --- |
-| `preferVerifiedSubscription` | Rank verified subscription-backed routes above every billed route, regardless of price |
 | `allowUnverifiedSubscription` | Keep a `plan`-labelled route usable while its backing is still unverified (it is never *preferred*) |
 | `allowExtraBilled` | Model globs that may spend credits **after** their subscription window is exhausted |
 | `requireVerifiedExtraBilled` | Refuse extra billed usage unless live credit evidence says credits exist |
@@ -102,13 +100,12 @@ the provider uses on the wire (`5h`, `7d`, `7d_oi`, `primary`, `secondary`, `<fa
 that cannot authenticate is recorded as a failed probe — the route then stays `unverified`, which routing discloses
 rather than guessing either way.
 
-A project `.pi/modelrouter.json` is trusted with routing preferences and nothing else. Sections that name an
-endpoint or a credential — `entitlement` and `jev` — are read from the global file only, so a repository cannot
-point a credentialed request at its own host. Inside `billing` and `plan` a project may only move a safeguard the
-safe way: `denyPaid` unions with the global list, `allowPayPerToken` and `allowExtraBilled` can only narrow within
-it, `utilizationCeiling` and `evidenceMaxAgeMinutes` can only fall, and a key that declares no safe direction (say
-`probe.minIntervalMinutes`) stays global. A project may rank models with `models.<glob>.capability` but not assert
-their `billing` label. So a repository can make the router stricter than you configured it, never looser.
+A project `.pi/modelrouter.json` is read key by key against a list of what a repository may say: its tier lists,
+`thinking`, `switching`, the `/duo` settings, `notifyOnSwitch`, `enabled` (off only), `billing.denyPaid` (added to
+the global list, never replacing it) and `billing.probe.enabled` (off only). Everything else — `jev`, `entitlement`,
+`plan`, `models`, `scopes`, the rest of `billing`, and every key added in future — comes from the global file
+alone. So a repository can pick the models it prefers and make the router stricter than you configured it, and it
+can never name an endpoint a credential is sent to, assert what pays for a model, or loosen a spend safeguard.
 
 ## Commands
 

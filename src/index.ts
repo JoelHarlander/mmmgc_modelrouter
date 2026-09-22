@@ -82,7 +82,13 @@ export default function modelRouter(pi: ExtensionAPI) {
 		turn += 1;
 		if (!enabled || !ctx.model) return;
 		if (turn <= pinnedUntilTurn) {
-			setStatus(ctx, `pinned ${modelKey(ctx.model)} (${pinnedUntilTurn - turn + 1} more turn${pinnedUntilTurn - turn === 0 ? "" : "s"})`);
+			// A manual /model choice is honoured, but never without saying what pays for it.
+			await refreshBilling(ctx);
+			const pinned = assessBilling({ model: ctx.model, cfg, registry: ctx.modelRegistry, ledger });
+			setStatus(ctx, `pinned ${modelKey(ctx.model)} (${pinnedUntilTurn - turn + 1} more turn${pinnedUntilTurn - turn === 0 ? "" : "s"}, ${describeBasis(pinned)})`);
+			if (pinned.eligibility === "excluded" && ctx.hasUI) {
+				ctx.ui.notify(`router: pinned ${modelKey(ctx.model)} is not billing-eligible: ${pinned.reason}`, "warning");
+			}
 			return;
 		}
 		const started = Date.now();

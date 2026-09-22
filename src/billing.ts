@@ -56,17 +56,17 @@ export interface AssessArgs {
 }
 
 /**
- * The coarse label, and whether configuration asserted it or the registry implied it. A label
- * written for this exact model wins; a zero catalog price beats a provider-wide glob, so a free
- * variant of a billed provider is not reported or ranked as if it spent money.
+ * The coarse label, and whether configuration asserted it or the registry implied it.
+ *
+ * One precedence, used on every path: a configured `models` label decides, whether it was
+ * written for this model or for a glob over its provider. Only where no label claims the route
+ * does the catalog price decide, because a catalog zero also means "price not published" — it is
+ * never taken as proof that a route somebody labelled billed is free.
  */
 export function billingLabel(model: Model<Api>, cfg: RouterConfig, registry: ModelRegistry): { billing: Billing; fromConfig: boolean } {
-	const key = modelKey(model);
-	const exact = cfg.models[key]?.billing;
-	if (exact) return { billing: exact, fromConfig: true };
-	if (zeroCost(model)) return { billing: "free", fromConfig: false };
-	const override = overrideFor(cfg, key).billing;
+	const override = overrideFor(cfg, modelKey(model)).billing;
 	if (override) return { billing: override, fromConfig: true };
+	if (zeroCost(model)) return { billing: "free", fromConfig: false };
 	return { billing: registry.isUsingOAuth(model) ? "plan" : "on-demand", fromConfig: false };
 }
 
@@ -114,7 +114,7 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 		evidence.push(`account window exhausted (${spent})`);
 		return excluded(labelBasis(billing), billing, freshness, `${model.provider} account quota exhausted (${spent})`, evidence, uncertainty);
 	}
-	if (quota.credits && !zeroCost(model) && creditsSpent(quota.credits)) {
+	if (quota.credits && creditsSpent(quota.credits)) {
 		const state = describeCredits(quota.credits);
 		evidence.push(state);
 		return excluded(labelBasis(billing), billing, freshness, `${model.provider} account cannot pay for this route (${state})`, evidence, uncertainty);

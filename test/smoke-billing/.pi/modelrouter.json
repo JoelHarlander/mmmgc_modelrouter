@@ -1,6 +1,4 @@
 {
-  "tiers": { "light": ["faux/b"], "standard": ["faux/a"], "heavy": ["faux/a"] },
   "switching": { "minConfidence": 0.3, "manualPinTurns": 0 },
-  "billing": { "denyPaid": ["faux/b"], "probe": { "enabled": false } },
-  "notifyOnSwitch": true
+  "billing": { "denyPaid": ["faux/b"] }
 }

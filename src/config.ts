@@ -3,11 +3,10 @@
  *
  * Model ids are always "provider/modelId" as pi knows them (see `pi --list-models`).
  *
- * The project-local layer arrives with whatever repository is open, so it is trusted with
- * routing preferences and nothing else: it may set only the sections in `PROJECT_OVERRIDABLE`
- * (so no repository names the endpoint or credential a request is sent with), and inside a
- * safety or spend section it may only move a value in the safe direction named by
- * `PROJECT_SAFEGUARDS`.
+ * The project-local layer arrives with whatever repository is open, so nothing in it is trusted
+ * unless `PROJECT_SETTABLE` names the key: routing preferences it may state, safeguards it may
+ * only tighten, and everything else — endpoints, credentials, spend policy, quota scopes, and
+ * every key added later — comes from the global layer.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -67,8 +66,6 @@ export interface RouterConfig {
 		cooldownMinutesOn429: number;
 	};
 	billing: {
-		/** Rank verified subscription-backed routes above every billed route. */
-		preferVerifiedSubscription: boolean;
 		/** Keep a plan-labelled route usable while its subscription backing is still unverified. */
 		allowUnverifiedSubscription: boolean;
 		/** Model-key globs allowed to spend extra billed usage once their subscription window is exhausted. */
@@ -154,7 +151,6 @@ export const DEFAULT_CONFIG: RouterConfig = {
 	},
 	plan: { utilizationCeiling: 0.85, cooldownMinutesOn429: 30 },
 	billing: {
-		preferVerifiedSubscription: true,
 		allowUnverifiedSubscription: true,
 		// Extra credits exist on the ChatGPT plan only, and only once verified live.
 		allowExtraBilled: ["openai-codex/*"],
@@ -248,47 +244,34 @@ export function loadConfig(cwd: string): { config: RouterConfig; sources: string
 /** Which layer a patch came from. Only the global layer may name an endpoint or a credential. */
 export type ConfigScope = "global" | "project";
 
-/**
- * The sections a project-local config may set. It is an allowlist, so a section that is not
- * named here — `jev` and `entitlement` today, anything added later until it is listed — stays
- * whatever the global layer says, and no repository can point a credential at its own endpoint.
- */
-export const PROJECT_OVERRIDABLE: readonly (keyof RouterConfig)[] = [
-	"enabled",
-	"notifyOnSwitch",
-	"tiers",
-	"thinking",
-	"models",
-	"plan",
-	"billing",
-	"scopes",
-	"switching",
-	"parallel",
-];
-
-/** How far a project-local value may move: always towards spending less and proving more. */
-type SafeDirection = "widen" | "narrow" | "on" | "off" | "lower" | "higher";
+/** How a project-local value may be taken: as given, unioned onto the global list, or off only. */
+type ProjectRule = "set" | "union" | "off";
 
 /**
- * Sections that carry safety and spend policy. Inside one of these, a key that names no
- * direction below is global-only, so a safeguard added later is beyond a project file's reach
- * until it declares how it may move.
+ * Every key a project-local `.pi/modelrouter.json` may speak for, and how. Anything absent here
+ * — a whole section such as `jev`, `entitlement`, `plan`, `models` or `scopes`, a single key such
+ * as `billing.allowPayPerToken`, and every key added in future — comes from the global layer
+ * alone. So a repository can pick which models it prefers and make the router stricter, and it
+ * can never name an endpoint, assert what pays for a model, or loosen a spend safeguard.
  */
-const SAFEGUARD_SECTIONS: readonly string[] = ["billing", "plan"];
-
-/** The direction each safeguard may be moved in from a project-local config, and no other. */
-const PROJECT_SAFEGUARDS: Record<string, SafeDirection> = {
-	"billing.denyPaid": "widen",
-	"billing.allowPayPerToken": "narrow",
-	"billing.allowExtraBilled": "narrow",
-	"billing.preferVerifiedSubscription": "on",
-	"billing.allowUnverifiedSubscription": "off",
-	"billing.requireVerifiedExtraBilled": "on",
-	"billing.evidenceMaxAgeMinutes": "lower",
+export const PROJECT_SETTABLE: Readonly<Record<string, ProjectRule>> = {
+	enabled: "off",
+	notifyOnSwitch: "set",
+	tiers: "set",
+	thinking: "set",
+	"switching.minConfidence": "set",
+	"switching.cacheSwitchPenalty": "set",
+	"switching.manualPinTurns": "set",
+	"switching.expectedOutputTokens": "set",
+	"parallel.defaultN": "set",
+	"parallel.models": "set",
+	"parallel.judge": "set",
+	"parallel.autoAdopt": "set",
+	"parallel.switchToWinner": "set",
+	"parallel.timeoutMs": "set",
+	"parallel.maxResponseCharsForJudge": "set",
+	"billing.denyPaid": "union",
 	"billing.probe.enabled": "off",
-	"plan.utilizationCeiling": "lower",
-	"plan.cooldownMinutesOn429": "higher",
-	"parallel.requireRoutingEnabled": "on",
 };
 
 /** Section-level merge. `tiers` and `parallel.models` replace wholesale when given. */
@@ -310,61 +293,32 @@ export function mergeConfig(base: RouterConfig, rawPatch: Partial<RouterConfig>,
 	};
 }
 
-/** Keeps only what a project-local config may set, each value already moved the safe way. */
+/** Keeps only what a project-local config may say, each value already taken the safe way. */
 function projectPatch(base: RouterConfig, patch: Partial<RouterConfig>): Partial<RouterConfig> {
+	return (settable(base as unknown, patch, "") ?? {}) as Partial<RouterConfig>;
+}
+
+function settable(base: unknown, patch: unknown, path: string): unknown {
+	const rule = PROJECT_SETTABLE[path];
+	if (rule) return projectValue(base, patch, rule);
+	if (!isRecord(patch)) return undefined;
 	const out: Record<string, unknown> = {};
-	for (const section of PROJECT_OVERRIDABLE) {
-		if (patch[section] === undefined) continue;
-		const kept = tighten((base as unknown as Record<string, unknown>)[section], patch[section], section);
-		if (kept !== undefined) out[section] = kept;
+	for (const [key, value] of Object.entries(patch)) {
+		const kept = settable(isRecord(base) ? base[key] : undefined, value, path ? `${path}.${key}` : key);
+		if (kept !== undefined) out[key] = kept;
 	}
-	if (isRecord(out.models)) out.models = projectModels(base.models, out.models);
-	return out as Partial<RouterConfig>;
+	return Object.keys(out).length > 0 || path === "" ? out : undefined;
 }
 
-/**
- * A project may rank models against each other but not assert what pays for one: a billing label
- * is a claim about money that only the global layer, or live evidence, gets to make.
- */
-function projectModels(base: Record<string, ModelOverride>, models: Record<string, unknown>): Record<string, ModelOverride> {
-	const out: Record<string, ModelOverride> = {};
-	for (const [pattern, override] of Object.entries(models)) {
-		const capability = isRecord(override) ? override.capability : undefined;
-		out[pattern] = { ...base[pattern], ...(typeof capability === "number" ? { capability } : {}) };
-	}
-	return out;
-}
-
-function tighten(base: unknown, patch: unknown, path: string): unknown {
-	const direction = PROJECT_SAFEGUARDS[path];
-	if (direction) return saferValue(base, patch, direction);
-	const guarded = SAFEGUARD_SECTIONS.includes(path.split(".")[0]!);
-	if (isRecord(patch)) {
-		const out: Record<string, unknown> = {};
-		for (const [key, value] of Object.entries(patch)) {
-			const kept = tighten(isRecord(base) ? base[key] : undefined, value, `${path}.${key}`);
-			if (kept !== undefined) out[key] = kept;
-		}
-		return guarded && Object.keys(out).length === 0 ? undefined : out;
-	}
-	return guarded ? undefined : patch;
-}
-
-/** The safer of the global and project values. A value of the wrong shape keeps the global one. */
-function saferValue(base: unknown, patch: unknown, direction: SafeDirection): unknown {
-	switch (direction) {
-		case "widen":
+/** A value of the wrong shape, like a safeguard moved the wrong way, keeps the global one. */
+function projectValue(base: unknown, patch: unknown, rule: ProjectRule): unknown {
+	switch (rule) {
+		case "set":
+			return patch;
+		case "union":
 			return isStringList(patch) ? [...new Set([...(isStringList(base) ? base : []), ...patch])] : base;
-		case "narrow":
-			return isStringList(patch) && isStringList(base) ? patch.filter((p) => anyGlobMatch(base, p)) : base;
-		case "on":
-			return typeof patch === "boolean" ? base === true || patch : base;
 		case "off":
 			return typeof patch === "boolean" ? base === true && patch : base;
-		case "lower":
-			return typeof patch === "number" && typeof base === "number" ? Math.min(base, patch) : base;
-		case "higher":
-			return typeof patch === "number" && typeof base === "number" ? Math.max(base, patch) : base;
 	}
 }
 
