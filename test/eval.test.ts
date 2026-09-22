@@ -31,16 +31,17 @@ import type { Fleet, TaskPack } from "../eval/types.ts";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FLEET = join(ROOT, "eval", "tasks", "fleet.json");
 const PACK = join(ROOT, "eval", "tasks", "swe-router-v1.json");
+const LONG_PACK = join(ROOT, "eval", "tasks", "swe-router-long-v1.json");
 
-function pack(): TaskPack {
-	return JSON.parse(readFileSync(PACK, "utf8")) as TaskPack;
+function pack(path = PACK): TaskPack {
+	return JSON.parse(readFileSync(path, "utf8")) as TaskPack;
 }
 
 function tmpLedger(): string {
 	return join(mkdtempSync(join(tmpdir(), "router-eval-test-")), "usage.json");
 }
 
-type RunOpts = Partial<Omit<Parameters<typeof runEval>[0], "pack" | "loaded">> & { unauthed?: string[] };
+type RunOpts = Partial<Omit<Parameters<typeof runEval>[0], "loaded">> & { unauthed?: string[] };
 
 async function run(options: RunOpts = {}) {
 	const { unauthed, ...rest } = options;
@@ -306,6 +307,48 @@ test("every metric rate stays inside its range", async () => {
 		"every turn is exactly one of: right tier, under-routed, over-routed",
 	);
 	assert.ok(m.avgStateChars > 0 && m.avgStateChars < outcome.config.jev.maxStateChars, "the classifier state must fit its budget");
+});
+
+test("the long-session pack reaches the context sizes the cache-cost study measured", () => {
+	const long = pack(LONG_PACK);
+	const contexts: number[] = [];
+	for (const task of long.tasks) {
+		for (let i = 0; i < task.turns.length; i++) contexts.push(task.startContextTokens + i * task.contextGrowthPerTurn);
+		assert.ok(task.turns.length >= 8, `${task.id} is not a long session (${task.turns.length} turns)`);
+	}
+	const max = Math.max(...contexts);
+	assert.ok(max >= 200_000, `the long pack tops out at ${max} tokens; the measured p50 is 235k`);
+	assert.ok(Math.min(...contexts) >= 50_000, "a long session does not start at a short pack's context size");
+	assert.deepEqual(validatePack(long, loadFleet(FLEET)).filter((p) => p.level === "error"), []);
+});
+
+test("context size is what makes the cache dominate, and the harness shows it", async () => {
+	const short = computeMetrics(...unpack(await run()));
+	const long = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	assert.ok(long.coldWriteTokens > short.coldWriteTokens * 5, "long sessions must re-write far more context");
+	assert.ok(
+		long.coldPremiumShare > short.coldPremiumShare,
+		`cold starts should take a bigger share of spend at long context (${long.coldPremiumShare} vs ${short.coldPremiumShare})`,
+	);
+	assert.ok(long.coldPremiumShare > 0.3, "at the measured context sizes the cold premium is a large share of spend");
+});
+
+test("fan-out gets dramatically more expensive per extra solve at realistic context", async () => {
+	const short = computeMetrics(...unpack(await run({ candidateN: 3 }))).candidate!;
+	const long = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), candidateN: 3 }))).candidate!;
+	assert.ok(Number.isFinite(short.listUsdPerExtraSolve) && Number.isFinite(long.listUsdPerExtraSolve));
+	assert.ok(
+		long.listUsdPerExtraSolve > short.listUsdPerExtraSolve * 2,
+		`a fan-out candidate pays full uncached input, so its price must scale with context (${short.listUsdPerExtraSolve} -> ${long.listUsdPerExtraSolve})`,
+	);
+});
+
+test("task-level rates stay readable when every long session has at least one failure", async () => {
+	const m = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	assert.equal(m.taskResolveRate, 0, "this pack is long enough that no session is flawless; that is the point");
+	assert.ok(m.medianTaskTurnSuccess > 0, "...so the median per-task rate has to carry the quality signal");
+	assert.ok(m.worstTaskTurnSuccess <= m.medianTaskTurnSuccess);
+	assert.ok(m.medianTaskTurnSuccess <= 1);
 });
 
 test("the judge sweep degrades with noise and is reproducible", async () => {

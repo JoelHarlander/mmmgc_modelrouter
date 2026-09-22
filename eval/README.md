@@ -10,8 +10,26 @@ npm run eval -- --candidates 3                # candidate-selection mode: 3 resp
 npm run eval -- --sweep judge                 # over what range of judge quality does the lift survive?
 npm run eval -- --sweep bias                  # what a judge that prefers the flagship's style costs
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
+npm run eval -- --pack eval/tasks/swe-router-long-v1.json   # long sessions at realistic context
 npm run eval -- --help
 ```
+
+## The two packs
+
+| Pack | Shape | What it is for |
+| --- | --- | --- |
+| `swe-router-v1` | 15 tasks, 31 turns, 1–3 turns each, 9k–80k context | classification quality, eligibility, quota, pins — fast to run and read |
+| `swe-router-long-v1` | 6 tasks, 60 turns, 8–12 turns each, 80k–256k context | **cache and spend**, which only bite at the context sizes real sessions reach |
+
+The short pack under-weights the cache badly: at 20k of context a cold start is
+rounding error; at 200k it is the largest line in the turn. The long pack's contexts
+span the band this machine's own pi logs reach (the cache-cost study measured Opus
+context per call at p50 235k, p90 370k), and its turn shape — hard turns interleaved
+with cheap follow-ups — is what makes the router oscillate.
+
+The pack id is part of the results profile, so a long run is never compared against a
+short one. On the long pack `taskResolveRate` saturates at 0 (no 10-turn session is
+flawless), so `medianTaskTurnSuccess` and `turnSuccessRate` carry the quality signal.
 
 Every run writes `eval/results/<timestamp>-<profile>-<git>.json` plus a
 `latest-<profile>.json` the next run automatically compares against, and prints the

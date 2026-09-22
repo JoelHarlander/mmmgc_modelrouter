@@ -178,7 +178,7 @@ async function main(): Promise<number> {
 
 	const pack = JSON.parse(readFileSync(args.pack, "utf8")) as TaskPack;
 	const loaded = loadFleet(args.fleet, { unauthed: args.unauthed });
-	const profile = args.profile ?? defaultProfile(args);
+	const profile = args.profile ?? defaultProfile(args, pack.id);
 
 	// A pack whose goldTier disagrees with its own requiredSkill punishes a correct
 	// classification, so it cannot judge a router. Round 1 shipped one; never again.
@@ -274,8 +274,9 @@ async function main(): Promise<number> {
 	return metrics.ineligibleChoices > 0 ? 1 : 0;
 }
 
-function defaultProfile(args: Args): string {
-	const bits: string[] = [args.classifier];
+/** The pack is part of the profile: a long-session run must not be compared to a short one. */
+function defaultProfile(args: Args, packId: string): string {
+	const bits: string[] = [packId, args.classifier];
 	if (args.candidates >= 2) bits.push(`cand${args.candidates}`);
 	if (args.judgeBias) bits.push(`bias${args.judgeBias}`);
 	if (args.unauthed.length) bits.push(`noauth${args.unauthed.length}`);
@@ -301,12 +302,19 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 
 	const row = (label: string, key: string, value: string) => {
 		const d = deltaBy.get(key);
-		const mark = !d || d.direction === "same" ? "" : d.direction === "neutral" ? `  (${fmtDelta(d.delta)})` : `  ${d.direction === "better" ? "▲" : "▼"} ${fmtDelta(d.delta)}`;
+		const mark =
+			!d || d.direction === "same" || d.delta === 0
+				? ""
+				: d.direction === "neutral"
+					? `  (${fmtDelta(d.delta)})`
+					: `  ${d.direction === "better" ? "▲" : "▼"} ${fmtDelta(d.delta)}`;
 		out.push(`  ${label.padEnd(26)}${value.padStart(12)}${mark}`);
 	};
 
 	out.push("quality");
 	row("task resolve rate", "taskResolveRate", pct(m.taskResolveRate));
+	row("  median task turn rate", "medianTaskTurnSuccess", pct(m.medianTaskTurnSuccess));
+	row("  worst task turn rate", "worstTaskTurnSuccess", pct(m.worstTaskTurnSuccess));
 	row("turn success rate", "turnSuccessRate", pct(m.turnSuccessRate));
 	row("tier accuracy", "tierAccuracy", pct(m.tierAccuracy));
 	row("under-routed", "underRouteRate", pct(m.underRouteRate));
@@ -333,6 +341,7 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 	row("cold turns", "coldTurns", `${m.coldTurns}/${m.turns}`);
 	row("cold write tokens", "coldWriteTokens", m.coldWriteTokens.toLocaleString("en-US"));
 	row("cold premium", "coldPremiumUsd", usd(m.coldPremiumUsd));
+	row("  = share of all spend", "coldPremiumShare", pct(m.coldPremiumShare));
 	out.push(`  ${"cold causes".padEnd(26)}${Object.entries(m.coldByCause).map(([k, v]) => `${k}=${v}`).join(" ").padStart(12)}`);
 	out.push("");
 

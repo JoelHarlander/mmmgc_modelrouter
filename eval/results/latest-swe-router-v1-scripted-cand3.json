@@ -1,8 +1,8 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T12-57-00-scripted-cand3-2f4f58d",
-	"at": "2026-09-22T12:57:00.407Z",
-	"profile": "scripted-cand3",
+	"runId": "2026-09-22T13-05-12-swe-router-v1-scripted-cand3-c317e2a",
+	"at": "2026-09-22T13:05:12.644Z",
+	"profile": "swe-router-v1-scripted-cand3",
 	"pack": "swe-router-v1",
 	"fleet": "eval/tasks/fleet.json",
 	"classifier": "scripted",
@@ -11,13 +11,15 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "2f4f58d",
+	"git": "c317e2a",
 	"metrics": {
 		"tasks": 15,
 		"turns": 31,
 		"routedTurns": 29,
 		"pinnedTurns": 2,
 		"taskResolveRate": 0.6667,
+		"medianTaskTurnSuccess": 1,
+		"worstTaskTurnSuccess": 0,
 		"turnSuccessRate": 0.8065,
 		"tierAccuracy": 0.8387,
 		"underRouteRate": 0.0968,
@@ -43,6 +45,7 @@
 			"thinking-change": 1
 		},
 		"coldPremiumUsd": 4.9811,
+		"coldPremiumShare": 0.4337,
 		"modelShare": {
 			"faux-or/glm-5.3-flash": 8,
 			"faux-plan-codex/gpt-6-astra": 13,

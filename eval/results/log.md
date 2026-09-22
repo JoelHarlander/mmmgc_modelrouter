@@ -176,3 +176,71 @@ measure, and it needs live Jev.
 **Next.** Live mode reaches the classifier but not the judge, so the one number that
 would settle this — Jev's own bias when picking between real responses — is still
 unmeasured.
+
+---
+
+## Round 4 — 2026-09-22 — measure at the context sizes that actually occur
+
+**Measured.** Whether the first three rounds measured the cache at all. They did not.
+`swe-router-v1`'s sessions are 1–3 turns at 9k–80k of context; this machine's pi logs
+put Opus context per call at **p50 235k, p90 370k**. At 20k a cold start is rounding
+error. At 200k it is the largest line in the turn — so every cost conclusion so far
+was taken in the regime where the thing being studied barely exists.
+
+**Changed.** Added `swe-router-long-v1`: 6 SWE-bench-style issues worked over 8–12
+turns each, 80k–256k of context, with hard turns interleaved with cheap follow-ups —
+the shape that makes the router oscillate. 60 turns, ground truth validated by the
+same invariant. The pack id is now part of the results profile so a long run is never
+compared against a short one. Added `medianTaskTurnSuccess` / `worstTaskTurnSuccess`
+(on a 10-turn session `taskResolveRate` saturates at 0) and `coldPremiumShare`. Four
+new tests; also fixed a `NaN` delta when a metric was `Infinity` in both runs.
+
+**What the numbers did.**
+
+| profile | turn | median task | tier acc | in-tier miss | list $ | plan pts | switches | cold | cold prem | share |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `v1-scripted` | 80.7% | 100% | 83.9% | 3 | $11.48 | 0.28 | 10 | 26/31 | $4.98 | 43% |
+| `v1-oracle` | 87.1% | 100% | 100% | 4 | $9.72 | 0.24 | 5 | 21/31 | $3.46 | 36% |
+| **`long-v1-scripted`** | 75.0% | 80.9% | 86.7% | 8 | **$69.27** | 1.72 | **34** | 40/60 | **$34.26** | **49%** |
+| **`long-v1-heuristic`** | **96.7%** | 100% | 38.3% | 1 | **$50.05** | 1.26 | **0** | 20/60 | $17.44 | 35% |
+| `long-v1-oracle` | 86.7% | 95.0% | 100% | 8 | $62.45 | 1.55 | 34 | 40/60 | $30.28 | 48% |
+
+**Three things fall out, and none of them were visible before this round.**
+
+1. **Half of what the router spends on a long session is cold starts.**
+   `coldPremiumShare` is **49%** on `long-v1-scripted` — $34.26 of $69.27 bought
+   nothing but re-reading context the model had already been given. 34 switches in 60
+   turns: the router changes its mind on more than half of all turns.
+
+2. **Not switching beats switching perfectly, on quality *and* on cost.**
+   `long-v1-heuristic` sends everything to one model, makes **0 switches**, and
+   reaches **96.7%** turn success for **$50.05**. `long-v1-oracle` classifies every
+   turn correctly, makes **34 switches**, and reaches **86.7%** for $62.45. Perfect
+   routing is 10pp worse and 25% more expensive than never routing at all. Two known
+   causes compound: the tier price inversion from round 2 means escalating is free, and
+   cheapest-in-tier means the tier the router lands on is served by its weakest member.
+
+3. **The cache-cost study's headline reproduces as a measurement.**
+   `long-v1-heuristic` never changes model and still pays **14 cold starts**, every one
+   of them `thinking-change`: `src/index.ts:128-129` re-applies `cfg.thinking[tier]` on
+   each turn, and a thinking-level change invalidates the message cache on its own. The
+   study found this by mining session logs; the eval now produces it from the shipped
+   code, on demand, offline.
+
+**And the candidate answer changes with it.** At realistic context a fan-out candidate
+pays the **full uncached input rate** for the whole prompt (`src/parallel.ts` passes
+`cacheRetention: "none"`), so the price of the idea scales with context:
+
+| pack | baseline | judge | lift | fan-out $ | **$ per extra solve** |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `swe-router-v1` | 80.7% | 93.5% | +12.9pp | $19.74 | **$4.94** |
+| `swe-router-long-v1` | 75.0% | 93.3% | +18.3pp | $157.08 | **$14.28** |
+
+The lift is *larger* on long sessions (+18.3pp) and each point of it costs **2.9×
+more**. Any claim about what candidate selection is worth has to name the context size
+it was measured at; rounds 1–3 quoted the cheap end without saying so.
+
+**Next.** Every cost number now depends on `cacheRetention: "none"` staying true of the
+shipped fan-out and on the ~5 calls / 650 growth / 550 output traffic profile. The
+first is pinned by a test; the second is three constants nobody has varied. Find out
+how much the conclusions move when they do.

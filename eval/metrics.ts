@@ -25,7 +25,10 @@ export interface RunMetrics {
 	pinnedTurns: number;
 
 	/** Quality */
+	/** Tasks where *every* turn was solved. Saturates at 0 on long sessions; read the two below there. */
 	taskResolveRate: number;
+	medianTaskTurnSuccess: number;
+	worstTaskTurnSuccess: number;
 	turnSuccessRate: number;
 	tierAccuracy: number;
 	underRouteRate: number;
@@ -59,6 +62,12 @@ export interface RunMetrics {
 	coldWriteTokens: number;
 	coldByCause: Record<string, number>;
 	coldPremiumUsd: number;
+	/**
+	 * Share of *routed-turn* spend that bought nothing but a re-read of context the model
+	 * already had. Fan-out is excluded from the denominator: a candidate is always cold by
+	 * construction, so including it would dilute the number the router can actually move.
+	 */
+	coldPremiumShare: number;
 
 	modelShare: Record<string, number>;
 	avgStateChars: number;
@@ -96,6 +105,7 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		byTask.set(t.taskId, list);
 	}
 	const resolved = [...byTask.values()].filter((list) => list.every((t) => t.solved)).length;
+	const perTaskSuccess = [...byTask.values()].map((list) => list.filter((t) => t.solved).length / list.length);
 	const routed = turns.filter((t) => !t.pinned);
 
 	const tierIndex = (tier: string) => TIERS.indexOf(tier as (typeof TIERS)[number]);
@@ -127,6 +137,8 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		pinnedTurns: turns.length - routed.length,
 
 		taskResolveRate: ratio(resolved, taskIds.size),
+		medianTaskTurnSuccess: median(perTaskSuccess),
+		worstTaskTurnSuccess: perTaskSuccess.length === 0 ? 0 : round(Math.min(...perTaskSuccess), 4),
 		turnSuccessRate: ratio(turns.filter((t) => t.solved).length, turns.length),
 		tierAccuracy: ratio(exact, turns.length),
 		underRouteRate: ratio(under, turns.length),
@@ -152,6 +164,7 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		coldWriteTokens: sum(turns, (t) => t.coldWriteTokens),
 		coldByCause,
 		coldPremiumUsd: round(coldPremium(turns)),
+		coldPremiumShare: ratio(coldPremium(turns), sum(turns, (t) => t.listEquivalentUsd)),
 
 		modelShare,
 		avgStateChars: Math.round(stateChars.reduce((a, b) => a + b, 0) / Math.max(1, stateChars.length)),
@@ -208,6 +221,13 @@ function sum<T>(items: T[], f: (item: T) => number): number {
 
 function ratio(a: number, b: number): number {
 	return b === 0 ? 0 : round(a / b, 4);
+}
+
+function median(values: number[]): number {
+	if (values.length === 0) return 0;
+	const sorted = [...values].sort((a, b) => a - b);
+	const mid = Math.floor(sorted.length / 2);
+	return round(sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2, 4);
 }
 
 function round(n: number, digits = 4): number {

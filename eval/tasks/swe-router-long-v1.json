@@ -1,0 +1,729 @@
+{
+	"version": 1,
+	"id": "swe-router-long-v1",
+	"description": "Long-session companion to swe-router-v1. Six SWE-bench-style issues worked over 8-12 turns each, at the context sizes this machine's own pi logs actually reach (the cache-cost study measured Opus context per call at p50 235k, p90 370k; this pack spans 80k-256k). The short pack under-weights the cache: at 20k of context a cold start is rounding error, at 200k it is the largest line in the turn. The turn shape matters too - hard turns interleaved with cheap follow-ups is what makes the router oscillate, and each oscillation is a cache flush. Same contract as swe-router-v1: requiredSkill is the declared ground truth, goldTier is derived and checked.",
+	"tasks": [
+		{
+			"id": "django__django-16379-session",
+			"repo": "django/django",
+			"category": "concurrency",
+			"requiredSkill": 80,
+			"startContextTokens": 100000,
+			"contextGrowthPerTurn": 14000,
+			"note": "Twelve turns on one race condition. The shape that matters: hard turns interleaved with cheap follow-ups, which is where the router oscillates and the cache pays for it.",
+			"turns": [
+				{
+					"prompt": "Read django/core/cache/backends/filebased.py and tell me what has_key does.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.84,
+						"needsTools": 0.7,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Walk me through the cull path in the same file.",
+					"goldTier": "light",
+					"requiredSkill": 34,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.76,
+						"needsTools": 0.5,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Is has_key racy? It stats the file and then opens it.",
+					"goldTier": "heavy",
+					"requiredSkill": 80,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.71,
+						"needsTools": 0.4,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Which other callers in this backend share that stat-then-open assumption?",
+					"goldTier": "standard",
+					"requiredSkill": 76,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.63,
+						"needsTools": 0.6,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Fix the race properly - not by swallowing the exception.",
+					"goldTier": "heavy",
+					"requiredSkill": 88,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.79,
+						"needsTools": 0.95,
+						"stakes": 1.9
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.88,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Does _is_expired have the same problem when it deletes the file it just read?",
+					"goldTier": "heavy",
+					"requiredSkill": 84,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.74,
+						"needsTools": 0.5,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Fix that one too.",
+					"goldTier": "heavy",
+					"requiredSkill": 86,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.77,
+						"needsTools": 0.95,
+						"stakes": 1.9
+					}
+				},
+				{
+					"prompt": "Run the cache tests.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Write a test that actually reproduces the race under threads.",
+					"goldTier": "heavy",
+					"requiredSkill": 82,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.58,
+						"needsTools": 0.96,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "The new test is flaky on Windows. Why?",
+					"goldTier": "heavy",
+					"requiredSkill": 85,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.69,
+						"needsTools": 0.6,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Summarise the change for the commit message.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.92,
+						"needsTools": 0.3,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "pytest-dev__pytest-11143-session",
+			"repo": "pytest-dev/pytest",
+			"category": "architecture",
+			"requiredSkill": 80,
+			"startContextTokens": 120000,
+			"contextGrowthPerTurn": 15000,
+			"callsPerTurn": 7,
+			"turns": [
+				{
+					"prompt": "Reproduce the 'TypeError: argument of type int is not iterable' from assertion rewriting.",
+					"goldTier": "standard",
+					"requiredSkill": 60,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.7,
+						"needsTools": 0.9,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Where in rewrite.py is the module docstring detected?",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.82,
+						"needsTools": 0.6,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Why does it assume the first expression is a string?",
+					"goldTier": "standard",
+					"requiredSkill": 66,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.64,
+						"needsTools": 0.4,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Redesign that detection so it is correct for every module shape, not just this one.",
+					"goldTier": "heavy",
+					"requiredSkill": 90,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.83,
+						"needsTools": 0.9,
+						"stakes": 2.0
+					}
+				},
+				{
+					"prompt": "Walk me through the consequences for plugins that install their own rewrite hooks.",
+					"goldTier": "heavy",
+					"requiredSkill": 82,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.47,
+						"needsTools": 0.3,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Write the fix.",
+					"goldTier": "heavy",
+					"requiredSkill": 88,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.78,
+						"needsTools": 0.96,
+						"stakes": 1.9
+					}
+				},
+				{
+					"prompt": "Show the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.89,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Add tests.",
+					"goldTier": "heavy",
+					"requiredSkill": 70,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.61,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "The rewrite cache needs invalidating too - handle it.",
+					"goldTier": "heavy",
+					"requiredSkill": 86,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.72,
+						"needsTools": 0.94,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Changelog entry.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "astropy__astropy-12907-session",
+			"repo": "astropy/astropy",
+			"category": "bugfix",
+			"requiredSkill": 60,
+			"startContextTokens": 80000,
+			"contextGrowthPerTurn": 12000,
+			"turns": [
+				{
+					"prompt": "Reproduce the nested CompoundModel separability bug.",
+					"goldTier": "standard",
+					"requiredSkill": 52,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.73,
+						"needsTools": 0.9,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Print the separability matrix for the non-nested case.",
+					"goldTier": "light",
+					"requiredSkill": 40,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.85,
+						"needsTools": 0.9,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Why does _cstack mis-handle the nested case?",
+					"goldTier": "standard",
+					"requiredSkill": 70,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.59,
+						"needsTools": 0.4,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Fix _coord_matrix.",
+					"goldTier": "standard",
+					"requiredSkill": 68,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.76,
+						"needsTools": 0.95,
+						"stakes": 1.5
+					}
+				},
+				{
+					"prompt": "Check the non-nested cases still pass.",
+					"goldTier": "light",
+					"requiredSkill": 45,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.95,
+						"stakes": 0.6
+					}
+				},
+				{
+					"prompt": "Add the nested case to the separability tests.",
+					"goldTier": "light",
+					"requiredSkill": 46,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.78,
+						"needsTools": 0.95,
+						"stakes": 0.7
+					}
+				},
+				{
+					"prompt": "There is still a regression three levels deep. Find it.",
+					"goldTier": "heavy",
+					"requiredSkill": 78,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.6,
+						"needsTools": 0.7,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Fix it.",
+					"goldTier": "heavy",
+					"requiredSkill": 80,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Write the changelog.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				}
+			]
+		},
+		{
+			"id": "scikit-learn__scikit-learn-13779-session",
+			"repo": "scikit-learn/scikit-learn",
+			"category": "bugfix",
+			"requiredSkill": 60,
+			"startContextTokens": 110000,
+			"contextGrowthPerTurn": 13000,
+			"turns": [
+				{
+					"prompt": "Reproduce the AttributeError when a VotingClassifier estimator is set to None and sample_weight is passed.",
+					"goldTier": "standard",
+					"requiredSkill": 50,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.72,
+						"needsTools": 0.9,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Show me the sample_weight check in fit().",
+					"goldTier": "light",
+					"requiredSkill": 38,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.84,
+						"needsTools": 0.8,
+						"stakes": 0.3
+					}
+				},
+				{
+					"prompt": "Skip the None estimators in that check.",
+					"goldTier": "standard",
+					"requiredSkill": 60,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.79,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "What else in this module assumes the estimators are non-None?",
+					"goldTier": "standard",
+					"requiredSkill": 66,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.58,
+						"needsTools": 0.6,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Fix VotingRegressor the same way.",
+					"goldTier": "standard",
+					"requiredSkill": 62,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.74,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Add tests for both.",
+					"goldTier": "standard",
+					"requiredSkill": 55,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.68,
+						"needsTools": 0.95,
+						"stakes": 1.1
+					}
+				},
+				{
+					"prompt": "The clone() path still breaks. Why?",
+					"goldTier": "heavy",
+					"requiredSkill": 76,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.57,
+						"needsTools": 0.6,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Fix it and re-run the ensemble tests.",
+					"goldTier": "standard",
+					"requiredSkill": 72,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.71,
+						"needsTools": 0.95,
+						"stakes": 1.5
+					}
+				}
+			]
+		},
+		{
+			"id": "sphinx-doc__sphinx-8721-session",
+			"repo": "sphinx-doc/sphinx",
+			"category": "feature",
+			"requiredSkill": 62,
+			"startContextTokens": 90000,
+			"contextGrowthPerTurn": 11000,
+			"turns": [
+				{
+					"prompt": "Where does viewcode decide to emit module pages?",
+					"goldTier": "light",
+					"requiredSkill": 36,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.83,
+						"needsTools": 0.7,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Make that decision honour viewcode_enable_epub.",
+					"goldTier": "standard",
+					"requiredSkill": 62,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.51,
+						"needsTools": 0.94,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "Is the singlehtml builder affected by the change?",
+					"goldTier": "standard",
+					"requiredSkill": 58,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.66,
+						"needsTools": 0.5,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Add tests for both builders.",
+					"goldTier": "standard",
+					"requiredSkill": 64,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.3
+					}
+				},
+				{
+					"prompt": "The epub test fails. Why?",
+					"goldTier": "standard",
+					"requiredSkill": 70,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.62,
+						"needsTools": 0.8,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Fix it.",
+					"goldTier": "standard",
+					"requiredSkill": 68,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.75,
+						"needsTools": 0.95,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "The setting interacts with viewcode_follow_imported_members. Work out how.",
+					"goldTier": "heavy",
+					"requiredSkill": 80,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.68,
+						"needsTools": 0.5,
+						"stakes": 1.7
+					}
+				},
+				{
+					"prompt": "Handle that case.",
+					"goldTier": "heavy",
+					"requiredSkill": 78,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.59,
+						"needsTools": 0.95,
+						"stakes": 1.6
+					}
+				},
+				{
+					"prompt": "Re-run the full viewcode suite.",
+					"goldTier": "light",
+					"requiredSkill": 32,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.88,
+						"needsTools": 0.95,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Write the docs entry for the setting.",
+					"goldTier": "light",
+					"requiredSkill": 44,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.8,
+						"needsTools": 0.9,
+						"stakes": 0.5
+					}
+				}
+			]
+		},
+		{
+			"id": "psf__requests-1142-session",
+			"repo": "psf/requests",
+			"category": "security",
+			"requiredSkill": 80,
+			"startContextTokens": 130000,
+			"contextGrowthPerTurn": 14000,
+			"turns": [
+				{
+					"prompt": "Where is Content-Length set for a GET?",
+					"goldTier": "light",
+					"requiredSkill": 34,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.86,
+						"needsTools": 0.7,
+						"stakes": 0.4
+					}
+				},
+				{
+					"prompt": "Why do some servers reject a GET that carries it?",
+					"goldTier": "standard",
+					"requiredSkill": 55,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.64,
+						"needsTools": 0.4,
+						"stakes": 1.2
+					}
+				},
+				{
+					"prompt": "Can dropping it break request-smuggling assumptions downstream?",
+					"goldTier": "heavy",
+					"requiredSkill": 86,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.8,
+						"needsTools": 0.3,
+						"stakes": 2.0
+					}
+				},
+				{
+					"prompt": "What about proxies that rewrite the body on the way through?",
+					"goldTier": "heavy",
+					"requiredSkill": 84,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.72,
+						"needsTools": 0.3,
+						"stakes": 1.9
+					}
+				},
+				{
+					"prompt": "Implement whichever behaviour is safe.",
+					"goldTier": "heavy",
+					"requiredSkill": 82,
+					"jev": {
+						"tier": "heavy",
+						"confidence": 0.77,
+						"needsTools": 0.95,
+						"stakes": 1.9
+					}
+				},
+				{
+					"prompt": "Show me the diff.",
+					"goldTier": "light",
+					"requiredSkill": 30,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.9,
+						"needsTools": 0.8,
+						"stakes": 0.2
+					}
+				},
+				{
+					"prompt": "The redirect path still sets it. Fix that.",
+					"goldTier": "standard",
+					"requiredSkill": 68,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.7,
+						"needsTools": 0.95,
+						"stakes": 1.5
+					}
+				},
+				{
+					"prompt": "Write the tests that pin the decision.",
+					"goldTier": "standard",
+					"requiredSkill": 62,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.69,
+						"needsTools": 0.95,
+						"stakes": 1.4
+					}
+				},
+				{
+					"prompt": "Does this change break the HTTP/2 upgrade path?",
+					"goldTier": "heavy",
+					"requiredSkill": 80,
+					"jev": {
+						"tier": "standard",
+						"confidence": 0.58,
+						"needsTools": 0.5,
+						"stakes": 1.8
+					}
+				},
+				{
+					"prompt": "Changelog plus a security note.",
+					"goldTier": "light",
+					"requiredSkill": 46,
+					"jev": {
+						"tier": "light",
+						"confidence": 0.82,
+						"needsTools": 0.8,
+						"stakes": 0.6
+					}
+				}
+			]
+		}
+	]
+}

@@ -64,6 +64,8 @@ function reviver(_key: string, value: unknown): unknown {
 /** Metrics where a larger number is better. Everything else is judged the other way. */
 const HIGHER_IS_BETTER = new Set([
 	"taskResolveRate",
+	"medianTaskTurnSuccess",
+	"worstTaskTurnSuccess",
 	"turnSuccessRate",
 	"tierAccuracy",
 	"baselineSuccessRate",
@@ -93,6 +95,8 @@ export function compareMetrics(previous: RunMetrics | undefined, current: RunMet
 			if (typeof value === "number") {
 				const before = prev[key];
 				if (typeof before !== "number") continue;
+				// Infinity means "this never happened"; differencing it produces NaN, not news.
+				if (!Number.isFinite(value) || !Number.isFinite(before)) continue;
 				const delta = value - before;
 				const name = prefix + key;
 				let direction: MetricDelta["direction"] = "same";
