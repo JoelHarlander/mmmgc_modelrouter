@@ -308,7 +308,14 @@ async function runCandidateTurn(args: CandidateTurnArgs): Promise<CandidateTurnR
 			ledgerCostUsd: usage.ledgerCostUsd,
 			listEquivalentUsd: usage.listEquivalentUsd,
 		});
-		judgeInput.push({ label, key: spec.key, trueSkill: skill, text: syntheticResponse(spec, task.category, prompt) });
+		judgeInput.push({
+			label,
+			key: spec.key,
+			trueSkill: skill,
+			// List output price stands in for "looks like the flagship's answer".
+			flashiness: spec.cost.output,
+			text: syntheticResponse(spec, task.category, prompt),
+		});
 	});
 
 	const verdict = await judge.pick(prompt, judgeInput, { taskId: task.id, turn });

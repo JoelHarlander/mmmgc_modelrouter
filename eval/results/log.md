@@ -114,3 +114,65 @@ rises to **0.78 points** for +12.9pp of turn success.
 **Next.** The offline judge is the least trustworthy part of the candidate story — one
 noise setting, one seed. Sweep it, and check whether the judge's lift survives a judge
 that is worse than skill-minus-10.
+
+---
+
+## Round 3 — 2026-09-22 — stop trusting one judge setting
+
+**Measured.** Whether round 2's headline candidate result — "+12.9pp for $4.94 per
+extra solve" — was a property of the idea or of one knob at one seed. It was largely
+the knob.
+
+**Changed.** `--sweep judge` and `--sweep bias`: the pack run across candidate count ×
+judge quality × five seeds, reporting the mean lift with its spread. Added
+`--judge-bias`, a judge that hands the flashiest candidate free skill points
+regardless of quality — the documented failure mode of preferring the flagship's house
+style. Two tests pin the shape of both sweeps.
+
+**What the numbers did.**
+
+Random error degrades the lift gracefully (n=3, mean of 5 seeds):
+
+| judge noise | judge | lift | spread | recall | regressions | $/extra solve |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 96.8% | +16.1pp | ±0.0 | 100% | 0.0 | $3.95 |
+| 10 | 95.5% | +14.8pp | ±1.6 | 98.7% | 0.2 | $4.34 |
+| 20 | 91.0% | +10.3pp | ±4.8 | 94.0% | 1.2 | $7.04 |
+| 40 | 85.8% | +5.2pp | ±8.1 | 88.7% | 2.6 | $12.75 |
+| 80 | 78.7% | **−1.9pp** | ±11.3 | 81.3% | 4.2 | — |
+
+**Systematic bias is far more expensive than random error.** At noise 10 the same
+judge goes from +14.8pp to **−9.7pp** as its preference for the flashy answer grows:
+
+| bias (skill points) | n=3 lift @ noise 10 | regressions |
+| ---: | ---: | ---: |
+| 0 | +14.8pp | 0.2 |
+| 10 | +8.4pp | 1.8 |
+| 20 | −1.3pp | 3.8 |
+| 40 | **−9.7pp** | 6.0 |
+
+A bias of 20 points — a judge that reliably rates the flagship one band higher than it
+deserves — is enough to make running three responses and judging them **worse than not
+running them at all**, while still paying $19.74 of fan-out.
+
+Two further readings:
+
+- **Noise partially cancels bias.** At bias 40, going from noise 10 to noise 30
+  *improves* the lift (−9.7pp → −3.9pp): random error breaks up a systematic
+  preference. A judge that is merely unreliable is safer than one that is reliably
+  wrong in one direction.
+- **More candidates buys robustness, not just ceiling.** n=4 is the only width that
+  reaches a 100% ceiling (it is the only one that includes `claude-fable-5-1`) and it
+  still returns +14.2pp at noise 40, where n=3 returns +5.2pp. The fan-out's own
+  candidate policy — inherited from `src/parallel.ts` — never includes the strongest
+  model at n=2 or n=3, because `tiers.heavy[0]` is the plan model.
+
+**The honest headline is therefore narrower than round 2's.** Candidate selection is
+worth roughly **+15pp of turn success for ~$4 per extra solve when the judge is
+good**, it is worth nothing once the judge carries ~20 points of systematic bias, and
+the harness cannot currently tell which of those Jev is. That is the next thing to
+measure, and it needs live Jev.
+
+**Next.** Live mode reaches the classifier but not the judge, so the one number that
+would settle this — Jev's own bias when picking between real responses — is still
+unmeasured.

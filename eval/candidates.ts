@@ -35,6 +35,8 @@ export interface JudgeCandidate {
 	/** Present in live mode; the offline judge scores the declared skill instead. */
 	text?: string;
 	trueSkill: number;
+	/** How much this candidate looks like the expensive answer. Drives the judge's bias. */
+	flashiness?: number;
 }
 
 export interface Judge {
@@ -42,26 +44,48 @@ export interface Judge {
 	pick(request: string, candidates: JudgeCandidate[], context: { taskId: string; turn: number }): Promise<JudgeVerdict>;
 }
 
+export interface NoisyJudgeOptions {
+	/** Half-width, in skill points, of the judge's perception error. */
+	noise: number;
+	seed: string;
+	temperature?: number;
+	/**
+	 * Skill points the judge hands the flashiest candidate regardless of quality. Models
+	 * the documented LLM-judge failure mode of preferring the flagship's house style;
+	 * `flashiness` is supplied per candidate (here, its list price rank).
+	 */
+	bias?: number;
+}
+
 /**
  * The offline stand-in for Jev: it perceives each candidate's true quality with a
  * bounded error, so it is reliably right about large quality gaps and close to a
- * coin flip on small ones. `noise` is the half-width of that error in skill points.
+ * coin flip on small ones. It is a stand-in, not a simulation of Jev — which is why
+ * `--sweep judge` exists: the candidate result only counts if it survives a range of
+ * judges, not one setting of one knob.
  */
 export class NoisyJudge implements Judge {
 	readonly name: string;
+	private readonly noise: number;
+	private readonly seed: string;
+	private readonly temperature: number;
+	private readonly bias: number;
 
-	constructor(
-		private readonly noise: number,
-		private readonly seed: string,
-		private readonly temperature = 6,
-	) {
-		this.name = `noisy(${noise})`;
+	constructor(noiseOrOptions: number | NoisyJudgeOptions, seed = "", temperature = 6) {
+		const o: NoisyJudgeOptions = typeof noiseOrOptions === "number" ? { noise: noiseOrOptions, seed, temperature } : noiseOrOptions;
+		this.noise = o.noise;
+		this.seed = o.seed;
+		this.temperature = o.temperature ?? 6;
+		this.bias = o.bias ?? 0;
+		this.name = this.bias === 0 ? `noisy(${this.noise})` : `noisy(${this.noise},bias ${this.bias})`;
 	}
 
 	async pick(_request: string, candidates: JudgeCandidate[], context: { taskId: string; turn: number }): Promise<JudgeVerdict> {
+		const flashiest = candidates.reduce((a, b) => ((b.flashiness ?? 0) > (a.flashiness ?? 0) ? b : a));
 		const perceived = candidates.map((c) => {
 			const jitter = (hashUnit(this.seed, context.taskId, context.turn, c.key) * 2 - 1) * this.noise;
-			return { label: c.label, score: c.trueSkill + jitter };
+			const bias = c === flashiest ? this.bias : 0;
+			return { label: c.label, score: c.trueSkill + jitter + bias };
 		});
 		const max = Math.max(...perceived.map((p) => p.score));
 		const exps = perceived.map((p) => Math.exp((p.score - max) / this.temperature));

@@ -7,6 +7,9 @@ npm run eval                                  # offline, deterministic, no netwo
 npm run eval -- --classifier heuristic        # score the no-credential fallback
 npm run eval -- --classifier oracle           # the routing ceiling
 npm run eval -- --candidates 3                # candidate-selection mode: 3 responses, judge picks
+npm run eval -- --sweep judge                 # over what range of judge quality does the lift survive?
+npm run eval -- --sweep bias                  # what a judge that prefers the flagship's style costs
+npm run eval -- --validate                    # check the pack's ground truth against the fleet
 npm run eval -- --help
 ```
 
@@ -110,8 +113,27 @@ that file, so if the shipped fan-out changes, the harness fails rather than drif
 
 The offline judge (`NoisyJudge`) perceives each candidate's true skill with a bounded
 error — `--judge-noise` is that error's half-width in skill points — so it is reliably
-right about large quality gaps and near a coin flip on small ones. It is a stand-in
-for Jev, not a simulation of it.
+right about large quality gaps and near a coin flip on small ones. `--judge-bias` adds
+skill points to the flashiest candidate regardless of its quality, modelling the
+documented failure mode of preferring the flagship's house style.
+
+It is a stand-in for Jev, not a simulation of it, so **a single candidate run is not a
+result**. `--sweep judge` and `--sweep bias` are: they run the pack across candidate
+count × judge quality × five seeds and report the mean lift with its spread, which says
+over what range of judge quality the lift survives and where it turns negative.
+
+## Ground truth and `--validate`
+
+`requiredSkill` is the only hand-declared claim about a turn: how hard it is, on the
+ladder in `tasks/fleet.json`. **`goldTier` is derived** — the cheapest tier holding a
+model that reaches it — because which tier can do a piece of work is a fact about the
+fleet. The fixture writes it down for readability and `--validate` fails when the two
+disagree, which is what stops a pack from punishing a correct classification.
+
+`--validate` also warns about a **tier price inversion**: when the model the router
+prefers in a heavier tier is *cheaper* than the one it prefers in a lighter tier,
+escalating costs nothing and every quality-vs-spend reading inverts. The shipped
+defaults have exactly this shape, so it is a warning, not an error.
 
 ## Files
 
@@ -125,6 +147,8 @@ for Jev, not a simulation of it.
 | `simulate.ts` | the competence oracle and the token/cost model |
 | `metrics.ts` | the metric set and how to read each direction |
 | `results.ts` | results IO, the round log, run comparison |
+| `sweep.ts` | judge and bias sweeps |
+| `validate.ts` | ground-truth invariants and the tier price check |
 | `session.ts` | the fake `ExtensionContext` `buildRoutingState` needs |
 | `tasks/` | the fleet and the task pack |
 | `results/` | one JSON per run, `latest-<profile>.json`, `log.md` |

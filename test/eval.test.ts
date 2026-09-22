@@ -25,6 +25,7 @@ import { compareMetrics, readRun, type RunRecord, writeRun } from "../eval/resul
 import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
 import { buildFleet } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
+import { runJudgeSweep, type SweepCell } from "../eval/sweep.ts";
 import type { Fleet, TaskPack } from "../eval/types.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -305,6 +306,38 @@ test("every metric rate stays inside its range", async () => {
 		"every turn is exactly one of: right tier, under-routed, over-routed",
 	);
 	assert.ok(m.avgStateChars > 0 && m.avgStateChars < outcome.config.jev.maxStateChars, "the classifier state must fit its budget");
+});
+
+test("the judge sweep degrades with noise and is reproducible", async () => {
+	const loaded = loadFleet(FLEET);
+	const opts = { pack: pack(), loaded, classifier: "scripted" as const, candidateNs: [3], seeds: ["s1", "s2", "s3"] };
+	const cells = await runJudgeSweep({ ...opts, noises: [0, 20, 80] });
+	assert.equal(cells.length, 3);
+	assert.deepEqual(await runJudgeSweep({ ...opts, noises: [0, 20, 80] }), cells);
+
+	const [perfect, middling, awful] = cells as [SweepCell, SweepCell, SweepCell];
+	assert.equal(perfect.liftSpread, 0, "a judge with no error cannot vary by seed");
+	assert.equal(perfect.judgeRecall, 1);
+	assert.ok(perfect.judgeLift > middling.judgeLift, "more noise must not help");
+	assert.ok(middling.judgeLift > awful.judgeLift);
+	for (const cell of cells) assert.ok(cell.judgeSuccessRate <= cell.oracleSuccessRate + 1e-9);
+});
+
+test("a judge that systematically prefers the flashy answer makes the fan-out worse than not running it", async () => {
+	const loaded = loadFleet(FLEET);
+	const cells = await runJudgeSweep({
+		pack: pack(),
+		loaded,
+		classifier: "scripted",
+		candidateNs: [3],
+		noises: [10],
+		biases: [0, 40],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const [unbiased, biased] = cells as [SweepCell, SweepCell];
+	assert.ok(unbiased.judgeLift > 0, "the unbiased judge should still help");
+	assert.ok(biased.judgeLift < 0, "a strong flagship bias should cost more turns than it wins");
+	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
 });
 
 test("the shipped pack's ground truth is consistent with the shipped fleet", () => {

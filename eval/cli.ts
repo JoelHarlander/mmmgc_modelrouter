@@ -12,7 +12,7 @@
  *   npm run eval -- --compare eval/results/latest-scripted.json
  *   npm run eval -- --json                # machine-readable summary on stdout
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -21,7 +21,8 @@ import { NoisyJudge } from "./candidates.ts";
 import { loadFleet } from "./fleet.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
-import { appendLog, compareMetrics, latestPath, readRun, type RunRecord, writeRun } from "./results.ts";
+import { appendLog, compareMetrics, ensureDirFor, latestPath, readRun, resultsDir, type RunRecord, writeRun } from "./results.ts";
+import { renderSweep, runJudgeSweep } from "./sweep.ts";
 import { formatProblems, validatePack } from "./validate.ts";
 import type { ClassifierMode, TaskPack } from "./types.ts";
 
@@ -43,6 +44,8 @@ interface Args {
 	noWrite: boolean;
 	validateOnly: boolean;
 	allowInconsistent: boolean;
+	sweep?: "judge" | "bias";
+	judgeBias: number;
 	help: boolean;
 }
 
@@ -59,6 +62,7 @@ function parseArgs(argv: string[]): Args {
 		noWrite: false,
 		validateOnly: false,
 		allowInconsistent: false,
+		judgeBias: 0,
 		help: false,
 	};
 	for (let i = 0; i < argv.length; i++) {
@@ -83,6 +87,12 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--judge-noise":
 				args.judgeNoise = Number(next());
+				break;
+			case "--judge-bias":
+				args.judgeBias = Number(next());
+				break;
+			case "--sweep":
+				args.sweep = next() as "judge" | "bias";
 				break;
 			case "--seed":
 				args.seed = next();
@@ -136,6 +146,9 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --classifier <mode>    scripted | heuristic | oracle | live   (default scripted)
   --candidates <n>       run n candidates per turn and let a judge pick (0 = off)
   --judge-noise <n>      offline judge error half-width in skill points (default 10)
+  --judge-bias <n>       skill points the judge hands the flashiest candidate regardless
+  --sweep judge          sweep candidate count x judge noise x seed and print the lift curve
+  --sweep bias           sweep the judge's preference for the flashy candidate
   --seed <s>             deterministic seed for the offline judge
   --start-model <key>    model each task session starts on
   --no-auth <key>        mark a fleet model unauthed (repeatable)
@@ -193,13 +206,31 @@ async function main(): Promise<number> {
 		process.stderr.write(`LIVE: ${pack.tasks.reduce((n, t) => n + t.turns.length, 0)} classifier calls via ${jev.describe()}\n`);
 	}
 
+	if (args.sweep) {
+		const shape =
+			args.sweep === "bias"
+				? { noises: [10, 30], biases: [0, 10, 20, 40], candidateNs: [2, 3] }
+				: { biases: [0] };
+		const cells = await runJudgeSweep({ pack, loaded, classifier: args.classifier, startModel: args.startModel, ...shape });
+		const title = `${args.sweep} sweep — pack ${pack.id}, classifier ${args.classifier}, mean of 5 seeds per cell`;
+		if (args.json) process.stdout.write(`${JSON.stringify({ title, cells }, null, "\t")}\n`);
+		else process.stdout.write(renderSweep(cells, title));
+		if (!args.noWrite) {
+			const path = join(resultsDir(ROOT), `sweep-${args.sweep}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}-${shortGit()}.json`);
+			ensureDirFor(path);
+			writeFileSync(path, `${JSON.stringify({ title, pack: pack.id, classifier: args.classifier, cells }, null, "\t")}\n`);
+			process.stderr.write(`wrote ${path.replace(`${ROOT}/`, "")}\n`);
+		}
+		return 0;
+	}
+
 	const outcome = await runEval({
 		pack,
 		loaded,
 		classifier: args.classifier,
 		startModel: args.startModel,
 		candidateN: args.candidates,
-		judge: new NoisyJudge(args.judgeNoise, args.seed),
+		judge: new NoisyJudge({ noise: args.judgeNoise, seed: args.seed, bias: args.judgeBias }),
 		seed: args.seed,
 		jev,
 	});
@@ -215,7 +246,7 @@ async function main(): Promise<number> {
 		fleet: args.fleet.replace(`${ROOT}/`, ""),
 		classifier: args.classifier,
 		candidateN: args.candidates,
-		judge: args.candidates >= 2 ? `noisy(${args.judgeNoise})` : "none",
+		judge: args.candidates >= 2 ? `noisy(${args.judgeNoise}${args.judgeBias ? `,bias ${args.judgeBias}` : ""})` : "none",
 		seed: args.seed,
 		startModel: outcome.startModel,
 		live,
@@ -246,6 +277,7 @@ async function main(): Promise<number> {
 function defaultProfile(args: Args): string {
 	const bits: string[] = [args.classifier];
 	if (args.candidates >= 2) bits.push(`cand${args.candidates}`);
+	if (args.judgeBias) bits.push(`bias${args.judgeBias}`);
 	if (args.unauthed.length) bits.push(`noauth${args.unauthed.length}`);
 	return bits.join("-");
 }
