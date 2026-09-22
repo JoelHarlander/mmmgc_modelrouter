@@ -1850,3 +1850,46 @@ candidate set. 48 Jev calls, no model inference, under a cent.
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`. Thirty rounds have
 been spent making that one command worth running; nothing else offline sharpens it
 further.
+
+---
+
+## Round 31 — 2026-09-23 — run the code nobody has ever run
+
+**Measured.** Coverage of the paths this whole project points at. `--classifier live`,
+the Jev judge and `--record` are opt-in and cost money, so **nothing had ever executed
+them** — not once, in thirty rounds. `src/jev.ts` is the only file in `src/` that talks
+to a network, and its 429 retry, its error formatting and its cost extraction had no
+test coverage at all. Thirty rounds of "just run `--probe --live-judge`" rested on code
+that had never been run.
+
+**Changed.** `test/fake-jev.ts`: a loopback stand-in that serves the real System One wire
+shape from `127.0.0.1`. Six tests now drive the live paths end to end with a fake
+credential, no network beyond loopback and no spend:
+
+- the **request** `src/jev.ts` sends — endpoint, `Bearer` credential, model, and the
+  three questions `src/state.ts` asks — and the response parsed, timed and priced at the
+  TypeSafe list rate;
+- **429 retry** (retried once when `retry-after` fits inside the timeout, not retried
+  when it does not) and **error formatting** (a 402 surfaces the server's own
+  `customer_verification_required: add a card` rather than a bare status);
+- a **whole eval run driven by real HTTP**, answering from the state the harness actually
+  serialised — one call per routed turn, none for pinned turns, no heuristic fallbacks,
+  and every turn billed the endpoint's reported cost;
+- an **endpoint that starts failing** mid-run: the fallbacks become visible, the earlier
+  calls still count, no invalid route is produced, and failed calls are not billed;
+- **`--record`** writing back exactly what the endpoint said, leaving prompts and
+  declared ground truth untouched;
+- the **judge's** question, criteria and 6000-character truncation.
+
+**What it found.** One edge case in `src/jev.ts`, minor but real: the retry guard is
+`retryAfter > 0`, so a **`retry-after: 0`** — a valid header meaning *retry immediately*
+— is **not retried**. Recorded with a test rather than worked around, since changing it
+belongs to `src/`.
+
+**Why this round and not another sweep.** Thirty rounds sharpened one command until its
+answer decides a $450 question. It would have been a poor joke if the first person to run
+it hit an unparsed response or an unhandled 429. The offline work is now backed by tests
+that exercise the same code the live command will.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`, on a path that has
+now at least been run.

@@ -118,7 +118,14 @@ and pins survive, pinned turns are skipped because the classifier was never cons
 and a recorded pack still has to pass `--validate`.
 
 Live mode needs both `--classifier live` and `ROUTER_EVAL_LIVE=1`; either one alone
-refuses to run. Nothing else in the harness can reach a network: the offline fleet's
+refuses to run.
+
+The live paths are nonetheless **tested**, against a loopback stand-in for TypeSafe's
+endpoint (`test/fake-jev.ts`): the wire shape and credential `src/jev.ts` sends, its 429
+retry and error formatting, its cost extraction, a whole run driven by real HTTP, an
+endpoint that fails partway and falls through to the heuristic, `--record` writing back
+exactly what the endpoint said, and the judge's question and truncation. No credential,
+no network beyond 127.0.0.1, no spend. Nothing else in the harness can reach a network: the offline fleet's
 registry throws if anything calls `complete()`, and every provider id starts `faux-`.
 
 ## The turn loop
@@ -362,6 +369,7 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `simulate.ts` | the competence oracle and the token/cost model |
 | `metrics.ts` | the metric set and how to read each direction |
 | `results.ts` | results IO, the round log, run comparison |
+| `../test/fake-jev.ts` | a loopback stand-in for TypeSafe's endpoint, so the live paths are testable |
 | `explain.ts` | `--explain`: the trace behind one task's score |
 | `sweep.ts` | the judge, bias, traffic-profile, oracle, gate, policy, confidence, strategy, pin and start sweeps |
 | `assumptions.ts` | `--sweep assumptions`: what the answer rests on |
