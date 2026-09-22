@@ -138,3 +138,18 @@ test("the fan-out slots go to the best-ranked routes, not the first ones listed"
 		"a billed route does not take the slot while an included-usage route is eligible",
 	);
 });
+
+test("an explicitly configured parallel.models list keeps its order and membership", () => {
+	// The caller named what to compare; the rank orders slots nobody named, not this list.
+	const pinned = mergeConfig(cfg, {
+		models: { ...cfg.models, "xai/*": { billing: "on-demand" } },
+		billing: { ...cfg.billing, allowPayPerToken: ["openrouter/*"] },
+		parallel: { ...cfg.parallel, models: ["openrouter/z-ai/glm-5.3", "claude-bridge/claude-opus-5", "claude-bridge/claude-fable-5-1"] },
+	});
+	const { models } = pickParallelModels({ ctx: fakeCtx(opus), cfg: pinned, n: 2, ledger: ledger() });
+	assert.deepEqual(
+		models.map((m) => `${m.provider}/${m.id}`),
+		["openrouter/z-ai/glm-5.3", "claude-bridge/claude-opus-5"],
+		"the billed route the caller asked to compare is not dropped for a better-ranked one",
+	);
+});

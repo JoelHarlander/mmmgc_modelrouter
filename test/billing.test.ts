@@ -260,6 +260,7 @@ test("an exhausted model-scoped window excludes that model and leaves the provid
 });
 
 test("a Codex per-model family limit is model-scoped too", () => {
+	// A scope entry still governs a window when one names it, by the id the evidence carries.
 	const scoped = mergeConfig(cfg, { scopes: { ...cfg.scopes, "openai-codex:bengalfox:primary": ["openai-codex/gpt-6-astra"] } });
 	const l = ledger();
 	l.observeResponse(
@@ -563,9 +564,20 @@ test("a stale no-credits fact stops excluding a route instead of stranding it fo
 });
 
 test("an exhausted family meter excludes its own model and leaves the credential usable", () => {
-	// Per-family headers carry the same fields as the account ones (docs/research/plan-quotas.md).
+	// The wire shape per docs/research/plan-quotas.md: the per-family prefix is an opaque metered
+	// limit id, and the model it meters arrives in `x-codex-<id>-limit-name`.
 	const l = ledger();
-	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "20", "x-codex-GPT-6-Astra-primary-used-percent": "100" }, cfg);
+	l.observeResponse(
+		"openai-codex",
+		200,
+		{
+			"x-codex-primary-used-percent": "20",
+			"x-codex-bengalfox-primary-used-percent": "100",
+			"x-codex-bengalfox-limit-name": "gpt-6-astra",
+			"x-codex-active-limit": "bengalfox",
+		},
+		cfg,
+	);
 	const a = assess(codex, l);
 	assert.equal(a.eligibility, "excluded");
 	assert.match(a.reason, /model-scoped quota exhausted \(gpt-6-astra:primary/);
@@ -584,7 +596,26 @@ test("the poll path and the header path name a family window the same way", () =
 			additional_rate_limits: [{ limit_name: "GPT-6-Astra", rate_limit: { primary_window: { used_percent: 100 } } }],
 		}),
 	);
-	const a = assess(codex, polled);
-	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /gpt-6-astra:primary/);
+	const fromPoll = assess(codex, polled);
+	assert.equal(fromPoll.eligibility, "excluded");
+	assert.match(fromPoll.reason, /gpt-6-astra:primary/);
+
+	// The same meter seen through the headers keys the same window, so a later poll refreshes it.
+	const headed = ledger();
+	headed.observeResponse(
+		"openai-codex",
+		200,
+		{ "x-codex-primary-used-percent": "20", "x-codex-bengalfox-primary-used-percent": "100", "x-codex-bengalfox-limit-name": "GPT-6-Astra" },
+		cfg,
+	);
+	assert.deepEqual(Object.keys(headed.peekProvider("openai-codex")!.windows).sort(), Object.keys(polled.peekProvider("openai-codex")!.windows).sort());
+
+	headed.applyEntitlement(
+		"openai-codex",
+		parseEntitlement("codex-wham-usage", {
+			rate_limit: { primary_window: { used_percent: 20 } },
+			additional_rate_limits: [{ limit_name: "GPT-6-Astra", rate_limit: { primary_window: { used_percent: 5 } } }],
+		}),
+	);
+	assert.notEqual(assess(codex, headed).eligibility, "excluded", "a poll that says the family has room clears the header's meter");
 });

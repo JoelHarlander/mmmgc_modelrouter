@@ -381,6 +381,8 @@ export function describeCredits(c: CreditState): string {
 
 const ANTHROPIC_WINDOW = /^anthropic-ratelimit-unified-(.+)-(utilization|status|reset)$/;
 const CODEX_FIELD = /^x-codex-(?:(.+)-)?(primary|secondary)-(used-percent|reset-after-seconds|reset-at)$/;
+/** `x-codex-<limitId>-limit-name` carries the model a per-family meter belongs to. */
+const CODEX_LIMIT_NAME = /^x-codex-(.+)-limit-name$/;
 
 /**
  * Anthropic unified headers. Utilization is already 0..1 here; the poll path is 0..100 and is
@@ -415,12 +417,19 @@ function applyAnthropicHeaders(state: ProviderState, headers: Record<string, str
  */
 function applyCodexHeaders(state: ProviderState, headers: Record<string, string>, now: number): void {
 	let touched = false;
+	// The per-family prefix is an opaque metered-limit id (`bengalfox`); the model it meters comes
+	// in its own header. Keying by that name is what lets the poll path and this one agree.
+	const limitNames = new Map<string, string>();
+	for (const [rawName, rawValue] of Object.entries(headers)) {
+		const m = CODEX_LIMIT_NAME.exec(rawName.toLowerCase());
+		if (m && rawValue) limitNames.set(m[1]!, slug(rawValue));
+	}
 	for (const [rawName, rawValue] of Object.entries(headers)) {
 		const name = rawName.toLowerCase();
 		const m = CODEX_FIELD.exec(name);
 		if (!m) continue;
 		const [, family, role, field] = m as unknown as [string, string | undefined, string, string];
-		const id = family ? `${slug(family)}:${role}` : role;
+		const id = family ? `${limitNames.get(family) ?? slug(family)}:${role}` : role;
 		const w = (state.windows[id] ??= { source: "header", lastSeen: now });
 		w.source = "header";
 		w.lastSeen = now;

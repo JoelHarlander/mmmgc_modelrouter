@@ -69,8 +69,10 @@ export interface PickParallelArgs {
 
 /**
  * Same gate *and* the same ordering as automatic routing: a candidate must pass auth and billing
- * eligibility before it can be fanned out to, and the slots then go to the best-ranked candidates,
- * so a fan-out never bills while a preferred subscription or zero-cost route sits unused.
+ * eligibility before it can be fanned out to, and the slots the caller did not name go to the
+ * best-ranked candidates, so a fan-out never bills while a preferred route sits unused. An
+ * explicit `parallel.models` list is the caller's own choice of what to compare: it keeps its
+ * configured order and membership.
  */
 export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 	const { ctx, cfg, n, ledger } = args;
@@ -93,13 +95,13 @@ export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 
 	if (cfg.parallel.models.length > 0) {
 		for (const key of cfg.parallel.models) consider(key);
-	} else {
-		consider(currentKey);
-		// Strongest first, one per tier, then the remaining tier lists: that is the diversity order.
-		for (const tier of [...TIERS].reverse()) consider(cfg.tiers[tier]?.[0]);
-		for (const tier of [...TIERS].reverse()) {
-			for (const key of cfg.tiers[tier] ?? []) consider(key);
-		}
+		return { models: eligible.slice(0, n).map((c) => c.model!), rejected };
+	}
+	consider(currentKey);
+	// Strongest first, one per tier, then the remaining tier lists: that is the diversity order.
+	for (const tier of [...TIERS].reverse()) consider(cfg.tiers[tier]?.[0]);
+	for (const tier of [...TIERS].reverse()) {
+		for (const key of cfg.tiers[tier] ?? []) consider(key);
 	}
 	const ranked = eligible
 		.map((candidate, order) => ({ candidate, order }))

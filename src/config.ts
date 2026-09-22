@@ -101,7 +101,7 @@ export interface RouterConfig {
 	};
 	parallel: {
 		defaultN: number;
-		/** Fixed list; empty = pick current model + best authed model of each tier. */
+		/** Fixed list, kept in this order; empty = pick current model + best authed model of each tier. */
 		models: string[];
 		judge: "jev" | "none";
 		autoAdopt: boolean;
