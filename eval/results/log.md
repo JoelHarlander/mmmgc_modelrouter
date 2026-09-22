@@ -1108,3 +1108,57 @@ each conclusion rests on. That is the whole bargain of an offline eval: declare 
 assumptions, sweep them, and report which answers survive.
 
 **Next.** `--classifier live --record` and `--probe --live-judge`.
+
+---
+
+## Round 18 — 2026-09-22 — make the numbers traceable
+
+**Measured.** Nothing new about the router. This round measured how hard the harness is
+to *check*. Seventeen rounds in it reports upwards of thirty metrics across two packs,
+nine sweeps, a probe, a calibration report and a config audit — and offered no way to
+see why any single one came out as it did.
+
+That is not a cosmetic gap. Rounds 1, 6, 12, 13 and 15 all found defects in the
+**measurement** rather than the router, and every one of them was found by dropping into
+a throwaway script to print a few turns. A tool whose own bugs are only findable by
+writing another tool is not finished.
+
+**Changed.** `--explain <task id>` prints the turn-by-turn trace behind one task's
+score: what the classifier said and whether the stakes override moved it, which tier the
+router landed in versus the gold one, which model served the turn and what it switched
+from, skill against required skill with any lost-context penalty broken out, whether
+another model in the same tier would have solved it, the cache outcome and its cause,
+any compaction and whether a roomier model would have avoided it, the cost at list and
+to the ledger, and — in candidate mode — every candidate with the judge's probabilities,
+what it picked, whether the gate blocked it, and what the best available answer was.
+
+It renders what the run **recorded** rather than re-simulating, so what it shows is what
+was scored. Two tests hold that: every cost in the trace must match the record to four
+decimal places, and an unknown task id must list the ones that do exist.
+
+**What it looks like** — three turns of `django__django-16379-session`, which explain
+between them most of what sixteen rounds have been arguing about:
+
+```
+  turn 2  FAILED
+    classifier    jev said light @ 76%
+    tier          landed light (matches gold); router reported light
+    model         faux-or/glm-5.3-flash
+    competence    skill 30 vs required 34 → -4.0
+                  another model in this tier would have solved it
+    cache         warm; thinking low
+    cost          $0.0307 at list ($0.0307 if warm), $0.0307 to the ledger
+
+  turn 3  SOLVED
+    classifier    jev said heavy @ 71%
+    model         faux-plan-anthropic/claude-opus-5  (switched from faux-or/glm-5.3-flash)
+    cache         cold (model-switch), rewrote 128,000 tokens; thinking high
+    cost          $1.1442 at list ($0.4123 if warm), $0.0000 to the ledger
+```
+
+Turn 2 is round 2's `inTierMisses` in one line: the classification was right, the tier
+was right, and the router picked the cheapest member of that tier, which was four skill
+points short. Turn 3 is rounds 4 and 14 together: a correct escalation that cost
+**$1.1442 against $0.4123 warm** — and billed the ledger **$0.00**.
+
+**Next.** `--classifier live --record` and `--probe --live-judge`.

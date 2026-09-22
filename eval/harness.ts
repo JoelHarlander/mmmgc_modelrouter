@@ -304,6 +304,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		const record: TurnRecord = {
 			taskId: task.id,
 			turn: turnNo,
+			prompt: turn.prompt,
 			goldTier,
 			requestedTier,
 			chosenTier: decision.tier,

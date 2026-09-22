@@ -20,6 +20,7 @@ import { JevClient } from "../src/jev.ts";
 import { JevJudge, NoisyJudge } from "./candidates.ts";
 import { auditConfig, renderAudit } from "./audit.ts";
 import { computeCalibration, renderCalibration } from "./calibration.ts";
+import { explainTask } from "./explain.ts";
 import { loadProbePack, renderProbe, runProbe } from "./probe.ts";
 import { recordAnswers, renderRecord } from "./record.ts";
 import { loadFleet } from "./fleet.ts";
@@ -84,6 +85,7 @@ interface Args {
 	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy" | "pin";
 	exploreTurns?: number;
 	calibration: boolean;
+	explain?: string;
 	record: boolean;
 	candidatePolicy?: string;
 	judgeMinConfidence?: number;
@@ -208,6 +210,9 @@ function parseArgs(argv: string[]): Args {
 			case "--calibration":
 				args.calibration = true;
 				break;
+			case "--explain":
+				args.explain = next();
+				break;
 			case "--record":
 				args.record = true;
 				break;
@@ -296,6 +301,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --calibration          is the classifier's confidence worth anything?
+  --explain <task id>    print the turn-by-turn trace behind one task's score
   --record               write the classifier's real answers back into the task pack
                          (needs --classifier live; rewrites turns[].jev and nothing else)
   --candidate-policy <p> shipped | strongest | cheapest | spread | tier-top
@@ -473,6 +479,11 @@ async function main(): Promise<number> {
 		writeFileSync(args.pack, `${JSON.stringify(result.pack, null, "\t")}\n`);
 		process.stdout.write(renderRecord(result, args.pack.replace(`${ROOT}/`, "")));
 		return 0;
+	}
+
+	if (args.explain) {
+		process.stdout.write(explainTask(outcome.turns, args.explain));
+		return outcome.turns.some((t) => t.taskId === args.explain) ? 0 : 2;
 	}
 
 	if (args.calibration) {

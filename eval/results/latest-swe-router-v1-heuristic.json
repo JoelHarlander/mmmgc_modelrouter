@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T13-58-04-swe-router-v1-heuristic-92cb9b5",
-	"at": "2026-09-22T13:58:04.009Z",
+	"runId": "2026-09-22T14-00-26-swe-router-v1-heuristic-e3fbb44",
+	"at": "2026-09-22T14:00:26.706Z",
 	"profile": "swe-router-v1-heuristic",
 	"pack": "swe-router-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,7 +11,7 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "92cb9b5",
+	"git": "e3fbb44",
 	"metrics": {
 		"tasks": 15,
 		"turns": 31,
@@ -62,6 +62,7 @@
 		{
 			"taskId": "sympy__sympy-20590",
 			"turn": 1,
+			"prompt": "Symbol instances started having a __dict__ in 1.7 but not in 1.6.2. Which commit or class change would explain that? Just tell me where to look.",
 			"goldTier": "light",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -95,6 +96,7 @@
 		{
 			"taskId": "pylint-dev__pylint-7228",
 			"turn": 1,
+			"prompt": "rxg regex with \\p{Han} in the rcfile raises 'bad escape \\p'. Swap the re module for regex in the config parsing so unicode property escapes work.",
 			"goldTier": "light",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -128,6 +130,7 @@
 		{
 			"taskId": "psf__requests-2317",
 			"turn": 1,
+			"prompt": "method = builtin_str(method) turns a binary string b'GET' into the literal \"b'GET'\" on Python 3, so the request 404s. Fix the conversion in sessions.py.",
 			"goldTier": "light",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -161,6 +164,7 @@
 		{
 			"taskId": "psf__requests-2317",
 			"turn": 2,
+			"prompt": "Add a regression test for the binary-method case.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -195,6 +199,7 @@
 		{
 			"taskId": "django__django-11039",
 			"turn": 1,
+			"prompt": "sqlmigrate wraps its output in BEGIN/COMMIT even when the database doesn't support transactional DDL. The check should consider connection.features.can_rollback_ddl as well as migration.atomic.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -228,6 +233,7 @@
 		{
 			"taskId": "django__django-11039",
 			"turn": 2,
+			"prompt": "Now update the sqlmigrate tests so they cover a backend that cannot roll back DDL.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -261,6 +267,7 @@
 		{
 			"taskId": "astropy__astropy-12907",
 			"turn": 1,
+			"prompt": "separability_matrix returns the wrong result for nested CompoundModels: the inputs stop being reported as separable once you wrap a compound model inside another one. Work out why _cstack/_coord_matrix mis-handle the nested case and fix it.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -294,6 +301,7 @@
 		{
 			"taskId": "astropy__astropy-12907",
 			"turn": 2,
+			"prompt": "Add the nested-compound case to the separability tests.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -328,6 +336,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779",
 			"turn": 1,
+			"prompt": "VotingClassifier.fit raises AttributeError when one of the estimators has been set to None via set_params and sample_weight is passed. Skip the None estimators in the sample_weight check.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -361,6 +370,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779",
 			"turn": 2,
+			"prompt": "What other estimators in the ensemble module have the same None-estimator assumption?",
 			"goldTier": "standard",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -395,6 +405,7 @@
 		{
 			"taskId": "matplotlib__matplotlib-23913",
 			"turn": 1,
+			"prompt": "Add a draggable keyword to Axes.legend so a legend can be made draggable at construction time instead of calling set_draggable afterwards.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -428,6 +439,7 @@
 		{
 			"taskId": "matplotlib__matplotlib-23913",
 			"turn": 2,
+			"prompt": "Document the new keyword in the legend docstring.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -462,6 +474,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721",
 			"turn": 1,
+			"prompt": "viewcode creates module pages for epub even when viewcode_enable_epub is False. Make the builder check honour that setting.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -495,6 +508,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721",
 			"turn": 2,
+			"prompt": "Good. Now make sure the singlehtml builder is unaffected by the change and add a test for both builders.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -528,6 +542,7 @@
 		{
 			"taskId": "django__django-15790",
 			"turn": 1,
+			"prompt": "check_for_template_tags_with_the_same_name reports a duplicate when the same library appears once in TEMPLATES['OPTIONS']['libraries'] and once by autodiscovery. Write the failing test first.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -561,6 +576,7 @@
 		{
 			"taskId": "django__django-15790",
 			"turn": 2,
+			"prompt": "Now make it pass by de-duplicating the module paths before the count.",
 			"goldTier": "standard",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -595,6 +611,7 @@
 		{
 			"taskId": "psf__requests-1142",
 			"turn": 1,
+			"prompt": "requests adds Content-Length: 0 to every GET, which some servers reject and which leaks intent through proxies. Decide whether dropping it for bodyless methods can break request smuggling assumptions downstream, then implement whichever behaviour is safe.",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -628,6 +645,7 @@
 		{
 			"taskId": "psf__requests-1142",
 			"turn": 2,
+			"prompt": "Write the tests that pin the decision, including the redirect path.",
 			"goldTier": "standard",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -662,6 +680,7 @@
 		{
 			"taskId": "django__django-16379",
 			"turn": 1,
+			"prompt": "FileBasedCache.has_key is racy: it checks os.path.exists then opens the file, so a concurrent cull between the two raises FileNotFoundError. Work out every caller that shares the assumption and fix the race properly.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -695,6 +714,7 @@
 		{
 			"taskId": "django__django-16379",
 			"turn": 2,
+			"prompt": "Does _is_expired have the same problem when it deletes the file it just read?",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -729,6 +749,7 @@
 		{
 			"taskId": "django__django-16379",
 			"turn": 3,
+			"prompt": "Write a test that actually reproduces the race under threads.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -763,6 +784,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143",
 			"turn": 1,
+			"prompt": "Assertion rewriting crashes with 'TypeError: argument of type int is not iterable' when a test module's first expression is a number rather than a docstring. The docstring detection in rewrite.py assumes too much about module structure. Redesign that detection so it is correct for every module shape, not just this one.",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -796,6 +818,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143",
 			"turn": 2,
+			"prompt": "Walk me through the consequences for plugins that install their own rewrite hooks.",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -829,6 +852,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143",
 			"turn": 3,
+			"prompt": "Now write the fix and its tests.",
 			"goldTier": "heavy",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -863,6 +887,7 @@
 		{
 			"taskId": "django__django-14672",
 			"turn": 1,
+			"prompt": "ManyToManyRel.identity includes through_fields, which can be a list and therefore unhashable, so make_hashable needs to be applied to it like it already is elsewhere in the related descriptors.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -896,6 +921,7 @@
 		{
 			"taskId": "django__django-14672",
 			"turn": 2,
+			"prompt": "Sweep the rest of the related-field identity properties for the same unhashable-member problem and fix any you find.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -929,6 +955,7 @@
 		{
 			"taskId": "pydata__xarray-4094",
 			"turn": 1,
+			"prompt": "to_unstacked_dataset fails with 'MergeError: conflicting values for variable' when the stacked variables are single-dimension. Find out what to_stacked_array wrote into the index that round-trips wrongly.",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -962,6 +989,7 @@
 		{
 			"taskId": "pydata__xarray-4094",
 			"turn": 2,
+			"prompt": "Just print the MultiIndex levels for me.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -992,6 +1020,7 @@
 		{
 			"taskId": "pydata__xarray-4094",
 			"turn": 3,
+			"prompt": "Right, now implement the round-trip fix.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -1021,6 +1050,7 @@
 		{
 			"taskId": "mwaskom__seaborn-3010",
 			"turn": 1,
+			"prompt": "PolyFit is not robust to missing data: np.polyfit raises LinAlgError when x or y contains NaN. Drop the missing pairs before fitting.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1054,6 +1084,7 @@
 		{
 			"taskId": "mwaskom__seaborn-3010",
 			"turn": 2,
+			"prompt": "why does this still return an empty fit when every point is missing?",
 			"goldTier": "standard",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",

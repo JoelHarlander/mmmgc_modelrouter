@@ -18,6 +18,7 @@ npm run eval -- --sweep strategy              # fan out every turn, or only to l
 npm run eval -- --sweep pin                   # what a /model pin costs once it outlives its question
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
+npm run eval -- --explain <task id>           # the turn-by-turn trace behind one task's score
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
 npm run eval -- --audit-config                # price the SHIPPED tiers from docs/data and check both ladders
 npm run eval -- --pack eval/tasks/swe-router-long-v1.json   # long sessions at realistic context
@@ -156,6 +157,18 @@ Fan-out candidates are priced differently on purpose. `src/parallel.ts` calls
 `complete` with `cacheRetention: "none"` and a fresh `sessionId`, so each candidate
 pays the **full uncached input rate once** and leaves the session's own cache alone.
 
+## Reading a number back to its turns
+
+`npm run eval -- --explain <task id>` prints the turn-by-turn trace behind one task:
+what the classifier said, which tier the router landed in and why, which model served
+the turn, whether its skill cleared the bar, what the cache and any compaction cost, and
+— in candidate mode — every candidate, the judge's probabilities, and whether the pick
+was gated. It renders what the run *recorded* rather than re-simulating, so what it
+shows is what was scored.
+
+Several rounds found bugs in the measurement rather than the router; every one of them
+was found by dropping into an ad-hoc script. This is that script, made part of the tool.
+
 ## Metrics
 
 | Metric | Reading |
@@ -270,6 +283,7 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `simulate.ts` | the competence oracle and the token/cost model |
 | `metrics.ts` | the metric set and how to read each direction |
 | `results.ts` | results IO, the round log, run comparison |
+| `explain.ts` | `--explain`: the trace behind one task's score |
 | `sweep.ts` | the judge, bias, traffic-profile, oracle, gate, policy, confidence, strategy and pin sweeps |
 | `record.ts` | writing a live classifier's answers back into a pack |
 | `probe.ts` | the judge bias probe and its calibration |

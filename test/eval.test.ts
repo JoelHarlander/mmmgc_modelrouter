@@ -17,6 +17,7 @@ import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, mergeConfig, modelKey } from "../src/config.ts";
 import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
 import { computeCalibration } from "../eval/calibration.ts";
+import { explainTask } from "../eval/explain.ts";
 import { recordAnswers } from "../eval/record.ts";
 import { pickParallelModels } from "../src/parallel.ts";
 import { CANDIDATE_POLICIES, JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
@@ -1222,4 +1223,32 @@ test("a /model pin to a small-context model can cost the session its memory", as
 		assert.equal(turn.compaction!.avoidable, true, "the router would not have compacted here; the pin did");
 		assert.ok(turn.contextTokens > 150_000, "the conversation that gets discarded is a large one");
 	}
+});
+
+test("the trace renders what the run recorded, not a re-simulation", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3 });
+	const taskId = "django__django-16379-session";
+	const turns = outcome.turns.filter((t) => t.taskId === taskId);
+	const text = explainTask(outcome.turns, taskId);
+
+	assert.match(text, new RegExp(`${taskId}\\s+—\\s+${turns.length} turns, ${turns.filter((t) => t.solved).length} solved`));
+	for (const turn of turns) {
+		assert.match(text, new RegExp(`turn ${turn.turn}  ${turn.solved ? "SOLVED" : "FAILED"}`), `turn ${turn.turn} missing its verdict`);
+		assert.ok(text.includes(turn.model), `turn ${turn.turn} does not name its model`);
+		// Costs are printed from the record, so they must match it exactly.
+		assert.ok(text.includes(`$${turn.listEquivalentUsd.toFixed(4)} at list`), `turn ${turn.turn}'s cost was not rendered from the record`);
+		if (turn.cold) assert.ok(text.includes(`cold (${turn.coldCause})`));
+		if (turn.compaction) assert.ok(text.includes(`${turn.compaction.tokensBefore.toLocaleString("en-US")} →`));
+		if (turn.pinned) assert.match(text, /pinned|committed/);
+	}
+	// The totals are the turns' own numbers added up.
+	const totalList = turns.reduce((a, t) => a + t.listEquivalentUsd + (t.compaction?.listEquivalentUsd ?? 0), 0);
+	assert.ok(text.includes(`total: $${totalList.toFixed(4)} at list`));
+});
+
+test("asking to explain a task that is not in the run says which ones are", async () => {
+	const outcome = await run();
+	const text = explainTask(outcome.turns, "nope__nope-1");
+	assert.match(text, /no task "nope__nope-1" in this run/);
+	for (const id of new Set(outcome.turns.map((t) => t.taskId))) assert.ok(text.includes(id), `${id} not offered as an alternative`);
 });

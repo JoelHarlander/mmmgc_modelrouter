@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T13-58-07-swe-router-long-v1-scripted-92cb9b5",
-	"at": "2026-09-22T13:58:07.065Z",
+	"runId": "2026-09-22T14-00-29-swe-router-long-v1-scripted-e3fbb44",
+	"at": "2026-09-22T14:00:29.721Z",
 	"profile": "swe-router-long-v1-scripted",
 	"pack": "swe-router-long-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,7 +11,7 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "92cb9b5",
+	"git": "e3fbb44",
 	"metrics": {
 		"tasks": 6,
 		"turns": 60,
@@ -65,6 +65,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 1,
+			"prompt": "Read django/core/cache/backends/filebased.py and tell me what has_key does.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -100,6 +101,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 2,
+			"prompt": "Walk me through the cull path in the same file.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -135,6 +137,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 3,
+			"prompt": "Is has_key racy? It stats the file and then opens it.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -171,6 +174,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 4,
+			"prompt": "Which other callers in this backend share that stat-then-open assumption?",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -207,6 +211,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 5,
+			"prompt": "Fix the race properly - not by swallowing the exception.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -243,6 +248,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 6,
+			"prompt": "Show me the diff.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -273,6 +279,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 7,
+			"prompt": "Does _is_expired have the same problem when it deletes the file it just read?",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -310,6 +317,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 8,
+			"prompt": "Fix that one too.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -339,6 +347,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 9,
+			"prompt": "Run the cache tests.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -375,6 +384,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 10,
+			"prompt": "Write a test that actually reproduces the race under threads.",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -411,6 +421,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 11,
+			"prompt": "The new test is flaky on Windows. Why?",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -447,6 +458,7 @@
 		{
 			"taskId": "django__django-16379-session",
 			"turn": 12,
+			"prompt": "Summarise the change for the commit message.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -483,6 +495,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 1,
+			"prompt": "Reproduce the 'TypeError: argument of type int is not iterable' from assertion rewriting.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -518,6 +531,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 2,
+			"prompt": "Where in rewrite.py is the module docstring detected?",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -554,6 +568,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 3,
+			"prompt": "Why does it assume the first expression is a string?",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -590,6 +605,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 4,
+			"prompt": "Redesign that detection so it is correct for every module shape, not just this one.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -626,6 +642,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 5,
+			"prompt": "Walk me through the consequences for plugins that install their own rewrite hooks.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -661,6 +678,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 6,
+			"prompt": "Write the fix.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -696,6 +714,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 7,
+			"prompt": "Show the diff.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -733,6 +752,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 8,
+			"prompt": "Add tests.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -762,6 +782,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 9,
+			"prompt": "The rewrite cache needs invalidating too - handle it.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -791,6 +812,7 @@
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
 			"turn": 10,
+			"prompt": "Changelog entry.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -827,6 +849,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 1,
+			"prompt": "Reproduce the nested CompoundModel separability bug.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -862,6 +885,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 2,
+			"prompt": "Print the separability matrix for the non-nested case.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -898,6 +922,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 3,
+			"prompt": "Why does _cstack mis-handle the nested case?",
 			"goldTier": "standard",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -934,6 +959,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 4,
+			"prompt": "Fix _coord_matrix.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -970,6 +996,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 5,
+			"prompt": "Check the non-nested cases still pass.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1006,6 +1033,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 6,
+			"prompt": "Add the nested case to the separability tests.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1041,6 +1069,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 7,
+			"prompt": "There is still a regression three levels deep. Find it.",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1077,6 +1106,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 8,
+			"prompt": "Fix it.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -1113,6 +1143,7 @@
 		{
 			"taskId": "astropy__astropy-12907-session",
 			"turn": 9,
+			"prompt": "Write the changelog.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1149,6 +1180,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779-session",
 			"turn": 1,
+			"prompt": "Reproduce the AttributeError when a VotingClassifier estimator is set to None and sample_weight is passed.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1184,6 +1216,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779-session",
 			"turn": 2,
+			"prompt": "Show me the sample_weight check in fit().",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1220,6 +1253,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779-session",
 			"turn": 3,
+			"prompt": "Skip the None estimators in that check.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1256,6 +1290,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779-session",
 			"turn": 4,
+			"prompt": "What else in this module assumes the estimators are non-None?",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1291,6 +1326,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779-session",
 			"turn": 5,
+			"prompt": "Fix VotingRegressor the same way.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1326,6 +1362,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779-session",
 			"turn": 6,
+			"prompt": "Add tests for both.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1361,6 +1398,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779-session",
 			"turn": 7,
+			"prompt": "The clone() path still breaks. Why?",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1396,6 +1434,7 @@
 		{
 			"taskId": "scikit-learn__scikit-learn-13779-session",
 			"turn": 8,
+			"prompt": "Fix it and re-run the ensemble tests.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1431,6 +1470,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 1,
+			"prompt": "Where does viewcode decide to emit module pages?",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1466,6 +1506,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 2,
+			"prompt": "Make that decision honour viewcode_enable_epub.",
 			"goldTier": "standard",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1501,6 +1542,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 3,
+			"prompt": "Show me the diff.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1531,6 +1573,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 4,
+			"prompt": "Is the singlehtml builder affected by the change?",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1560,6 +1603,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 5,
+			"prompt": "Add tests for both builders.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1589,6 +1633,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 6,
+			"prompt": "The epub test fails. Why?",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1625,6 +1670,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 7,
+			"prompt": "Fix it.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1660,6 +1706,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 8,
+			"prompt": "The setting interacts with viewcode_follow_imported_members. Work out how.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -1696,6 +1743,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 9,
+			"prompt": "Handle that case.",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1732,6 +1780,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 10,
+			"prompt": "Re-run the full viewcode suite.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1775,6 +1824,7 @@
 		{
 			"taskId": "sphinx-doc__sphinx-8721-session",
 			"turn": 11,
+			"prompt": "Write the docs entry for the setting.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1810,6 +1860,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 1,
+			"prompt": "Where is Content-Length set for a GET?",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -1845,6 +1896,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 2,
+			"prompt": "Why do some servers reject a GET that carries it?",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -1881,6 +1933,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 3,
+			"prompt": "Can dropping it break request-smuggling assumptions downstream?",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -1917,6 +1970,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 4,
+			"prompt": "What about proxies that rewrite the body on the way through?",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -1952,6 +2006,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 5,
+			"prompt": "Implement whichever behaviour is safe.",
 			"goldTier": "heavy",
 			"requestedTier": "heavy",
 			"chosenTier": "heavy",
@@ -1987,6 +2042,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 6,
+			"prompt": "Show me the diff.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",
@@ -2024,6 +2080,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 7,
+			"prompt": "The redirect path still sets it. Fix that.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -2053,6 +2110,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 8,
+			"prompt": "Write the tests that pin the decision.",
 			"goldTier": "standard",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -2082,6 +2140,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 9,
+			"prompt": "Does this change break the HTTP/2 upgrade path?",
 			"goldTier": "heavy",
 			"requestedTier": "standard",
 			"chosenTier": "standard",
@@ -2118,6 +2177,7 @@
 		{
 			"taskId": "psf__requests-1142-session",
 			"turn": 10,
+			"prompt": "Changelog plus a security note.",
 			"goldTier": "light",
 			"requestedTier": "light",
 			"chosenTier": "light",

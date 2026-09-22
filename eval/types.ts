@@ -92,6 +92,8 @@ export type ClassifierMode = "scripted" | "heuristic" | "oracle" | "live";
 export interface TurnRecord {
 	taskId: string;
 	turn: number;
+	/** The user message for this turn, so a trace can be read without the pack open. */
+	prompt?: string;
 	goldTier: Tier;
 	/** What the classifier asked for, after the stakes override. Measures the classifier. */
 	requestedTier: Tier;
