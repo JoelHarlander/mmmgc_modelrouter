@@ -1,6 +1,17 @@
 {
-  "tiers": { "light": ["faux/b"], "standard": ["faux/a"], "heavy": ["faux/a"] },
-  "models": { "faux/*": { "billing": "on-demand" } },
-  "switching": { "minConfidence": 0.3, "manualPinTurns": 0 },
-  "notifyOnSwitch": true
+	"_comment": "Project config for `npm run smoke` and the cross-validation in test/integration.test.ts. It pins every setting the predicted routing depends on, so the run is deterministic whatever the machine's global ~/.pi/agent/modelrouter.json says: the two faux models as the tiers, a Jev transport whose credential is never present (so routing falls to src/router.ts#heuristicTier, offline), and a confidence bar the heuristic can clear.",
+	"enabled": true,
+	"notifyOnSwitch": false,
+	"jev": { "transport": "typesafe", "apiKeyEnv": "MODELROUTER_SMOKE_NO_SUCH_KEY" },
+	"tiers": {
+		"light": ["faux/b"],
+		"standard": ["faux/b"],
+		"heavy": ["faux/a"]
+	},
+	"models": {
+		"faux/a": { "billing": "on-demand", "capability": 90 },
+		"faux/b": { "billing": "on-demand", "capability": 40 }
+	},
+	"switching": { "minConfidence": 0.3, "cacheSwitchPenalty": true, "manualPinTurns": 3, "expectedOutputTokens": 1500 },
+	"thinking": { "light": "low", "standard": "medium", "heavy": "high" }
 }

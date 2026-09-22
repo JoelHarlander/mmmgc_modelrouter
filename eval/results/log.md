@@ -1893,3 +1893,50 @@ that exercise the same code the live command will.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`, on a path that has
 now at least been run.
+
+---
+
+## Round 32 — 2026-09-23 — check the harness against the thing it models
+
+**Measured.** The one claim thirty-one rounds never tested: that the harness's model of
+the turn loop is the loop pi actually runs. Everything in `eval/` drives `chooseModel`
+directly — which is what makes it fast and deterministic, and means a discrepancy
+between the harness and pi would be invisible from inside the harness. The brief asked
+for a faux provider "in the style of `test/faux-provider.ext.ts`"; the harness had never
+used one.
+
+**Changed.** `test/integration.test.ts` runs **real pi** — the shipped extension, the
+faux provider, print mode — for five prompts, and requires the model that actually
+answered to be the model the harness predicts for the same prompt, starting model and
+configuration.
+
+`test/smoke/.pi/modelrouter.json` now pins **every setting the prediction depends on**:
+the tiers, the model overrides, the whole `switching` block, the thinking map, and a Jev
+transport whose credential is never present. Without that the check quietly becomes a
+test of whoever's machine it runs on — this machine's global config turned out to lower
+`minConfidence`, which I would have mistaken for a harness bug. A second test asserts the
+pinning is still complete, and that the fleet mirrored in the test matches the tiers pi
+is given.
+
+**What the numbers did.** Five for five:
+
+| prompt | pi routed to | harness predicted |
+| --- | --- | --- |
+| `ls` | `faux/b` | `faux/b` |
+| `why does this deadlock under load?` | `faux/a` | `faux/a` |
+| `implement the described helper in two files…` | `faux/b` | `faux/b` |
+| `rename this variable` | `faux/b` | `faux/b` |
+| `investigate the root cause of the flaky test` | `faux/a` | `faux/a` |
+
+The heavy-hint branch, the short-prompt branch and the default branch of
+`heuristicTier` all agree, and so does `chooseModel`'s tier selection on top of them.
+The test skips rather than fails when `pi` is not runnable, so it does not make the
+suite depend on a binary being installed.
+
+**Two things this catches that nothing else would.** A change to `src/index.ts`'s hook
+order — the thing the README says was verified by hand on pi 0.85.1 — would break this
+and nothing else. And a harness that drifted from the shipped loop would now be caught by
+the shipped loop rather than by my re-reading it, which is how round 24's audit worked
+and is not a method that scales.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

@@ -139,7 +139,16 @@ turn++ → manual-pin check → buildRoutingState → classify → stakes overri
 ```
 
 A pinned turn returns before the classifier call, so it costs nothing to route — the
-harness books that the same way. One `Ledger` serves the whole run, because plan
+harness books that the same way.
+
+Driving `chooseModel` directly is what makes this fast and deterministic, and it means
+the harness never proves the decision *reaches* pi. `test/integration.test.ts` closes
+that: for five prompts it runs **real pi** with the faux provider from
+`test/faux-provider.ext.ts` and the shipped extension, and requires the model that
+actually answered to be the one the harness predicts. `test/smoke/.pi/modelrouter.json`
+pins every setting the prediction depends on — including a Jev transport whose credential
+is never present — so both sides route through `heuristicTier` offline and the check
+cannot become a test of whoever's machine it runs on. One `Ledger` serves the whole run, because plan
 quota and 429 cooldowns are account facts that outlive a session: a 429 in one task
 still steers the next.
 
