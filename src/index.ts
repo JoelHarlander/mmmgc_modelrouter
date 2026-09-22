@@ -11,7 +11,7 @@ import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Container, Text } from "@earendil-works/pi-tui";
-import { assessBilling, billsPerToken, describeBasis } from "./billing.ts";
+import { assessBilling, authOf, billsPerToken, describeBasis } from "./billing.ts";
 import { loadConfig, modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
 import { refreshEntitlements } from "./entitlement.ts";
 import { type JevChoiceAnswer, JevClient, type JevNoulAnswer, type JevScoreAnswer } from "./jev.ts";
@@ -175,7 +175,7 @@ export default function modelRouter(pi: ExtensionAPI) {
 
 	pi.on("after_provider_response", async (event, ctx) => {
 		if (!ctx.model) return;
-		ledger.observeResponse(ctx.model.provider, event.status, event.headers ?? {}, cfg);
+		ledger.observeResponse(ctx.model.provider, event.status, event.headers ?? {}, cfg, Date.now(), authOf(ctx.modelRegistry));
 	});
 
 	pi.on("session_shutdown", async () => {

@@ -15,7 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Usage } from "@earendil-works/pi-ai";
-import { anyGlobMatch, credentialOf, globMatch, routableModels, type RouterConfig } from "./config.ts";
+import { anyGlobMatch, type AuthLookup, credentialOf, globMatch, quotaAccountOf, routableModels, type RouterConfig } from "./config.ts";
 
 export interface ModelTotals {
 	calls: number;
@@ -164,21 +164,31 @@ export class Ledger {
 	}
 
 	/** Called from after_provider_response. Headers are lower-cased by pi. */
-	observeResponse(provider: string, status: number, headers: Record<string, string>, cfg: RouterConfig, now = Date.now()): void {
-		const state = this.providerState(credentialOf(cfg, provider), now);
+	observeResponse(provider: string, status: number, headers: Record<string, string>, cfg: RouterConfig, now = Date.now(), auth?: AuthLookup): void {
+		const account = quotaAccountOf(cfg, provider, auth);
+		// Which models a window governs is a fact about the provider's windows, not about which
+		// account bucket the numbers are filed in, so scopes are read in the terms the config
+		// states them: the declared credential, whether or not its quota is shared.
+		const scoped = credentialOf(cfg, provider);
+		const state = this.providerState(account, now);
 		const h = (name: string) => headers[name] ?? headers[name.toLowerCase()];
 
 		applyAnthropicHeaders(state, headers, now);
 		applyCodexHeaders(state, headers, now);
 
 		if (status === 429 || status === 402) {
-			// Whose refusal is this? Only the windows *this* response reported spent can answer -
-			// a window stored days ago says nothing about a refusal arriving now. When the response
-			// names one, that window already excludes the models it governs and nothing else. When
-			// it names none, the refusal is the credential's own (the bare entitlement gate,
-			// docs/research/plan-quotas.md §1) and is recorded as an account-wide window.
-			if (!reportedSpentWindow(state, cfg, credentialOf(cfg, provider), now)) {
-				const retryAfter = num(h("retry-after"));
+			// Whose refusal is this? Only the evidence *this* response carried can answer - a window
+			// stored days ago says nothing about a refusal arriving now. A window it reported spent
+			// that the router can place already excludes the models it governs and nothing else. A
+			// refusal that places nothing but still bounds itself - a `retry-after`, or a meter no
+			// route answers to - is the credential's own, for as long as it says. A refusal carrying
+			// no quota evidence whatsoever is Anthropic's entitlement gate rather than quota
+			// pressure (docs/research/plan-quotas.md §1), and recording it as exhaustion would back
+			// a healthy account off its own subscription, so nothing is recorded for it.
+			const reported = Object.entries(state.windows).filter(([id, w]) => w.lastSeen === now && REFUSAL_WINDOWS[id] === undefined);
+			const placed = reported.some(([id, w]) => windowExhausted(w, cfg, now) !== undefined && windowPlaceable(cfg, scoped, id));
+			const retryAfter = num(h("retry-after"));
+			if (!placed && (reported.length > 0 || retryAfter !== undefined)) {
 				const id = status === 402 ? "budget-exhausted" : "rate-limited";
 				state.windows[id] = {
 					status: "rejected",
@@ -223,9 +233,10 @@ export class Ledger {
 	 * Everything routing needs about one provider/model pair. Model-scoped windows are matched
 	 * against `modelKey` through `cfg.scopes`, so an exhausted scoped quota excludes only its models.
 	 */
-	assess(provider: string, modelKey: string | undefined, cfg: RouterConfig, now = Date.now()): QuotaAssessment {
+	assess(provider: string, modelKey: string | undefined, cfg: RouterConfig, now = Date.now(), auth?: AuthLookup): QuotaAssessment {
 		const out: QuotaAssessment = { exhaustedAccount: [], exhaustedScoped: [], refused: [], unattributed: [], accountWindows: [], sources: [] };
-		const account = credentialOf(cfg, provider);
+		const account = quotaAccountOf(cfg, provider, auth);
+		const scoped = credentialOf(cfg, provider);
 		const state = this.data.providers[account];
 		if (!state) return out;
 		out.plan = state.plan;
@@ -250,11 +261,11 @@ export class Ledger {
 				out.overage = w;
 				continue;
 			}
-			const scope = scopeGlobs(cfg, account, id);
+			const scope = scopeGlobs(cfg, scoped, id);
 			const spent = windowExhausted(w, cfg, now);
 			if (scope !== undefined) {
 				if (!(modelKey && anyGlobMatch(scope.globs, modelKey))) {
-					if (spent && !windowPlaceable(cfg, account, id)) out.unattributed.push({ id, reason: `${id} ${spent}` });
+					if (spent && !windowPlaceable(cfg, scoped, id)) out.unattributed.push({ id, reason: `${id} ${spent}` });
 					continue;
 				}
 				if (spent) out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
@@ -398,17 +409,6 @@ function windowPlaceable(cfg: RouterConfig, account: string, windowId: string): 
 	return scope === undefined || scope.declared || routableModels(cfg).some((key) => anyGlobMatch(scope.globs, key));
 }
 
-/** Whether the response just folded in named a window of its own, that the router can place, as spent. */
-function reportedSpentWindow(state: ProviderState, cfg: RouterConfig, account: string, now: number): boolean {
-	return Object.entries(state.windows).some(
-		([id, w]) =>
-			w.lastSeen === now &&
-			REFUSAL_WINDOWS[id] === undefined &&
-			windowExhausted(w, cfg, now) !== undefined &&
-			windowPlaceable(cfg, account, id),
-	);
-}
-
 export function describeCredits(c: CreditState): string {
 	if (c.disabledReason) return `extra usage off (${c.disabledReason})`;
 	if (c.unlimited) return "credits unlimited";
@@ -504,23 +504,11 @@ function applyCodexHeaders(state: ProviderState, headers: Record<string, string>
 
 // ---- persistence -----------------------------------------------------------
 
-function withoutLegacyCooldowns(providers: Record<string, ProviderState>): Record<string, ProviderState> {
-	return Object.fromEntries(
-		Object.entries(providers).map(([provider, state]) => {
-			const { cooldownUntil, cooldownReason, ...rest } = state as ProviderState & { cooldownUntil?: number; cooldownReason?: string };
-			return [provider, rest];
-		}),
-	);
-}
-
 function readLedgerFile(file: string): LedgerFile | undefined {
 	if (!existsSync(file)) return undefined;
 	try {
 		const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<LedgerFile> & { version?: number; plans?: Record<string, unknown> };
 		if (parsed?.version === 3) return { version: 3, totals: parsed.totals ?? {}, providers: parsed.providers ?? {} };
-		// v2 kept a provider-level cooldown beside the windows. Cooldowns are short-lived, so the
-		// quota state comes across and the stale scalars are simply dropped; totals are untouched.
-		if (parsed?.version === 2) return { version: 3, totals: parsed.totals ?? {}, providers: withoutLegacyCooldowns(parsed.providers ?? {}) };
 		if (parsed?.version === 1) return { version: 3, totals: (parsed.totals as Record<string, ModelTotals>) ?? {}, providers: {} };
 	} catch {
 		// corrupt ledger: start fresh, keep the old file until the next save replaces it

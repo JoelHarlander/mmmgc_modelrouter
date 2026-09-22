@@ -20,15 +20,20 @@ must live, since a project file may not state them) and the user's real global c
 - `src/billing.ts` keeps three questions separate and every explanation should too: the **basis** (what pays), the
   **verification** (how well that is established), and the **eligibility** (what the config permits). Only a
   verified subscription route is `preferred`. Never let a config label stand in for evidence.
-- Quota state is keyed by *credential*, not provider id: `credentialOf()` resolves both `ledger.assess` and
-  `observeResponse`, `cfg.scopes` keys name the credential, and `refreshEntitlements` probes each credential once
-  per interval and records it under that id. Provider ids sharing one (`entitlement.<p>.authProvider`) must never
-  grow a second copy of the same account's windows.
+- Quota state is keyed by *credential*, not provider id, but only where that is proven: `credentialOf()` is what
+  the config declares (it keys `cfg.scopes` and the once-per-interval probe in `refreshEntitlements`), while
+  `quotaAccountOf()` files the numbers, and it aliases two ids only when pi's own auth evidence
+  (`ModelRegistry.getProviderAuthStatus`, threaded in as `AuthLookup`) says they present the same credential. Missing
+  or differing evidence means separate quota, never shared - a declaration is intent, not proof, and an API-key
+  route must never be excluded by a subscription it does not bill. Ids that do share must never grow a second copy
+  of the same account's windows.
 - Quota window ids are the provider's own wire names (`5h`, `7d`, `7d_oi`, `primary`); a per-model meter is keyed
   `<model>:<role>` from the limit name the provider reports, which is what lets `scopeGlobs` match it with no config.
   A scoped or overage window governs its own models only. A 429/402 is attributed to the windows *that response*
-  reported spent; when it names none, the refusal is the credential's own and is stored as one more account-wide
-  window (`REFUSAL_WINDOWS`) rather than a second kind of state — keep it that way, since every earlier attempt to
+  reported spent; when it names none but still bounds itself (a `retry-after`, or a meter no route answers to), the
+  refusal is the credential's own and is stored as one more account-wide window (`REFUSAL_WINDOWS`) rather than a
+  second kind of state. A 429/402 carrying no quota evidence whatsoever is the entitlement gate, not quota
+  (docs/research/plan-quotas.md §1), and is recorded nowhere — keep it that way, since every earlier attempt to
   hold a provider-wide cooldown beside the windows traded one wrong answer for another. Clearing one is an expired
   window carrying its own `lastSeen`, never a deleted key, so `mergeLedgers` can settle it. Such a refusal reaches
   `assess` as `refused`, not `exhaustedAccount`: it excludes every route on the credential whatever the basis, and

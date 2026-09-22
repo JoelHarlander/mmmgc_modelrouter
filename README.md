@@ -107,16 +107,22 @@ response reported spent can answer whose refusal it is; a window stored hours ag
 attributes to no window of its own — or attributes only to a meter that governs no route you can reach — is the
 credential's own, and is recorded as one more account-wide window — `rate limited (429)` or
 `budget exhausted (402)` — that expires after the `retry-after` it came with or `plan.cooldownMinutesOn429`, and
-that the credential's next successful answer clears. While it stands it excludes every route on that credential
+that the credential's next successful answer clears. A refusal that carries no quota evidence at all — no window
+headers and no `retry-after` — is Anthropic's entitlement gate rather than quota pressure
+(docs/research/plan-quotas.md §1) and is not recorded: backing a healthy subscription off itself on evidence the
+provider never gave would also route away from the only credential that could clear it. While it stands it excludes every route on that credential
 whatever pays for them: a credential refusing calls is not a spent subscription window, so extra billed credits are
 never a way around it. And when a provider reports a spent
 meter that names no route your config can reach, the router neither ignores it nor calls the whole credential
 spent — it carries it as uncertainty on every route of that provider and stops calling those verdicts `verified`.
 
 Quota is a fact about a credential, not about a provider id. `entitlement.<provider>.authProvider` names the
-credential a provider id routes on — `claude-bridge` routes on `anthropic`'s — so ids that share one are one
-account: one probe per interval between them, one set of windows, and a refusal seen through either excludes the
-routes of both.
+credential a provider id routes on — `claude-bridge` routes on `anthropic`'s — and one account is worth one
+read-only probe per interval, not one per id. Sharing the *quota* takes more than the declaration: the two ids
+must also present the same credential in pi's own auth evidence. When they do, one set of windows serves both and
+a refusal seen through either excludes the routes of both; when the evidence differs or pi knows of no credential
+for one of them, the provider keeps its own quota, so a spent subscription never excludes a route billed on a
+different credential — which is exactly when the paid overflow is needed.
 
 `entitlement` maps a provider to its read-only usage endpoint. The shipped entries are Anthropic's
 `/api/oauth/usage`, Codex's `/wham/usage`, OpenRouter's `/api/v1/key` and the Vercel gateway credit balance. A probe

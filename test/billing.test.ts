@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { assessBilling, describeBasis } from "../src/billing.ts";
+import { assessBilling, authOf, describeBasis } from "../src/billing.ts";
 import { DEFAULT_CONFIG, mergeConfig, modelKey, type RouterConfig } from "../src/config.ts";
 import { parseEntitlement } from "../src/entitlement.ts";
 import { Ledger, ledgerPath } from "../src/ledger.ts";
@@ -36,6 +36,13 @@ function fakeRegistry(models: Model<Api>[], oauth: string[] = [], unauthed: stri
 		find: (p: string, id: string) => models.find((m) => m.provider === p && m.id === id),
 		hasConfiguredAuth: (m: Model<Api>) => !unauthed.includes(m.provider),
 		isUsingOAuth: (m: Model<Api>) => oauth.includes(m.provider),
+		// What pi reports about the credential behind a provider id, as the real registry does.
+		getProviderAuthStatus: (p: string) =>
+			unauthed.includes(p)
+				? { configured: false }
+				: oauth.includes(p)
+					? { configured: true, source: "stored", label: "OAuth" }
+					: { configured: true, source: "environment", label: `${p.toUpperCase()}_API_KEY` },
 	} as unknown as ModelRegistry;
 }
 
@@ -181,7 +188,7 @@ test("an overage pool the provider states nothing about is not evidence of credi
 	const allowAnthropicCredits = mergeConfig(cfg, { billing: { ...cfg.billing, allowExtraBilled: ["claude-bridge/*"] } });
 	const l = ledger();
 	l.applyEntitlement(
-		"anthropic",
+		"claude-bridge",
 		parseEntitlement("anthropic-oauth-usage", { rate_limits: { seven_day: { utilization: 100, status: "rejected" }, overage: { utilization: 12 } } }),
 	);
 	const a = assess(opus, l, allowAnthropicCredits);
@@ -194,7 +201,7 @@ test("an extra-usage window that is itself spent excludes extra billed usage", (
 	const allowAnthropicCredits = mergeConfig(cfg, { billing: { ...cfg.billing, allowExtraBilled: ["claude-bridge/*"] } });
 	const l = ledger();
 	l.applyEntitlement(
-		"anthropic",
+		"claude-bridge",
 		parseEntitlement("anthropic-oauth-usage", {
 			rate_limits: { seven_day: { utilization: 100, status: "rejected" }, overage: { utilization: 100, status: "allowed" } },
 		}),
@@ -725,10 +732,10 @@ test("a per-family Codex refusal leaves the rest of the credential usable", () =
 
 test("a scoped window spent days ago does not suppress a later unrelated refusal", () => {
 	// The refusal has to be attributed from the response that carried it: a Fable bucket stored
-	// last week says nothing about a headerless refusal arriving today.
+	// last week says nothing about a refusal arriving today.
 	const l = ledger();
 	l.observeResponse("claude-bridge", 200, FABLE_ONLY_REJECTED, cfg);
-	l.observeResponse("claude-bridge", 429, {}, cfg, Date.now() + 60_000);
+	l.observeResponse("claude-bridge", 429, { "retry-after": "600" }, cfg, Date.now() + 60_000);
 
 	const cooled = l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, Date.now() + 60_000);
 	assert.match(cooled.refused.map((w) => w.reason).join(","), /rate limited \(429\)/, "the credential's own refusal still cools it");
@@ -756,21 +763,35 @@ test("an account-wide rejection keeps every route on the credential out", () => 
 	}
 });
 
-test("a bare entitlement-gate 429 still cools the credential briefly", () => {
-	// Nothing in the response names a window, so the refusal is the credential's own: cool down,
-	// but only for billing.plan.cooldownMinutesOn429, and let the next success clear it.
+test("a bare entitlement-gate 429 is not quota pressure and does not cool the credential", () => {
+	// docs/research/plan-quotas.md §1: a headerless 429 is the entitlement gate, about the shape of
+	// the request rather than the account. Recording it as exhaustion would back a healthy
+	// subscription off itself for half an hour on evidence the provider never gave - and would then
+	// keep routing away from the credential that alone could clear it.
 	const l = ledger();
 	const t0 = Date.now();
-	// A verified window first, so what the refusal takes away and gives back is visible.
 	l.observeResponse("claude-bridge", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.2" }, cfg, t0);
 	assert.equal(assess(opus, l, cfg, t0).eligibility, "preferred");
 
 	l.observeResponse("claude-bridge", 429, {}, cfg, t0 + 1_000);
+
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0 + 1_000).refused, [], "nothing to cool down for");
+	assert.equal(l.peekProvider("claude-bridge")?.windows["rate-limited"], undefined, "and nothing recorded that a later success would have to clear");
+	assert.equal(assess(opus, l, cfg, t0 + 1_000).eligibility, "preferred", "the windows the provider did report are still healthy");
+});
+
+test("a 429 that bounds itself with retry-after does cool the credential, briefly", () => {
+	// A provider that says when to come back has said something about the account, so honour it -
+	// for exactly that long, and let an earlier success clear it.
+	const l = ledger();
+	const t0 = Date.now();
+	l.observeResponse("claude-bridge", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.2" }, cfg, t0);
+	l.observeResponse("claude-bridge", 429, { "retry-after": "600" }, cfg, t0 + 1_000);
+
 	assert.equal(assess(opus, l, cfg, t0 + 1_000).eligibility, "excluded");
 	assert.match(assess(opus, l, cfg, t0 + 1_000).reason, /rate limited \(429\)/);
-	// Brief: gone once billing.plan.cooldownMinutesOn429 has passed.
-	const later = t0 + cfg.plan.cooldownMinutesOn429 * 60_000 + 5_000;
-	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, later).refused, [], "and it lifts on its own");
+	const later = t0 + 611_000;
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, later).refused, [], "and it lifts when retry-after has passed");
 
 	l.observeResponse("claude-bridge", 200, {}, cfg, t0 + 2_000);
 	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0 + 2_000).refused, [], "a success clears it early");
@@ -784,7 +805,7 @@ test("a cleared refusal stays cleared through a save and merge cycle", () => {
 	const t0 = Date.now();
 	const l = new Ledger(ledgerPath(dir));
 	l.observeResponse("claude-bridge", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.2" }, cfg, t0);
-	l.observeResponse("claude-bridge", 429, {}, cfg, t0 + 1_000);
+	l.observeResponse("claude-bridge", 429, { "retry-after": "600" }, cfg, t0 + 1_000);
 	l.save();
 	assert.equal(assess(opus, l, cfg, t0 + 1_000).eligibility, "excluded");
 
@@ -798,12 +819,14 @@ test("a cleared refusal stays cleared through a save and merge cycle", () => {
 });
 
 test("quota seen through one provider id is quota for every id on that credential", () => {
-	// `claude-bridge` routes on `anthropic`'s credential, so a refusal seen through one is a fact
-	// about the account: routing must not escalate onto the sibling id and burn another turn.
+	// `claude-bridge` routes on `anthropic`'s credential and pi's auth evidence agrees, so a
+	// refusal seen through one is a fact about the account: routing must not escalate onto the
+	// sibling id and burn another turn.
+	const oneAccount = fakeRegistry(ALL, ["claude-bridge", "anthropic"]);
 	const l = ledger();
-	l.observeResponse("claude-bridge", 429, {}, cfg);
+	l.observeResponse("claude-bridge", 429, { "retry-after": "600" }, cfg, Date.now(), authOf(oneAccount));
 
-	const sibling = assessBilling({ model: claudeApi, cfg, registry: fakeRegistry(ALL, ["claude-bridge", "anthropic"]), ledger: l });
+	const sibling = assessBilling({ model: claudeApi, cfg, registry: oneAccount, ledger: l });
 	assert.equal(sibling.eligibility, "excluded", "anthropic/* is the same subscription that just refused");
 	assert.match(sibling.reason, /rate limited \(429\)/);
 });
@@ -844,12 +867,12 @@ test("a spent meter no configured route answers to is disclosed rather than igno
 });
 
 test("a refusal the response placed nowhere is not an exhausted subscription credits may cover", () => {
-	// `openai-codex/*` is in billing.allowExtraBilled with credits to spend, so reading the bare
-	// entitlement-gate 429 as spent subscription quota would move the turn onto paid credits and
-	// send it straight back to the provider that is refusing.
+	// `openai-codex/*` is in billing.allowExtraBilled with credits to spend, so reading a refusal
+	// as spent subscription quota would move the turn onto paid credits and send it straight back
+	// to the provider that is refusing.
 	const l = ledger();
 	l.applyEntitlement("openai-codex", { credits: { hasCredits: true, balance: "12" } });
-	l.observeResponse("openai-codex", 429, {}, cfg);
+	l.observeResponse("openai-codex", 429, { "retry-after": "600" }, cfg);
 
 	const a = assess(codex, l);
 	assert.equal(a.eligibility, "excluded");
@@ -870,4 +893,23 @@ test("a 429 whose only spent meter is one nothing can place still cools the cred
 
 	const q = l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg);
 	assert.match(q.unattributed.map((w) => w.id).join(","), /codex_other:primary/);
+});
+
+test("a subscription refusal on the bridge does not exclude a separately authenticated Anthropic route", () => {
+	// `claude-bridge` declares it routes on `anthropic`'s credential, but a declaration is not
+	// proof: here pi reports the bridge on OAuth and `anthropic` on an API key, which are two
+	// accounts. A spent subscription must not take the paid overflow down with it - that is the
+	// moment the overflow exists for.
+	const l = ledger();
+	const spent = {
+		"anthropic-ratelimit-unified-7d-utilization": "1",
+		"anthropic-ratelimit-unified-7d-status": "rejected",
+	};
+	l.observeResponse("claude-bridge", 200, spent, cfg, Date.now(), authOf(fakeRegistry(ALL, ["claude-bridge", "openai-codex", "xai"])));
+
+	assert.equal(assess(opus, l).eligibility, "excluded", "the subscription itself is spent");
+	const paid = assess(claudeApi, l);
+	assert.equal(paid.basis, "pay-per-token");
+	assert.equal(paid.eligibility, "allowed", "the API key bills a credential the subscription says nothing about");
+	assert.ok(paid.rank > assess(codex, l).rank, "still ranked behind included usage, but reachable");
 });

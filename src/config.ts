@@ -138,7 +138,10 @@ export const DEFAULT_CONFIG: RouterConfig = {
 	thinking: { light: "low", standard: "medium", heavy: "high" },
 	models: {
 		// The OAuth-backed subscription routes. `anthropic/*` and `xai/*` carry no label: whether
-		// they are a plan or an API key is pi's own auth evidence to answer, not this file's.
+		// they are a plan or an API key is pi's own auth evidence to answer, not this file's - and
+		// the same evidence decides whether `anthropic` shares `claude-bridge`'s quota
+		// (`quotaAccountOf`) or keeps its own, so an API key there is never excluded by a
+		// subscription it does not bill.
 		"claude-bridge/*": { billing: "plan" },
 		"openai-codex/*": { billing: "plan" },
 		"openrouter/*": { billing: "on-demand" },
@@ -150,7 +153,8 @@ export const DEFAULT_CONFIG: RouterConfig = {
 		// Extra credits exist on the ChatGPT plan only, and are only ever spent on verified credits.
 		allowExtraBilled: ["openai-codex/*"],
 		// The pay-per-token routes the default tiers name, and no others. Paid Anthropic and xAI are
-		// reachable here but rank last, so they are the overflow rather than the first choice.
+		// reachable here but rank last, so they are the overflow rather than the first choice:
+		// "not a ban btw - just priority. if all is used i expect payg on oai as a preference".
 		allowPayPerToken: ["openrouter/*", "vercel-ai-gateway/*", "ds4/*", "anthropic/*", "xai/*"],
 		evidenceMaxAgeMinutes: 30,
 		probe: { enabled: true, timeoutMs: 4000, minIntervalMinutes: 30 },
@@ -314,13 +318,38 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 
+/** What pi's own auth evidence says about a provider's credential. Identity only, never the secret. */
+export interface CredentialEvidence {
+	configured: boolean;
+	source?: string;
+	label?: string;
+}
+
+/** Reads that evidence for one provider id. Undefined where pi knows of no credential at all. */
+export type AuthLookup = (provider: string) => CredentialEvidence | undefined;
+
 /**
- * The account a provider id routes on. Several pi provider ids can front one subscription - the
- * config says so with `entitlement.<id>.authProvider` - and quota is a fact about the account, so
- * evidence, probes and scopes are all keyed by this rather than by the routed provider id.
+ * The credential a provider's entitlement is probed with, as the config declares it with
+ * `entitlement.<id>.authProvider`. Several pi provider ids can front one subscription, and one
+ * account is worth exactly one read-only probe.
  */
 export function credentialOf(cfg: RouterConfig, provider: string): string {
 	return cfg.entitlement[provider]?.authProvider ?? provider;
+}
+
+/**
+ * The account a provider's quota is kept under. The config declares which ids share a credential,
+ * but only pi's own auth evidence can prove it, and a declaration is not proof: unless both ids
+ * present the same credential, the provider keeps its own quota, so a subscription refusal never
+ * excludes a route billed on a different credential.
+ */
+export function quotaAccountOf(cfg: RouterConfig, provider: string, auth?: AuthLookup): string {
+	const declared = credentialOf(cfg, provider);
+	if (declared === provider || !auth) return provider;
+	const mine = auth(provider);
+	const theirs = auth(declared);
+	if (!mine?.configured || !theirs?.configured) return provider;
+	return mine.source === theirs.source && mine.label === theirs.label ? declared : provider;
 }
 
 /** Every model key the router can actually route to, from the tiers and the fan-out list. */
