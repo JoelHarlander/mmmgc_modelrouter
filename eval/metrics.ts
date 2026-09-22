@@ -78,6 +78,11 @@ export interface RunMetrics {
 	 * construction, so including it would dilute the number the router can actually move.
 	 */
 	coldPremiumShare: number;
+	/** Turns where pi would have compacted before the agent ran. */
+	compactions: number;
+	/** Of those, the ones the fleet's roomiest model would not have needed: a routing cost. */
+	avoidableCompactions: number;
+	compactionCostUsd: number;
 
 	modelShare: Record<string, number>;
 	avgStateChars: number;
@@ -143,8 +148,12 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		} else over += 1;
 	}
 
-	const ledgerCostUsd = sum(turns, (t) => t.ledgerCostUsd) + sum(turns, (t) => t.candidate?.fanoutLedgerCostUsd ?? 0);
-	const listEquivalentUsd = sum(turns, (t) => t.listEquivalentUsd) + sum(turns, (t) => t.candidate?.fanoutListEquivalentUsd ?? 0);
+	const ledgerCostUsd =
+		sum(turns, (t) => t.ledgerCostUsd) + sum(turns, (t) => t.candidate?.fanoutLedgerCostUsd ?? 0) + sum(turns, (t) => t.compaction?.ledgerCostUsd ?? 0);
+	const listEquivalentUsd =
+		sum(turns, (t) => t.listEquivalentUsd) +
+		sum(turns, (t) => t.candidate?.fanoutListEquivalentUsd ?? 0) +
+		sum(turns, (t) => t.compaction?.listEquivalentUsd ?? 0);
 	const coldByCause: Record<string, number> = {};
 	for (const t of turns) if (t.coldCause) coldByCause[t.coldCause] = (coldByCause[t.coldCause] ?? 0) + 1;
 
@@ -188,6 +197,9 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		coldByCause,
 		coldPremiumUsd: round(coldPremium(turns)),
 		coldPremiumShare: ratio(coldPremium(turns), sum(turns, (t) => t.listEquivalentUsd)),
+		compactions: turns.filter((t) => t.compaction).length,
+		avoidableCompactions: turns.filter((t) => t.compaction?.avoidable).length,
+		compactionCostUsd: round(sum(turns, (t) => t.compaction?.listEquivalentUsd ?? 0)),
 
 		modelShare,
 		avgStateChars: Math.round(stateChars.reduce((a, b) => a + b, 0) / Math.max(1, stateChars.length)),

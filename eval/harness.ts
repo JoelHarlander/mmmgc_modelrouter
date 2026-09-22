@@ -24,7 +24,15 @@ import { applyStakesOverride, classify } from "./classifier.ts";
 import { CANDIDATE_POLICIES, type CandidatePolicy, type Judge, type JudgeCandidate, NoisyJudge, syntheticResponse } from "./candidates.ts";
 import type { LoadedFleet } from "./fleet.ts";
 import { FakeSession } from "./session.ts";
-import { DEFAULT_TRAFFIC, effectiveSkill, simulateFanoutUsage, simulateTurnUsage, solves, type TrafficProfile } from "./simulate.ts";
+import {
+	DEFAULT_TRAFFIC,
+	effectiveSkill,
+	planCompaction,
+	simulateFanoutUsage,
+	simulateTurnUsage,
+	solves,
+	type TrafficProfile,
+} from "./simulate.ts";
 import { cheapestCapableTier } from "./validate.ts";
 import type { CandidateOutcome, CandidateTurnRecord, ClassifierMode, EvalTask, FleetModel, TaskPack, TurnRecord } from "./types.ts";
 
@@ -212,6 +220,23 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		// not be charged a cache flush for one.
 		const thinking = isPinned ? lastThinking : chosen?.reasoning ? cfg.thinking[decision.tier] : undefined;
 
+		// pi compacts before the agent runs when the context no longer fits the *chosen*
+		// model's window, so this can only be decided after the router has picked.
+		const compaction = spec ? planCompaction(spec, contextTokens) : undefined;
+		if (compaction) {
+			const { provider, id } = splitModel(chosenKey);
+			ledger.record(provider, id, {
+				input: compaction.tokensBefore,
+				output: 0,
+				cacheRead: 0,
+				cacheWrite: 0,
+				totalTokens: compaction.tokensBefore,
+				cost: { input: compaction.ledgerCostUsd, output: 0, cacheRead: 0, cacheWrite: 0, total: compaction.ledgerCostUsd },
+			});
+			session.contextTokens = compaction.tokensAfter;
+		}
+		const effectiveContextTokens = compaction ? compaction.tokensAfter : contextTokens;
+
 		const coldCause = !previousKey
 			? ("first-turn" as const)
 			: previousKey !== chosenKey
@@ -219,16 +244,19 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 				: thinking !== lastThinking
 					? ("thinking-change" as const)
 					: undefined;
+		// A compaction rewrites the middle of the prompt, so nothing after it can be read
+		// from cache. It is a cold start on its own, whatever the model did.
+		const cause = compaction ? ("compaction" as const) : coldCause;
 
 		const traffic = options.traffic ?? DEFAULT_TRAFFIC;
 		const calls = task.callsPerTurn ?? traffic.callsPerTurn;
 		const usageArgs = {
-			contextTokens,
+			contextTokens: effectiveContextTokens,
 			calls,
 			traffic,
 			outputTokensPerCall: turn.expectedOutputTokens ? turn.expectedOutputTokens / calls : undefined,
 		};
-		const usage = spec ? simulateTurnUsage({ model: spec, cold: coldCause !== undefined, ...usageArgs }) : undefined;
+		const usage = spec ? simulateTurnUsage({ model: spec, cold: cause !== undefined, ...usageArgs }) : undefined;
 		// The same turn priced warm, so the cold premium can be reported exactly.
 		const warmUsage = spec ? simulateTurnUsage({ model: spec, cold: false, ...usageArgs }) : undefined;
 		if (spec && usage) {
@@ -269,8 +297,15 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			ineligibleReason: eligibility.reason,
 			contextTokens,
 			thinkingLevel: thinking,
-			cold: coldCause !== undefined,
-			coldCause,
+			compaction: compaction
+				? {
+						...compaction,
+						// Would a model with the fleet's largest window have avoided it?
+						avoidable: !largestWindowWouldCompact(loaded, contextTokens),
+					}
+				: undefined,
+			cold: cause !== undefined,
+			coldCause: cause,
 			coldWriteTokens: usage?.coldWriteTokens ?? 0,
 			ledgerCostUsd: usage?.ledgerCostUsd ?? 0,
 			listEquivalentUsd: usage?.listEquivalentUsd ?? 0,
@@ -425,6 +460,16 @@ function checkEligibility(
 function findModel(loaded: LoadedFleet, key: string): Model<Api> | undefined {
 	const { provider, id } = splitModel(key);
 	return loaded.registry.find(provider, id);
+}
+
+/** Would the fleet's roomiest model also have compacted here? If not, the compaction is a routing cost. */
+function largestWindowWouldCompact(loaded: LoadedFleet, contextTokens: number): boolean {
+	let best: FleetModel | undefined;
+	for (const spec of loaded.byKey.values()) {
+		if (loaded.unauthed.has(spec.key)) continue;
+		if (!best || (spec.contextWindow ?? 0) > (best.contextWindow ?? 0)) best = spec;
+	}
+	return best !== undefined && planCompaction(best, contextTokens) !== undefined;
 }
 
 function round2(n: number): number {

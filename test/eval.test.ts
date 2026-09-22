@@ -25,7 +25,15 @@ import { loadFleet } from "../eval/fleet.ts";
 import { runEval } from "../eval/harness.ts";
 import { computeMetrics, PLAN_POINT_USD } from "../eval/metrics.ts";
 import { compareMetrics, GATED_METRICS, gateRegressions, latestPath, readRun, type RunRecord, writeRun } from "../eval/results.ts";
-import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
+import {
+	CACHE_GROWTH_TOKENS_PER_CALL,
+	CALLS_PER_TURN,
+	COMPACTION_SUMMARY_TOKENS,
+	planCompaction,
+	simulateFanoutUsage,
+	simulateTurnUsage,
+} from "../eval/simulate.ts";
+import { DEFAULT_COMPACTION_SETTINGS } from "@earendil-works/pi-coding-agent";
 import { buildFleet, rebill } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
 import {
@@ -44,7 +52,7 @@ import {
 	type TrafficCell,
 } from "../eval/sweep.ts";
 import { loadProbePack, runProbe } from "../eval/probe.ts";
-import type { Fleet, TaskPack } from "../eval/types.ts";
+import type { Fleet, FleetModel, TaskPack } from "../eval/types.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FLEET = join(ROOT, "eval", "tasks", "fleet.json");
@@ -1089,4 +1097,65 @@ test("a /model pin that outlives its question is measurable, and the shipped len
 	assert.ok(shipped.pinnedWrongTier >= 5, `only ${shipped.pinnedWrongTier} pinned turns landed wrong; the pack no longer exercises this`);
 	assert.ok(shipped.sessionSuccessRate < none.sessionSuccessRate - 0.05, "it costs real quality");
 	assert.ok(shipped.listEquivalentUsd < none.listEquivalentUsd, "...and buys real spend back, by not switching");
+});
+
+test("compaction uses pi's own trigger, not the harness's idea of one", () => {
+	const model: FleetModel = {
+		key: "x/y",
+		name: "y",
+		tier: "light",
+		billing: "on-demand",
+		oauth: false,
+		cost: { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 1 },
+		skill: 50,
+		contextWindow: 200_000,
+	};
+	const trigger = 200_000 - DEFAULT_COMPACTION_SETTINGS.reserveTokens;
+	assert.equal(planCompaction(model, trigger), undefined, "at the threshold pi does not compact");
+	const event = planCompaction(model, trigger + 1);
+	assert.ok(event, "one token over, it does");
+	assert.equal(event.tokensBefore, trigger + 1);
+	assert.equal(event.tokensAfter, DEFAULT_COMPACTION_SETTINGS.keepRecentTokens + COMPACTION_SUMMARY_TOKENS);
+	assert.ok(event.listEquivalentUsd > 0);
+
+	// The same conversation, a roomier model, no compaction: this is the routing consequence.
+	assert.equal(planCompaction({ ...model, contextWindow: 400_000 }, trigger + 1), undefined);
+	// A plan route still compacts; it just does not bill the ledger for it.
+	assert.equal(planCompaction({ ...model, billing: "plan" }, trigger + 1)!.ledgerCostUsd, 0);
+});
+
+test("a compaction is a cache flush, shrinks the context, and is charged", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const compacted = outcome.turns.filter((t) => t.compaction);
+	assert.ok(compacted.length > 0, "the long pack must reach a context that compacts");
+
+	for (const turn of compacted) {
+		assert.equal(turn.cold, true, "a compaction rewrites the prefix, so nothing after it can be read from cache");
+		assert.equal(turn.coldCause, "compaction");
+		assert.equal(turn.contextTokens, turn.compaction!.tokensBefore);
+		assert.ok(turn.compaction!.tokensAfter < turn.compaction!.tokensBefore / 5, "compaction must actually shrink the context");
+		// Only a small-window model gets here; the fleet has 400k models available.
+		assert.equal(turn.compaction!.avoidable, true);
+	}
+
+	const m = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.equal(m.compactions, compacted.length);
+	assert.equal(m.avoidableCompactions, compacted.length);
+	assert.ok(m.compactionCostUsd > 0);
+	assert.ok(m.listEquivalentUsd > m.compactionCostUsd, "compaction cost is part of the total, not the whole of it");
+});
+
+test("a /model pin to a small-context model can cost the session its memory", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const compacted = outcome.turns.filter((t) => t.compaction);
+	const pinInduced = compacted.filter((t) => t.pinned);
+	assert.ok(
+		pinInduced.length >= 2,
+		`only ${pinInduced.length} compactions were pin-induced; the pack no longer exercises the case where an operator's ` +
+			"pin to a cheap model forces the conversation to be summarised away",
+	);
+	for (const turn of pinInduced) {
+		assert.equal(turn.compaction!.avoidable, true, "the router would not have compacted here; the pin did");
+		assert.ok(turn.contextTokens > 150_000, "the conversation that gets discarded is a large one");
+	}
 });

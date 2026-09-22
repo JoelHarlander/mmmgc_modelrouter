@@ -122,7 +122,9 @@ export interface TurnRecord {
 	thinkingLevel?: string;
 	/** Cold = the prompt cache was discarded before this turn. */
 	cold: boolean;
-	coldCause?: "first-turn" | "model-switch" | "thinking-change";
+	coldCause?: "first-turn" | "model-switch" | "thinking-change" | "compaction";
+	/** Set when pi would have compacted before this turn, given the model the router chose. */
+	compaction?: { tokensBefore: number; tokensAfter: number; listEquivalentUsd: number; ledgerCostUsd: number; avoidable: boolean };
 	coldWriteTokens: number;
 	ledgerCostUsd: number;
 	listEquivalentUsd: number;

@@ -13,6 +13,7 @@
  * second half is the behaviour Anthropic documents and the study measured.
  */
 import type { Usage } from "@earendil-works/pi-ai";
+import { DEFAULT_COMPACTION_SETTINGS, shouldCompact } from "@earendil-works/pi-coding-agent";
 import type { FleetModel } from "./types.ts";
 
 export const CALLS_PER_TURN = 5;
@@ -144,6 +145,44 @@ export function simulateFanoutUsage(model: FleetModel, contextTokens: number, ou
 		cost,
 	};
 	return { usage, ledgerCostUsd: cost.total, listEquivalentUsd, coldWriteTokens: contextTokens };
+}
+
+/**
+ * Tokens the compaction summary itself occupies, and the output it costs to produce.
+ * pi's own thresholds are used unmodified: `shouldCompact` and
+ * `DEFAULT_COMPACTION_SETTINGS` are imported from pi-coding-agent, so the trigger point
+ * is the product's, not the harness's.
+ */
+export const COMPACTION_SUMMARY_TOKENS = 2000;
+
+export interface CompactionEvent {
+	tokensBefore: number;
+	tokensAfter: number;
+	/** The summarisation call: it re-reads the whole context uncached and writes a summary. */
+	listEquivalentUsd: number;
+	ledgerCostUsd: number;
+}
+
+/**
+ * Would pi compact before this turn, given the model the router chose?
+ *
+ * This is a routing consequence nobody had measured: the trigger is
+ * `contextTokens > contextWindow - reserveTokens`, so **the same conversation compacts
+ * or does not depending on which model the router picked**. Routing a 200k conversation
+ * to a 200k-window model forces a compaction that a 400k-window model would not need,
+ * and a compaction rewrites the prefix - so it is also a guaranteed cache flush.
+ */
+export function planCompaction(model: FleetModel, contextTokens: number): CompactionEvent | undefined {
+	const window = model.contextWindow ?? 200_000;
+	if (!shouldCompact(contextTokens, window, DEFAULT_COMPACTION_SETTINGS)) return undefined;
+	const listEquivalentUsd =
+		(contextTokens * model.cost.input) / 1_000_000 + (COMPACTION_SUMMARY_TOKENS * model.cost.output) / 1_000_000;
+	return {
+		tokensBefore: contextTokens,
+		tokensAfter: DEFAULT_COMPACTION_SETTINGS.keepRecentTokens + COMPACTION_SUMMARY_TOKENS,
+		listEquivalentUsd,
+		ledgerCostUsd: model.billing === "on-demand" ? listEquivalentUsd : 0,
+	};
 }
 
 /** Deterministic [0,1) from a string, so a run with the same seed is byte-identical. */

@@ -610,6 +610,9 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 	row("cold write tokens", "coldWriteTokens", m.coldWriteTokens.toLocaleString("en-US"));
 	row("cold premium", "coldPremiumUsd", usd(m.coldPremiumUsd));
 	row("  = share of all spend", "coldPremiumShare", pct(m.coldPremiumShare));
+	row("compactions", "compactions", `${m.compactions}`);
+	row("  avoidable by routing", "avoidableCompactions", String(m.avoidableCompactions));
+	row("  compaction cost", "compactionCostUsd", usd(m.compactionCostUsd));
 	out.push(`  ${"cold causes".padEnd(26)}${Object.entries(m.coldByCause).map(([k, v]) => `${k}=${v}`).join(" ").padStart(12)}`);
 	out.push("");
 

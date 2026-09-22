@@ -14,7 +14,7 @@ Jump to the round that established each claim, and what it rests on.
 | The default tiers are **not a cost ladder** — escalating a tier makes a turn *cheaper* | 2, **11** | **published list prices, no simulation** |
 | The shipped **`standard` tier is dominated by `heavy`**: cheaper *and* more capable, so no request justifies it | **11** | published prices + AA Intelligence Index |
 | Cheapest-in-tier means the strongest model is never chosen, in any profile | 2 | — |
-| At realistic context, **switching costs ~half of a long session's spend** ($34.26, 34 switches in 60 turns) | 4 | ±20pt fleet jitter (r7), traffic constants (r5) |
+| At realistic context, **switching costs ~half of a long session's spend** (50.2% of it; $24.94 after r16 corrected r4's $34.26) | 4, **16** | ±20pt fleet jitter (r7), traffic constants (r5) |
 | A profile that never changes model still pays 14 cold starts, all `thinking-change` | 4 | — |
 | Never switching *also* wins on quality | 4 | **not robust — REVERSED in r15** once the pack contains operator pins (5/5 → 0/5) |
 | Fan-out costs 2.9× more per extra solve at realistic context ($4.94 → $14.28) | 4 | traffic constants (r5) |
@@ -32,6 +32,8 @@ Jump to the round that established each claim, and what it rests on.
 | **The router's quality depends on your billing, not your work**: same config, same tasks, 86.7% → 68.3% when models stop being free | **14** | isolates one variable |
 | On a plan, "never switch" is free and best; **off a plan it is the most expensive option** (2× the router's spend) | **14** | both packs |
 | The shipped `manualPinTurns: 3` leaves **7 of 12 pinned turns in the wrong tier**, costing 10pp of session success | **15** | long pack |
+| **A `/model` pin to a small-context model forces pi to compact**, discarding the conversation to serve a one-line request | **16** | pi's own `shouldCompact` |
+| Every compaction in the pack was **avoidable by routing**: a roomier model was authed and available | **16** | fleet windows |
 
 **Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
 judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
@@ -975,3 +977,68 @@ is a test that will be quietly loosened later.
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --record` now removes the
 asterisk on every scripted number, and `--probe --live-judge` still decides the
 candidate question. Both are under a cent and neither is closeable offline.
+
+---
+
+## Round 16 — 2026-09-22 — the thing the cache-cost study said it had not modelled
+
+**Measured.** Compaction. The cache-cost study listed it under *uncertainties*: "pi
+compacts long contexts; a compaction rewrites the middle of the prompt and invalidates
+everything after it regardless of switching… the router does not use
+`cache_anchor_items`." Round 4 then built a pack whose context climbs to **256k and
+never compacts** — which is not what pi does, and it is precisely the regime round 4
+declared the important one.
+
+**Changed.** The harness now models compaction using **pi's own trigger**:
+`shouldCompact` and `DEFAULT_COMPACTION_SETTINGS` are imported from
+`@earendil-works/pi-coding-agent`, so the threshold is the product's
+(`contextTokens > contextWindow − 16384`) and the post-compaction size is the product's
+(`keepRecentTokens` 20000, plus a 2000-token summary). A compaction charges the
+summarisation call, drops the context, and forces a cold turn — because rewriting the
+middle of the prompt is a cache flush whatever the model did.
+
+**The key property is that it depends on which model the router chose.** The trigger is
+a function of the *model's context window*, so the same conversation compacts or does
+not depending on the routing decision. `avoidableCompactions` counts the ones the
+fleet's roomiest authed model would not have needed.
+
+**What the numbers did.**
+
+First, a **correction to round 4**. Modelling compaction *lowers* the long pack's costs,
+because real sessions do not carry 256k of context indefinitely:
+
+| | round 4 (no compaction) | round 16 |
+| --- | ---: | ---: |
+| `long / scripted` list $ | $69.27 | **$49.77** |
+| cold premium | $34.26 | **$24.94** |
+| share of spend | 49% | **50.2%** |
+
+The absolute figure was inflated by about 40%; **the share was not**, which is the
+number round 5 said to quote anyway. Switching still costs roughly half of what a long
+session spends.
+
+Second, the finding. **Every compaction in the pack was avoidable by routing**, and
+three of the four were caused by the *operator*:
+
+| task | turn | model | context | pinned? |
+| --- | ---: | --- | ---: | :---: |
+| `django__django-16379-session` | 7 | `glm-5.3-flash` (200k) | 184,000 | **yes** |
+| `pytest-dev__pytest-11143-session` | 7 | `glm-5.3-flash` (200k) | 210,000 | **yes** |
+| `psf__requests-1142-session` | 6 | `glm-5.3-flash` (200k) | 200,000 | **yes** |
+| `sphinx-doc__sphinx-8721-session` | 10 | `glm-5.3-flash` (200k) | 189,000 | no |
+
+A `/model` pin to a cheap model, set for "show me the diff", puts a 200k conversation
+onto a 200k-window model — and pi compacts it down to **22k**. The operator asked for a
+cheap answer to a trivial question and paid for it with **the session's memory**. Round
+15 measured what a pin costs in tier accuracy; this is the part that does not show up in
+a tier at all.
+
+**A limitation, stated rather than hidden.** The harness charges a compaction's *money*
+and models its *cache* effect. It does **not** model its quality cost — losing detail
+from the conversation — because the competence oracle scores a turn on the model's skill
+and the turn's difficulty, with no notion of what the model can still remember. So the
+numbers above are a **lower bound** on what an avoidable compaction costs. Making that
+real would need the oracle to depend on context, which is a larger change than this
+round.
+
+**Next.** Unchanged, twice over: `--classifier live --record` and `--probe --live-judge`.

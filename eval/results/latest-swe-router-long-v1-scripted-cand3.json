@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T13-50-03-swe-router-long-v1-scripted-cand3-1e487b5",
-	"at": "2026-09-22T13:50:03.992Z",
+	"runId": "2026-09-22T13-54-16-swe-router-long-v1-scripted-cand3-c9be398",
+	"at": "2026-09-22T13:54:16.978Z",
 	"profile": "swe-router-long-v1-scripted-cand3",
 	"pack": "swe-router-long-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,7 +11,7 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "1e487b5",
+	"git": "c9be398",
 	"metrics": {
 		"tasks": 6,
 		"turns": 60,
@@ -31,23 +31,27 @@
 		"ineligibleChoices": 0,
 		"heuristicFallbacks": 0,
 		"tierEscalations": 0,
-		"ledgerCostUsd": 3.7745,
-		"listEquivalentUsd": 214.7469,
-		"planHiddenUsd": 210.9724,
-		"planPointsUsed": 5.332,
+		"ledgerCostUsd": 2.7511,
+		"listEquivalentUsd": 172.982,
+		"planHiddenUsd": 170.2309,
+		"planPointsUsed": 4.302,
 		"classifierCostUsd": 0.0009072,
 		"listUsdPerResolvedTask": "Infinity",
 		"switches": 30,
 		"switchesPerTurn": 0.5,
-		"coldTurns": 38,
-		"coldWriteTokens": 6055000,
+		"coldTurns": 39,
+		"coldWriteTokens": 4352000,
 		"coldByCause": {
 			"first-turn": 6,
-			"model-switch": 30,
+			"model-switch": 27,
+			"compaction": 4,
 			"thinking-change": 2
 		},
-		"coldPremiumUsd": 29.9014,
-		"coldPremiumShare": 0.5209,
+		"coldPremiumUsd": 24.9397,
+		"coldPremiumShare": 0.5023,
+		"compactions": 4,
+		"avoidableCompactions": 4,
+		"compactionCostUsd": 0.1215,
 		"modelShare": {
 			"faux-or/glm-5.3-flash": 26,
 			"faux-plan-anthropic/claude-opus-5": 12,
@@ -68,10 +72,10 @@
 			"judgeHeadroomCaptured": 0.8947,
 			"judgeRecall": 0.9655,
 			"judgeRegressions": 1,
-			"fanoutLedgerCostUsd": 1.7972,
-			"fanoutListEquivalentUsd": 157.3472,
+			"fanoutLedgerCostUsd": 1.4593,
+			"fanoutListEquivalentUsd": 123.2143,
 			"judgeCostUsd": 0,
-			"listUsdPerExtraSolve": 9.2557,
+			"listUsdPerExtraSolve": 7.2479,
 			"avgCandidates": 3
 		}
 	},
@@ -583,11 +587,19 @@
 			"eligible": true,
 			"contextTokens": 184000,
 			"thinkingLevel": "high",
-			"cold": false,
-			"coldWriteTokens": 0,
-			"ledgerCostUsd": 0.0481875,
-			"listEquivalentUsd": 0.0481875,
-			"warmListEquivalentUsd": 0.0481875,
+			"compaction": {
+				"tokensBefore": 184000,
+				"tokensAfter": 22000,
+				"listEquivalentUsd": 0.0286,
+				"ledgerCostUsd": 0.0286,
+				"avoidable": true
+			},
+			"cold": true,
+			"coldCause": "compaction",
+			"coldWriteTokens": 22000,
+			"ledgerCostUsd": 0.00979,
+			"listEquivalentUsd": 0.00979,
+			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
@@ -657,13 +669,13 @@
 			"pinned": true,
 			"reason": "pinned faux-or/glm-5.3-flash",
 			"eligible": true,
-			"contextTokens": 198000,
+			"contextTokens": 36000,
 			"thinkingLevel": "high",
 			"cold": false,
 			"coldWriteTokens": 0,
-			"ledgerCostUsd": 0.051687500000000004,
-			"listEquivalentUsd": 0.051687500000000004,
-			"warmListEquivalentUsd": 0.051687500000000004,
+			"ledgerCostUsd": 0.0111875,
+			"listEquivalentUsd": 0.0111875,
+			"warmListEquivalentUsd": 0.0111875,
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
@@ -678,8 +690,8 @@
 						"judgeScore": 0.000020516127195022738,
 						"judgeProbability": 0.000020516127195022738,
 						"cold": true,
-						"ledgerCostUsd": 0.03045,
-						"listEquivalentUsd": 0.03045
+						"ledgerCostUsd": 0.00615,
+						"listEquivalentUsd": 0.00615
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -690,7 +702,7 @@
 						"judgeProbability": 0.9782611938009429,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.0275
+						"listEquivalentUsd": 0.2175
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -701,7 +713,7 @@
 						"judgeProbability": 0.021718290071862018,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.055
+						"listEquivalentUsd": 0.435
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -714,8 +726,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03045,
-				"fanoutListEquivalentUsd": 3.1129500000000005
+				"fanoutLedgerCostUsd": 0.00615,
+				"fanoutListEquivalentUsd": 0.65865
 			}
 		},
 		{
@@ -737,16 +749,16 @@
 			"previousModel": "faux-or/glm-5.3-flash",
 			"switched": false,
 			"pinned": false,
-			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0114)",
+			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0033)",
 			"eligible": true,
-			"contextTokens": 212000,
+			"contextTokens": 50000,
 			"thinkingLevel": "low",
 			"cold": true,
 			"coldCause": "thinking-change",
-			"coldWriteTokens": 212000,
-			"ledgerCostUsd": 0.07629000000000001,
-			"listEquivalentUsd": 0.07629000000000001,
-			"warmListEquivalentUsd": 0.0551875,
+			"coldWriteTokens": 50000,
+			"ledgerCostUsd": 0.019590000000000003,
+			"listEquivalentUsd": 0.019590000000000003,
+			"warmListEquivalentUsd": 0.0146875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 30,
@@ -761,8 +773,8 @@
 						"judgeScore": 0.00002622833089313363,
 						"judgeProbability": 0.00002622833089313363,
 						"cold": true,
-						"ledgerCostUsd": 0.03255,
-						"listEquivalentUsd": 0.03255
+						"ledgerCostUsd": 0.00825,
+						"listEquivalentUsd": 0.00825
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -773,7 +785,7 @@
 						"judgeProbability": 0.9737320217553146,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.0975000000000001
+						"listEquivalentUsd": 0.2875
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -784,7 +796,7 @@
 						"judgeProbability": 0.026241749913792238,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.1950000000000003
+						"listEquivalentUsd": 0.575
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -797,8 +809,8 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03255,
-				"fanoutListEquivalentUsd": 3.3250500000000005
+				"fanoutLedgerCostUsd": 0.00825,
+				"fanoutListEquivalentUsd": 0.8707499999999999
 			}
 		},
 		{
@@ -822,14 +834,14 @@
 			"pinned": false,
 			"reason": "standard tier -> faux-plan-codex/gpt-6-astra (plan, ~$0.0000)",
 			"eligible": true,
-			"contextTokens": 226000,
+			"contextTokens": 64000,
 			"thinkingLevel": "medium",
 			"cold": true,
 			"coldCause": "model-switch",
-			"coldWriteTokens": 226000,
+			"coldWriteTokens": 64000,
 			"ledgerCostUsd": 0,
-			"listEquivalentUsd": 3.9055,
-			"warmListEquivalentUsd": 1.314625,
+			"listEquivalentUsd": 1.2325,
+			"warmListEquivalentUsd": 0.5046250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 78,
@@ -845,7 +857,7 @@
 						"judgeProbability": 0.20469787621905505,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.335
+						"listEquivalentUsd": 0.715
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -856,7 +868,7 @@
 						"judgeProbability": 0.7952229510165486,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.1675
+						"listEquivalentUsd": 0.3575
 					},
 					{
 						"key": "faux-or/glm-5.3-flash",
@@ -866,8 +878,8 @@
 						"judgeScore": 0.00007917276439645846,
 						"judgeProbability": 0.00007917276439645846,
 						"cold": true,
-						"ledgerCostUsd": 0.03465,
-						"listEquivalentUsd": 0.03465
+						"ledgerCostUsd": 0.01035,
+						"listEquivalentUsd": 0.01035
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -880,8 +892,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03465,
-				"fanoutListEquivalentUsd": 3.53715
+				"fanoutLedgerCostUsd": 0.01035,
+				"fanoutListEquivalentUsd": 1.08285
 			}
 		},
 		{
@@ -905,14 +917,14 @@
 			"pinned": false,
 			"reason": "heavy tier -> faux-plan-anthropic/claude-opus-5 (plan, ~$0.0000)",
 			"eligible": true,
-			"contextTokens": 240000,
+			"contextTokens": 78000,
 			"thinkingLevel": "high",
 			"cold": true,
 			"coldCause": "model-switch",
-			"coldWriteTokens": 240000,
+			"coldWriteTokens": 78000,
 			"ledgerCostUsd": 0,
-			"listEquivalentUsd": 2.06825,
-			"warmListEquivalentUsd": 0.6923124999999999,
+			"listEquivalentUsd": 0.73175,
+			"warmListEquivalentUsd": 0.2873125,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 86,
@@ -928,7 +940,7 @@
 						"judgeProbability": 0.9190393631188327,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.2375
+						"listEquivalentUsd": 0.4275
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -939,7 +951,7 @@
 						"judgeProbability": 0.08078161060992047,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.475
+						"listEquivalentUsd": 0.855
 					},
 					{
 						"key": "faux-or/glm-5.3-flash",
@@ -949,8 +961,8 @@
 						"judgeScore": 0.0001790262712466986,
 						"judgeProbability": 0.0001790262712466986,
 						"cold": true,
-						"ledgerCostUsd": 0.03675,
-						"listEquivalentUsd": 0.03675
+						"ledgerCostUsd": 0.012450000000000001,
+						"listEquivalentUsd": 0.012450000000000001
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -963,8 +975,8 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03675,
-				"fanoutListEquivalentUsd": 3.7492500000000004
+				"fanoutLedgerCostUsd": 0.012450000000000001,
+				"fanoutListEquivalentUsd": 1.29495
 			}
 		},
 		{
@@ -986,16 +998,16 @@
 			"previousModel": "faux-plan-anthropic/claude-opus-5",
 			"switched": true,
 			"pinned": false,
-			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0389)",
+			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0146)",
 			"eligible": true,
-			"contextTokens": 254000,
+			"contextTokens": 92000,
 			"thinkingLevel": "low",
 			"cold": true,
 			"coldCause": "model-switch",
-			"coldWriteTokens": 254000,
-			"ledgerCostUsd": 0.09099,
-			"listEquivalentUsd": 0.09099,
-			"warmListEquivalentUsd": 0.06568750000000001,
+			"coldWriteTokens": 92000,
+			"ledgerCostUsd": 0.03429,
+			"listEquivalentUsd": 0.03429,
+			"warmListEquivalentUsd": 0.025187499999999998,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 30,
@@ -1010,8 +1022,8 @@
 						"judgeScore": 0.000029622007755639045,
 						"judgeProbability": 0.000029622007755639045,
 						"cold": true,
-						"ledgerCostUsd": 0.03885,
-						"listEquivalentUsd": 0.03885
+						"ledgerCostUsd": 0.01455,
+						"listEquivalentUsd": 0.01455
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -1022,7 +1034,7 @@
 						"judgeProbability": 0.5922089778134221,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.3075
+						"listEquivalentUsd": 0.4975
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -1033,7 +1045,7 @@
 						"judgeProbability": 0.4077614001788223,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.615
+						"listEquivalentUsd": 0.995
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -1046,8 +1058,8 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03885,
-				"fanoutListEquivalentUsd": 3.9613500000000004
+				"fanoutLedgerCostUsd": 0.01455,
+				"fanoutListEquivalentUsd": 1.50705
 			}
 		},
 		{
@@ -1562,12 +1574,19 @@
 			"eligible": true,
 			"contextTokens": 210000,
 			"thinkingLevel": "high",
+			"compaction": {
+				"tokensBefore": 210000,
+				"tokensAfter": 22000,
+				"listEquivalentUsd": 0.0325,
+				"ledgerCostUsd": 0.0325,
+				"avoidable": true
+			},
 			"cold": true,
-			"coldCause": "model-switch",
-			"coldWriteTokens": 210000,
-			"ledgerCostUsd": 0.0976925,
-			"listEquivalentUsd": 0.0976925,
-			"warmListEquivalentUsd": 0.07679,
+			"coldCause": "compaction",
+			"coldWriteTokens": 22000,
+			"ledgerCostUsd": 0.0130925,
+			"listEquivalentUsd": 0.0130925,
+			"warmListEquivalentUsd": 0.01099,
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
@@ -1637,13 +1656,13 @@
 			"pinned": true,
 			"reason": "pinned faux-or/glm-5.3-flash",
 			"eligible": true,
-			"contextTokens": 225000,
+			"contextTokens": 37000,
 			"thinkingLevel": "high",
 			"cold": false,
 			"coldWriteTokens": 0,
-			"ledgerCostUsd": 0.08204,
-			"listEquivalentUsd": 0.08204,
-			"warmListEquivalentUsd": 0.08204,
+			"ledgerCostUsd": 0.01624,
+			"listEquivalentUsd": 0.01624,
+			"warmListEquivalentUsd": 0.01624,
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
@@ -1658,8 +1677,8 @@
 						"judgeScore": 0.00008930514900285602,
 						"judgeProbability": 0.00008930514900285602,
 						"cold": true,
-						"ledgerCostUsd": 0.0345,
-						"listEquivalentUsd": 0.0345
+						"ledgerCostUsd": 0.0063,
+						"listEquivalentUsd": 0.0063
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -1670,7 +1689,7 @@
 						"judgeProbability": 0.9774135538847469,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.1625
+						"listEquivalentUsd": 0.2225
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -1681,7 +1700,7 @@
 						"judgeProbability": 0.02249714096625038,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.325
+						"listEquivalentUsd": 0.445
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -1694,8 +1713,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.0345,
-				"fanoutListEquivalentUsd": 3.5220000000000002
+				"fanoutLedgerCostUsd": 0.0063,
+				"fanoutListEquivalentUsd": 0.6738
 			}
 		},
 		{
@@ -1713,13 +1732,13 @@
 			"pinned": true,
 			"reason": "pinned faux-or/glm-5.3-flash",
 			"eligible": true,
-			"contextTokens": 240000,
+			"contextTokens": 52000,
 			"thinkingLevel": "high",
 			"cold": false,
 			"coldWriteTokens": 0,
-			"ledgerCostUsd": 0.08728999999999999,
-			"listEquivalentUsd": 0.08728999999999999,
-			"warmListEquivalentUsd": 0.08728999999999999,
+			"ledgerCostUsd": 0.02149,
+			"listEquivalentUsd": 0.02149,
+			"warmListEquivalentUsd": 0.02149,
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
@@ -1734,8 +1753,8 @@
 						"judgeScore": 0.00003841366393012657,
 						"judgeProbability": 0.00003841366393012657,
 						"cold": true,
-						"ledgerCostUsd": 0.03675,
-						"listEquivalentUsd": 0.03675
+						"ledgerCostUsd": 0.00855,
+						"listEquivalentUsd": 0.00855
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -1746,7 +1765,7 @@
 						"judgeProbability": 0.9796782327541704,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.2375
+						"listEquivalentUsd": 0.2975
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -1757,7 +1776,7 @@
 						"judgeProbability": 0.020283353581899467,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.475
+						"listEquivalentUsd": 0.595
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -1770,8 +1789,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03675,
-				"fanoutListEquivalentUsd": 3.74925
+				"fanoutLedgerCostUsd": 0.00855,
+				"fanoutListEquivalentUsd": 0.9010499999999999
 			}
 		},
 		{
@@ -1793,16 +1812,16 @@
 			"previousModel": "faux-or/glm-5.3-flash",
 			"switched": false,
 			"pinned": false,
-			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0135)",
+			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0041)",
 			"eligible": true,
-			"contextTokens": 255000,
+			"contextTokens": 67000,
 			"thinkingLevel": "low",
 			"cold": true,
 			"coldCause": "thinking-change",
-			"coldWriteTokens": 255000,
-			"ledgerCostUsd": 0.11794249999999999,
-			"listEquivalentUsd": 0.11794249999999999,
-			"warmListEquivalentUsd": 0.09254,
+			"coldWriteTokens": 67000,
+			"ledgerCostUsd": 0.033342500000000004,
+			"listEquivalentUsd": 0.033342500000000004,
+			"warmListEquivalentUsd": 0.02674,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 28,
@@ -1817,8 +1836,8 @@
 						"judgeScore": 0.000007169155888950379,
 						"judgeProbability": 0.000007169155888950379,
 						"cold": true,
-						"ledgerCostUsd": 0.039,
-						"listEquivalentUsd": 0.039
+						"ledgerCostUsd": 0.0108,
+						"listEquivalentUsd": 0.0108
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -1829,7 +1848,7 @@
 						"judgeProbability": 0.8682317638524947,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.3125
+						"listEquivalentUsd": 0.3725
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -1840,7 +1859,7 @@
 						"judgeProbability": 0.13176106699161635,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.625
+						"listEquivalentUsd": 0.745
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -1853,8 +1872,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.039,
-				"fanoutListEquivalentUsd": 3.9764999999999997
+				"fanoutLedgerCostUsd": 0.0108,
+				"fanoutListEquivalentUsd": 1.1282999999999999
 			}
 		},
 		{
@@ -4007,12 +4026,19 @@
 			"eligible": true,
 			"contextTokens": 189000,
 			"thinkingLevel": "low",
+			"compaction": {
+				"tokensBefore": 189000,
+				"tokensAfter": 22000,
+				"listEquivalentUsd": 0.02935,
+				"ledgerCostUsd": 0.02935,
+				"avoidable": true
+			},
 			"cold": true,
-			"coldCause": "model-switch",
-			"coldWriteTokens": 189000,
-			"ledgerCostUsd": 0.06824000000000001,
-			"listEquivalentUsd": 0.06824000000000001,
-			"warmListEquivalentUsd": 0.0494375,
+			"coldCause": "compaction",
+			"coldWriteTokens": 22000,
+			"ledgerCostUsd": 0.00979,
+			"listEquivalentUsd": 0.00979,
+			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
@@ -4086,15 +4112,15 @@
 			"previousModel": "faux-or/glm-5.3-flash",
 			"switched": false,
 			"pinned": false,
-			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0108)",
+			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0024)",
 			"eligible": true,
-			"contextTokens": 200000,
+			"contextTokens": 33000,
 			"thinkingLevel": "low",
 			"cold": false,
 			"coldWriteTokens": 0,
-			"ledgerCostUsd": 0.052187500000000005,
-			"listEquivalentUsd": 0.052187500000000005,
-			"warmListEquivalentUsd": 0.052187500000000005,
+			"ledgerCostUsd": 0.010437499999999999,
+			"listEquivalentUsd": 0.010437499999999999,
+			"warmListEquivalentUsd": 0.010437499999999999,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
@@ -4109,8 +4135,8 @@
 						"judgeScore": 0.0009288770353721368,
 						"judgeProbability": 0.0009288770353721368,
 						"cold": true,
-						"ledgerCostUsd": 0.03075,
-						"listEquivalentUsd": 0.03075
+						"ledgerCostUsd": 0.0057,
+						"listEquivalentUsd": 0.0057
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -4121,7 +4147,7 @@
 						"judgeProbability": 0.85896768162422,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.0375
+						"listEquivalentUsd": 0.2025
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -4132,7 +4158,7 @@
 						"judgeProbability": 0.14010344134040797,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.075
+						"listEquivalentUsd": 0.405
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -4145,8 +4171,8 @@
 				"oracleSolved": true,
 				"baselineSolved": true,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03075,
-				"fanoutListEquivalentUsd": 3.14325
+				"fanoutLedgerCostUsd": 0.0057,
+				"fanoutListEquivalentUsd": 0.6132000000000001
 			}
 		},
 		{
@@ -4578,12 +4604,19 @@
 			"eligible": true,
 			"contextTokens": 200000,
 			"thinkingLevel": "high",
+			"compaction": {
+				"tokensBefore": 200000,
+				"tokensAfter": 22000,
+				"listEquivalentUsd": 0.031,
+				"ledgerCostUsd": 0.031,
+				"avoidable": true
+			},
 			"cold": true,
-			"coldCause": "model-switch",
-			"coldWriteTokens": 200000,
-			"ledgerCostUsd": 0.07209,
-			"listEquivalentUsd": 0.07209,
-			"warmListEquivalentUsd": 0.052187500000000005,
+			"coldCause": "compaction",
+			"coldWriteTokens": 22000,
+			"ledgerCostUsd": 0.00979,
+			"listEquivalentUsd": 0.00979,
+			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 34,
@@ -4653,13 +4686,13 @@
 			"pinned": true,
 			"reason": "pinned faux-or/glm-5.3-flash",
 			"eligible": true,
-			"contextTokens": 214000,
+			"contextTokens": 36000,
 			"thinkingLevel": "high",
 			"cold": false,
 			"coldWriteTokens": 0,
-			"ledgerCostUsd": 0.0556875,
-			"listEquivalentUsd": 0.0556875,
-			"warmListEquivalentUsd": 0.0556875,
+			"ledgerCostUsd": 0.0111875,
+			"listEquivalentUsd": 0.0111875,
+			"warmListEquivalentUsd": 0.0111875,
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 34,
@@ -4674,8 +4707,8 @@
 						"judgeScore": 0.000011925596898984379,
 						"judgeProbability": 0.000011925596898984379,
 						"cold": true,
-						"ledgerCostUsd": 0.03285,
-						"listEquivalentUsd": 0.03285
+						"ledgerCostUsd": 0.00615,
+						"listEquivalentUsd": 0.00615
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -4686,7 +4719,7 @@
 						"judgeProbability": 0.9422834106325119,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.1075000000000002
+						"listEquivalentUsd": 0.2175
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -4697,7 +4730,7 @@
 						"judgeProbability": 0.05770466377058927,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.2150000000000003
+						"listEquivalentUsd": 0.435
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -4710,8 +4743,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03285,
-				"fanoutListEquivalentUsd": 3.3553500000000005
+				"fanoutLedgerCostUsd": 0.00615,
+				"fanoutListEquivalentUsd": 0.65865
 			}
 		},
 		{
@@ -4729,13 +4762,13 @@
 			"pinned": true,
 			"reason": "pinned faux-or/glm-5.3-flash",
 			"eligible": true,
-			"contextTokens": 228000,
+			"contextTokens": 50000,
 			"thinkingLevel": "high",
 			"cold": false,
 			"coldWriteTokens": 0,
-			"ledgerCostUsd": 0.059187500000000004,
-			"listEquivalentUsd": 0.059187500000000004,
-			"warmListEquivalentUsd": 0.059187500000000004,
+			"ledgerCostUsd": 0.0146875,
+			"listEquivalentUsd": 0.0146875,
+			"warmListEquivalentUsd": 0.0146875,
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 34,
@@ -4750,8 +4783,8 @@
 						"judgeScore": 0.000014417613781718053,
 						"judgeProbability": 0.000014417613781718053,
 						"cold": true,
-						"ledgerCostUsd": 0.03495,
-						"listEquivalentUsd": 0.03495
+						"ledgerCostUsd": 0.00825,
+						"listEquivalentUsd": 0.00825
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -4762,7 +4795,7 @@
 						"judgeProbability": 0.9429371023501978,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.1775
+						"listEquivalentUsd": 0.2875
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -4773,7 +4806,7 @@
 						"judgeProbability": 0.057048480036020456,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.355
+						"listEquivalentUsd": 0.575
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -4786,8 +4819,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03495,
-				"fanoutListEquivalentUsd": 3.56745
+				"fanoutLedgerCostUsd": 0.00825,
+				"fanoutListEquivalentUsd": 0.8707499999999999
 			}
 		},
 		{
@@ -4811,14 +4844,14 @@
 			"pinned": false,
 			"reason": "standard tier -> faux-plan-codex/gpt-6-astra (plan, ~$0.0000)",
 			"eligible": true,
-			"contextTokens": 242000,
+			"contextTokens": 64000,
 			"thinkingLevel": "medium",
 			"cold": true,
 			"coldCause": "model-switch",
-			"coldWriteTokens": 242000,
+			"coldWriteTokens": 64000,
 			"ledgerCostUsd": 0,
-			"listEquivalentUsd": 4.1695,
-			"warmListEquivalentUsd": 1.3946249999999998,
+			"listEquivalentUsd": 1.2325,
+			"warmListEquivalentUsd": 0.5046250000000001,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 74,
@@ -4834,7 +4867,7 @@
 						"judgeProbability": 0.08466658972624265,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.495
+						"listEquivalentUsd": 0.715
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -4845,7 +4878,7 @@
 						"judgeProbability": 0.9144377332950346,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.2475
+						"listEquivalentUsd": 0.3575
 					},
 					{
 						"key": "faux-or/glm-5.3-flash",
@@ -4855,8 +4888,8 @@
 						"judgeScore": 0.000895676978722751,
 						"judgeProbability": 0.000895676978722751,
 						"cold": true,
-						"ledgerCostUsd": 0.03705,
-						"listEquivalentUsd": 0.03705
+						"ledgerCostUsd": 0.01035,
+						"listEquivalentUsd": 0.01035
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -4869,8 +4902,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03705,
-				"fanoutListEquivalentUsd": 3.77955
+				"fanoutLedgerCostUsd": 0.01035,
+				"fanoutListEquivalentUsd": 1.08285
 			}
 		},
 		{
@@ -4892,16 +4925,16 @@
 			"previousModel": "faux-plan-codex/gpt-6-astra",
 			"switched": true,
 			"pinned": false,
-			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0391)",
+			"reason": "light tier -> faux-or/glm-5.3-flash (on-demand, ~$0.0125)",
 			"eligible": true,
-			"contextTokens": 256000,
+			"contextTokens": 78000,
 			"thinkingLevel": "low",
 			"cold": true,
 			"coldCause": "model-switch",
-			"coldWriteTokens": 256000,
-			"ledgerCostUsd": 0.09169000000000001,
-			"listEquivalentUsd": 0.09169000000000001,
-			"warmListEquivalentUsd": 0.0661875,
+			"coldWriteTokens": 78000,
+			"ledgerCostUsd": 0.029390000000000003,
+			"listEquivalentUsd": 0.029390000000000003,
+			"warmListEquivalentUsd": 0.0216875,
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 34,
@@ -4916,8 +4949,8 @@
 						"judgeScore": 0.0005736061911206984,
 						"judgeProbability": 0.0005736061911206984,
 						"cold": true,
-						"ledgerCostUsd": 0.03915,
-						"listEquivalentUsd": 0.03915
+						"ledgerCostUsd": 0.012450000000000001,
+						"listEquivalentUsd": 0.012450000000000001
 					},
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
@@ -4928,7 +4961,7 @@
 						"judgeProbability": 0.9808138927512182,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 1.3175000000000001
+						"listEquivalentUsd": 0.4275
 					},
 					{
 						"key": "faux-plan-codex/gpt-6-astra",
@@ -4939,7 +4972,7 @@
 						"judgeProbability": 0.018612501057661122,
 						"cold": true,
 						"ledgerCostUsd": 0,
-						"listEquivalentUsd": 2.6350000000000002
+						"listEquivalentUsd": 0.855
 					}
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
@@ -4952,8 +4985,8 @@
 				"oracleSolved": true,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
-				"fanoutLedgerCostUsd": 0.03915,
-				"fanoutListEquivalentUsd": 3.9916500000000004
+				"fanoutLedgerCostUsd": 0.012450000000000001,
+				"fanoutListEquivalentUsd": 1.29495
 			}
 		}
 	]
