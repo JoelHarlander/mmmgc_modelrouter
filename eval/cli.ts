@@ -17,7 +17,8 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { JevClient } from "../src/jev.ts";
-import { JevJudge, NoisyJudge } from "./candidates.ts";
+import type { RouterConfig } from "../src/config.ts";
+import { type Judge, JevJudge, NoisyJudge, RetryingJudge } from "./candidates.ts";
 import { auditAssumptions, renderAssumptions } from "./assumptions.ts";
 import { renderCoverage, runCoverage } from "./coverage.ts";
 import { auditConfig, renderAudit } from "./audit.ts";
@@ -27,6 +28,7 @@ import { explainTask } from "./explain.ts";
 import { loadProbePack, renderProbe, runProbe } from "./probe.ts";
 import { recordAnswers, renderRecord } from "./record.ts";
 import { loadFleet } from "./fleet.ts";
+import { readStoredCredential } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, loadConfig } from "../src/config.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
@@ -286,27 +288,63 @@ function abs(p: string): string {
 }
 
 /**
+ * A Jev client with the same credentials the shipped extension would find.
+ *
+ * `src/index.ts` hands the client pi's stored Vercel AI Gateway key
+ * (`ctx.modelRegistry.getApiKeyForProvider("vercel-ai-gateway")`) on session start, so
+ * the router works for anyone who has run `npx vercel ai-gateway setup --agent pi` even
+ * with no environment variable set. Without this the eval's live modes could only ever
+ * use an env var, which is a narrower credential set than the thing they are measuring.
+ */
+function liveJevClient(cfg: RouterConfig["jev"]): JevClient {
+	const client = new JevClient(cfg);
+	try {
+		const stored = readStoredCredential("vercel-ai-gateway");
+		if (stored?.type === "api_key" && stored.key) client.setStoredGatewayKey(stored.key);
+	} catch {
+		// No auth store, or unreadable: env vars and config are still available.
+	}
+	return client;
+}
+
+/**
  * `--sweep bias` prices judge bias; the probe measures how much of it a judge has.
  * Offline it runs the stand-in judge (which is how the probe itself is tested);
  * `--live-judge` points it at real Jev for a fraction of a cent and no model inference.
  */
 async function runProbeCommand(args: Args): Promise<number> {
 	const probePack = loadProbePack(args.probePack);
-	let judge: JevJudge | NoisyJudge;
+	let judge: Judge;
+	let onFinish = () => {};
 	if (args.liveJudge) {
 		const cfg = loadFleet(args.fleet).config;
-		const jev = new JevClient(cfg.jev);
+		const jev = liveJevClient(cfg.jev);
 		if (!jev.available()) {
 			process.stderr.write(`--live-judge needs a Jev credential: ${jev.describe()}\n`);
 			return 2;
 		}
 		process.stderr.write(`LIVE: ${probePack.items.length * 2} judge calls via ${jev.describe()}\n`);
-		judge = new JevJudge(jev, cfg.parallel.maxResponseCharsForJudge);
+		let retries = 0;
+		// The gateway allows 30 requests per 15s; 800ms between calls keeps a 48-call probe
+		// comfortably inside that even when something else on the account is using it too.
+		judge = new RetryingJudge(new JevJudge(jev, cfg.parallel.maxResponseCharsForJudge), {
+			paceMs: 800,
+			attempts: 6,
+			rateLimitDelayMs: 16_000,
+			onRetry: (attempt, delayMs, err) => {
+				retries += 1;
+				process.stderr.write(`  retry ${attempt} in ${delayMs}ms: ${err instanceof Error ? err.message : String(err)}\n`);
+			},
+		});
+		onFinish = () => {
+			if (retries > 0) process.stderr.write(`${retries} transient failure(s) retried\n`);
+		};
 	} else {
 		judge = new NoisyJudge({ noise: args.judgeNoise, seed: args.seed, bias: args.judgeBias });
 	}
 
 	const report = await runProbe(judge, probePack);
+	onFinish();
 	if (args.json) process.stdout.write(`${JSON.stringify(report, null, "\t")}\n`);
 	else process.stdout.write(renderProbe(report));
 	if (!args.noWrite) {
@@ -429,7 +467,7 @@ async function main(): Promise<number> {
 
 	let jev: JevClient | undefined;
 	if (live) {
-		jev = new JevClient(loaded.config.jev);
+		jev = liveJevClient(loaded.config.jev);
 		if (!jev.available()) {
 			process.stderr.write(`live mode needs a Jev credential: ${jev.describe()}\n`);
 			return 2;

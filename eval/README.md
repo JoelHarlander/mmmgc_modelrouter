@@ -289,8 +289,17 @@ under the other (`--sweep axis`): the report ends with a `dominant axis` line an
 candidate set it implies.
 
 `--probe --live-judge` points the same probe at **real Jev** (needs `ROUTER_EVAL_LIVE=1`).
-It costs 48 Jev calls and no model inference at all — a fraction of a cent — and is the
-one measurement that would settle what candidate selection is actually worth here.
+It costs 48 Jev calls and no model inference at all. **It has been run** — see round 34
+in the log and §6 of the findings brief: Jev showed **no detectable bias on either
+axis** (0 points, ~6-point resolution), at a cost of **$0.00**, because the gateway
+serves Jev on system credentials.
+
+The live client resolves credentials the way the shipped extension does — environment
+variable, config, or pi's stored `vercel-ai-gateway` key — and `RetryingJudge` retries
+429s, 5xx and network failures, waiting out a rate-limit window rather than backing off
+from it. That matters: the gateway allows **30 requests per 15 seconds** and reports the
+limit as *"the upstream provider is currently experiencing high demand"*, which it is
+not.
 
 ## `--audit-config`: is the shipped config sound?
 

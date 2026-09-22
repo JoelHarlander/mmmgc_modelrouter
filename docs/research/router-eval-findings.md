@@ -242,20 +242,96 @@ committing also stops the router switching.
 
 ---
 
-## 6. The measurement that decides §5, and has not been taken
+## 6. The measurement that decides §5 — **taken, 2026-09-23**
 
-Everything in §5 is a bet on Jev's judging being unbiased, and **nobody has measured
-it**. `--sweep assumptions` makes the stakes explicit: with fan-out off, no judge
+**Jev carries no detectable presentation or length bias, and §5 resolves in favour of
+`tier-top`.**
+
+`ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`, 48 calls via the Vercel AI
+Gateway, **$0.00 actually spent** (credits $5.00 → $5.00, `total_used` 0 → 0; the gateway
+serves `typesafe-ai/jev` on system credentials at `cost: "0"`, market value ≈$0.000012 a
+call).
+
+| | result |
+| --- | ---: |
+| accuracy, all 48 presentations | **95.8%** |
+| aligned control | **100%** |
+| **presentation**-trap rate | **0.0%** (0 of 32) |
+| **length**-trap rate | **3.1%** (1 of 32) |
+| estimated bias, both axes | **0 points** |
+| dominant axis | **none** |
+| position bias | 4.2% |
+| mean confidence | 88.3% |
+
+Every one of the 12 traps, 3 aligned controls and 6 axis-splits was answered correctly in
+**both** label orders — 42 for 42 on items where quality genuinely differs. The only two
+errors are on `near-tie` items whose responses differ by one and two skill points, where
+there is nothing to choose; both took the second-listed answer, which is what the 4.2%
+position bias is.
+
+**Read `0` as "below this probe's resolution", not as "exactly zero".** The probe
+recovers an injected bias to within about 6–8 points, so the honest claim is **under ~6
+points**. That is comfortably inside the safe zone: round 3's sweep shows the candidate
+lift is essentially undamaged below 10 points and only turns negative around 20.
+
+### What that decides
+
+With no bias to defend against, there is no robustness premium worth paying, so the
+`tier-top`-versus-`strongest` choice collapses to cost and latency:
+
+| candidate set | lift at bias 0 | fan-out $ | added wall-clock |
+| --- | ---: | ---: | ---: |
+| **`tier-top`** | +26.9pp | **$140.58** | **+25%** |
+| `strongest` | +30.3pp | $588.71 | +70% |
+
+The 3.4pp quality difference is **not resolvable on this pack** (0 of 5 quality
+comparisons resolve at 95%); the **$448 and the 45 points of wall-clock are** (5 of 5
+cost and wall-clock comparisons resolve). **Prefer `tier-top`.**
+
+Re-run the probe if the judge model changes, or before relying on this for a materially
+different task mix — it is one reading of one model on one pack, and it costs nothing.
+
+---
+
+## 7. Two things the live run turned up on the way
+
+**The gateway's 429 message is misleading, and it triggers the §0 bug for real.**
+The gateway replies *"The upstream provider is currently experiencing high demand"* to
+what is actually a **per-key rate limit** — 30 requests per 15 seconds, visible only in
+`x-ratelimit-remaining-requests: 0` and `retry-after: 15`.
+
+`src/jev.ts` only honours a `retry-after` **shorter than its 4-second timeout**
+(`retryAfter * 1000 < this.cfg.timeoutMs`), so a `retry-after: 15` is never waited on and
+the call fails. The router then falls through to `heuristicTier` — whose confidence is
+always below `minConfidence` — which takes the §0 branch that keeps the current model
+**without checking `ledger.isBlocked`**.
+
+So a gateway rate limit makes the router stop routing *and* stop avoiding blocked
+providers, at the same time. §0 is no longer a hypothetical reachable only by an unusual
+starting model: **this is the condition that reaches it in normal operation.**
+
+**Jev is free on this route.** The gateway reports `cost: "0"` with
+`credentialType: "system"`, so the classifier's overhead measured in round 24 at ~20 parts
+per million of spend is, on the gateway path today, **zero**. The scripted cost model
+prices it at the TypeSafe list rate instead, so it slightly *over*states routing
+overhead — in the safe direction, and by an amount too small to matter.
+
+---
+
+## 8. How §6 was measured, and what is still outstanding
+
+Everything in §5 was a bet on Jev's judging being unbiased. §6 settles that;
+`--sweep assumptions` explains why it mattered so much: with fan-out off, no judge
 assumption moves the outcome at all; turn fan-out on and **judge bias becomes the single
 loudest input (±26.7pp)**, while the starting model and the fleet's declared competence
 fall to ±1.7pp each. Running several candidates absorbs a bad starting point and a wrong
 guess about who is good at what — and replaces both with a bet on the judge.
 
 ```bash
-ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge
+ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge   # taken; see §6
 ```
 
-48 Jev calls, **no model inference**, under a cent. It shows Jev 24 pairs of written
+48 Jev calls, **no model inference**, and $0.00 as it turned out. It shows Jev 24 pairs of written
 answers whose true quality is declared and whose presentation is deliberately opposed,
 in both label orders, and reports the bias in the same units `--sweep bias` prices. The
 probe is calibrated: it recovers an injected bias to within 8 points.
@@ -270,19 +346,23 @@ with a `dominant axis` line and the consequence:
 | --- | --- |
 | **presentation** | `tier-top` — cheap, fast, and its costliest-looking member is its strongest |
 | **length** | `strongest` — alignment will not help; only a high floor survives |
-| none | either; choose on cost and latency |
+| **none** ← *what it returned* | either; choose on cost and latency |
 
-Read the answer against `--sweep bias`:
+Read against `--sweep bias`, the measured **under ~6 points** puts §5 in the top row:
 
 | Jev probes at | what §5 is worth |
 | --- | --- |
-| ≤10 points | the full effect above |
+| **≤10 points** | **the full effect** |
 | ~20 points | roughly zero, and the fan-out bill is pure loss |
 | ≥40 points | **negative** — worse than not fanning out |
 
-The companion, `ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --record`, replaces
-the hand-written classifier answers in the task packs with what Jev actually says, which
-removes the standing asterisk on every `scripted` number.
+### Still outstanding
+
+`ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --record` replaces the
+hand-written classifier answers in the task packs with what Jev actually says, removing
+the standing asterisk on every `scripted` number. It needs ~206 Jev calls rather than 48
+and, at the gateway's 30-per-15-seconds limit, roughly three minutes of wall-clock. Not
+run here: the authorisation was scoped to the judge probe.
 
 ---
 

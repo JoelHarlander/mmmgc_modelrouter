@@ -11,7 +11,7 @@
  */
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { modelKey, type RouterConfig, TIERS } from "../src/config.ts";
-import { choiceConfidence, type JevChoiceAnswer, type JevClient, type JsonValue } from "../src/jev.ts";
+import { choiceConfidence, type JevChoiceAnswer, type JevClient, JevError, type JsonValue } from "../src/jev.ts";
 import type { FleetModel } from "./types.ts";
 import { effectiveSkill, hashUnit } from "./simulate.ts";
 import { splitKey } from "./fleet.ts";
@@ -119,6 +119,87 @@ export class NoisyJudge implements Judge {
 		const best = perceived.reduce((a, b) => (b.score > a.score ? b : a));
 		return { pick: best.label, confidence: choiceConfidence(probabilities), probabilities, costUsd: 0, ms: 0 };
 	}
+}
+
+export interface RetryOptions {
+	/** Total attempts per call, including the first. */
+	attempts?: number;
+	baseDelayMs?: number;
+	maxDelayMs?: number;
+	/**
+	 * Floor for a 429's backoff. The gateway enforces 30 requests per 15 seconds and
+	 * replies `retry-after: 15`, but src/jev.ts only honours a retry-after shorter than
+	 * its 4s timeout, so by the time the error reaches here the header is gone. Waiting
+	 * out the documented window is the only correct response.
+	 */
+	rateLimitDelayMs?: number;
+	/** Minimum gap between calls, so a 48-call probe does not arrive as a burst. */
+	paceMs?: number;
+	onRetry?: (attempt: number, delayMs: number, error: unknown) => void;
+}
+
+/**
+ * Wraps a judge so a transient upstream failure does not abandon a whole run.
+ *
+ * `src/jev.ts` retries a 429 only when it carries a usable `retry-after`, and the
+ * gateway's "upstream provider is experiencing high demand" 429 carries none - so the
+ * first live probe attempt aborted on call one. This retries any 429, any 5xx and any
+ * network error with exponential backoff and jitter, and paces calls so a 48-call probe
+ * does not arrive as a burst. It wraps rather than changes `src/`.
+ */
+export class RetryingJudge implements Judge {
+	readonly name: string;
+	private lastCallAt = 0;
+
+	constructor(
+		private readonly inner: Judge,
+		private readonly options: RetryOptions = {},
+	) {
+		this.name = inner.name;
+	}
+
+	async pick(request: string, candidates: JudgeCandidate[], context: { taskId: string; turn: number }): Promise<JudgeVerdict> {
+		const attempts = this.options.attempts ?? 5;
+		const base = this.options.baseDelayMs ?? 1000;
+		const max = this.options.maxDelayMs ?? 30_000;
+		const pace = this.options.paceMs ?? 0;
+
+		let lastError: unknown;
+		for (let attempt = 1; attempt <= attempts; attempt++) {
+			const since = Date.now() - this.lastCallAt;
+			if (pace > 0 && since < pace) await sleep(pace - since);
+			this.lastCallAt = Date.now();
+			try {
+				return await this.inner.pick(request, candidates, context);
+			} catch (err) {
+				lastError = err;
+				if (attempt === attempts || !isRetryable(err)) throw err;
+				// Exponential with full jitter, so concurrent retries do not resynchronise.
+				const backoff = Math.min(max, base * 2 ** (attempt - 1)) * (0.5 + Math.random() / 2);
+				// A rate limit is a window to wait out, not a blip to back off from.
+				const delay = isRateLimit(err) ? Math.max(backoff, this.options.rateLimitDelayMs ?? 16_000) : backoff;
+				this.options.onRetry?.(attempt, Math.round(delay), err);
+				await sleep(delay);
+			}
+		}
+		throw lastError;
+	}
+}
+
+/** A rate limit needs the window waited out rather than an exponential back-off. */
+export function isRateLimit(err: unknown): boolean {
+	return err instanceof JevError && err.status === 429;
+}
+
+/** A 429, a 5xx or a network-level failure is worth another go; a 4xx is not. */
+export function isRetryable(err: unknown): boolean {
+	if (err instanceof JevError) return err.status === undefined || err.status === 429 || err.status >= 500;
+	// fetch/abort failures arrive as ordinary Errors with no status.
+	return err instanceof Error;
+}
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** The real thing: Jev judging real response texts, using src/parallel.ts's question verbatim. */

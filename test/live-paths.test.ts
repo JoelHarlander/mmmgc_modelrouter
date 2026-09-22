@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { DEFAULT_CONFIG } from "../src/config.ts";
 import { JevClient, JevError } from "../src/jev.ts";
 import { routingQuestions } from "../src/state.ts";
-import { JevJudge } from "../eval/candidates.ts";
+import { isRateLimit, isRetryable, JevJudge, RetryingJudge } from "../eval/candidates.ts";
 import { loadFleet } from "../eval/fleet.ts";
 import { runEval } from "../eval/harness.ts";
 import { computeMetrics } from "../eval/metrics.ts";
@@ -224,4 +224,109 @@ test("the Jev judge sends src/parallel.ts's question and reads its choice", asyn
 			assert.equal(state.responses.B, "bee");
 		},
 	);
+});
+
+test("a transient upstream failure is retried; a permanent one is not", async () => {
+	// The first live probe run aborted on call one with a gateway 429 carrying no
+	// retry-after, which src/jev.ts does not retry. This wraps rather than changes it.
+	let calls = 0;
+	const flaky = {
+		name: "flaky",
+		async pick() {
+			calls += 1;
+			if (calls < 3) throw new JevError("AI Gateway 429 rate_limit_exceeded", 429);
+			return { pick: "A", confidence: 0.9, probabilities: { A: 0.9 }, costUsd: 0, ms: 1 };
+		},
+	};
+	const retries: number[] = [];
+	const judge = new RetryingJudge(flaky, { baseDelayMs: 1, maxDelayMs: 4, onRetry: (attempt) => retries.push(attempt) });
+	const verdict = await judge.pick("q", [], { taskId: "t", turn: 1 });
+	assert.equal(verdict.pick, "A");
+	assert.equal(calls, 3, "should have retried twice before succeeding");
+	assert.deepEqual(retries, [1, 2]);
+
+	// A 4xx that is not a 429 is the caller's problem and must surface immediately.
+	let permanentCalls = 0;
+	const permanent = {
+		name: "permanent",
+		async pick(): Promise<never> {
+			permanentCalls += 1;
+			throw new JevError("AI Gateway 402 customer_verification_required", 402);
+		},
+	};
+	await assert.rejects(
+		() => new RetryingJudge(permanent, { baseDelayMs: 1 }).pick("q", [], { taskId: "t", turn: 1 }),
+		/402/,
+	);
+	assert.equal(permanentCalls, 1, "a 402 must not be retried");
+
+	// And a persistent transient failure gives up after the configured attempts.
+	let alwaysCalls = 0;
+	const always = {
+		name: "always",
+		async pick(): Promise<never> {
+			alwaysCalls += 1;
+			throw new JevError("503 upstream", 503);
+		},
+	};
+	await assert.rejects(() => new RetryingJudge(always, { attempts: 3, baseDelayMs: 1 }).pick("q", [], { taskId: "t", turn: 1 }), /503/);
+	assert.equal(alwaysCalls, 3);
+});
+
+test("which failures are worth retrying", () => {
+	for (const status of [429, 500, 502, 503]) assert.equal(isRetryable(new JevError("x", status)), true, `${status} should be retried`);
+	for (const status of [400, 401, 402, 403, 404]) assert.equal(isRetryable(new JevError("x", status)), false, `${status} should not be`);
+	// A network-level failure has no status and is worth another go.
+	assert.equal(isRetryable(new JevError("fetch failed")), true);
+	assert.equal(isRetryable(new TypeError("fetch failed")), true);
+	assert.equal(isRetryable("not an error"), false);
+});
+
+test("the live probe paces its calls so 48 of them do not arrive as a burst", async () => {
+	const at: number[] = [];
+	const instant = {
+		name: "instant",
+		async pick() {
+			at.push(Date.now());
+			return { pick: "A", confidence: 1, probabilities: { A: 1 }, costUsd: 0, ms: 0 };
+		},
+	};
+	const judge = new RetryingJudge(instant, { paceMs: 20 });
+	for (let i = 0; i < 4; i++) await judge.pick("q", [], { taskId: "t", turn: i });
+	for (let i = 1; i < at.length; i++) {
+		assert.ok(at[i]! - at[i - 1]! >= 18, `calls ${i - 1} and ${i} were ${at[i]! - at[i - 1]!}ms apart`);
+	}
+});
+
+test("a rate limit is waited out, not backed off from", async () => {
+	// The gateway allows 30 requests per 15s and replies `retry-after: 15`, but
+	// src/jev.ts only honours a retry-after shorter than its 4s timeout, so the header is
+	// gone by the time the error reaches the wrapper. Exponential backoff from 1s never
+	// reaches the window; the floor does.
+	assert.equal(isRateLimit(new JevError("x", 429)), true);
+	for (const status of [500, 503, 402, undefined]) assert.equal(isRateLimit(new JevError("x", status)), false);
+
+	const delays: number[] = [];
+	let calls = 0;
+	const limited = {
+		name: "limited",
+		async pick() {
+			calls += 1;
+			if (calls === 1) throw new JevError("AI Gateway 429 rate_limit_exceeded", 429);
+			if (calls === 2) throw new JevError("503 upstream", 503);
+			return { pick: "A", confidence: 1, probabilities: { A: 1 }, costUsd: 0, ms: 0 };
+		},
+	};
+	// Real sleeps would make this slow, so assert on the delay the wrapper *chose*.
+	const judge = new RetryingJudge(limited, {
+		baseDelayMs: 1,
+		maxDelayMs: 2,
+		rateLimitDelayMs: 5,
+		onRetry: (_attempt, delayMs) => delays.push(delayMs),
+	});
+	await judge.pick("q", [], { taskId: "t", turn: 1 });
+
+	assert.equal(delays.length, 2);
+	assert.ok(delays[0]! >= 5, `a 429 waited only ${delays[0]}ms, below the rate-limit floor`);
+	assert.ok(delays[1]! < 5, `a 503 waited ${delays[1]}ms, so it used the rate-limit floor it should not`);
 });

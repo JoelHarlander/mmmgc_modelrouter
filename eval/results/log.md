@@ -65,10 +65,12 @@ each moves session success on the long pack):
 **Turning on fan-out moves the answer's dependency from the router to the judge** — and
 the judge is the one thing this harness cannot measure offline.
 
-**Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
-judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
-calls, no model inference, under a cent. Which of the three candidate-selection
-verdicts above applies depends entirely on that number.
+**MEASURED, round 34 (2026-09-23).** Jev carries **no detectable presentation or length
+bias**: 0.0% presentation-trap rate, 3.1% length-trap, **0 estimated bias points on both
+axes**, dominant axis **none**, 95.8% accuracy over 48 presentations with a 100% aligned
+control. Read as "below the probe's ~6-point resolution", which puts the candidate result
+in its best band. **The $450 question resolves in favour of `tier-top`.** Cost of the
+measurement: **$0.00** — the gateway serves Jev on system credentials at `cost: "0"`.
 
 ---
 
@@ -1984,3 +1986,87 @@ gates green from a clean `git archive` of `HEAD` with nothing but `node_modules`
 supplied.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.
+
+---
+
+## Round 34 — 2026-09-23 — the measurement, taken
+
+**Authorised** by firstmate, scoped explicitly: the judge probe only, 48 Jev calls, no
+model inference of any kind. Verified before spending that the path constructs only a
+`JevJudge` over `JevClient` — no model registry, no `complete()`, no `runEval` — and that
+the calibration step runs offline against `NoisyJudge`.
+
+**Two things had to be fixed to make the run possible**, both in `eval/`, neither in
+`src/`:
+
+1. **The credential.** `--live-judge` could only read `TYPESAFE_API_KEY` or
+   `AI_GATEWAY_API_KEY` from the environment, while the shipped extension also reads
+   pi's stored `vercel-ai-gateway` key on session start. Neither env var is set on this
+   machine, so the eval's live modes had a narrower credential set than the thing they
+   measure. The CLI now resolves the stored credential the same way `src/index.ts` does.
+2. **The rate limit.** The first attempt aborted on call one:
+   `AI Gateway 429 rate_limit_exceeded: The upstream provider is currently experiencing
+   high demand`. That message is **misleading** — a direct probe of the endpoint showed
+   `x-ratelimit-limit-requests: 30`, `x-ratelimit-remaining-requests: 0`,
+   `x-ratelimit-reset-requests: 15s`, `retry-after: 15`. It is a **per-key limit of 30
+   requests per 15 seconds**, not upstream demand. Added `RetryingJudge`: retries 429s,
+   5xx and network errors, waits out a rate-limit window rather than backing off from it
+   (an exponential ramp from 1s never reaches 15s), and paces calls at 800ms. Four tests.
+
+**The result.** 48 calls, **$0.00 spent** — gateway credits $5.00 → $5.00, `total_used`
+0 → 0; the gateway serves `typesafe-ai/jev` on `credentialType: "system"` at
+`cost: "0"`, market value ≈$0.000012 a call.
+
+| | |
+| --- | ---: |
+| accuracy over 48 presentations | **95.8%** |
+| aligned control | **100%** |
+| **presentation**-trap rate | **0.0%** (0 of 32) |
+| **length**-trap rate | **3.1%** (1 of 32) |
+| estimated bias, both axes | **0 points** |
+| **dominant axis** | **none** |
+| position bias | 4.2% |
+| mean confidence | 88.3% |
+
+**Jev got every item where quality genuinely differs right, in both label orders** — all
+12 traps, all 3 aligned controls, all 6 axis-splits, 42 for 42. The only two misses are
+`near-tie-docstring` and `near-tie-import-order`, whose two responses differ by one and
+two skill points respectively; both took the second-listed answer, which is exactly what
+the 4.2% position bias is. On this evidence the judge's weakness is not style, it is
+arbitrary tie-breaking — which costs nothing, because on a tie there is nothing to lose.
+
+**Read `0` as "below the probe's resolution", not "exactly zero."** The probe recovers an
+injected bias to within 6–8 points, so the claim is **under ~6 points**. Round 3's sweep
+puts the candidate lift essentially undamaged below 10 and negative around 20, so this
+sits comfortably in the best band.
+
+### What it decides
+
+Round 29 turned the axis into a **$448 question**. With no bias to defend against there
+is no robustness premium worth paying, so the choice collapses to cost and latency:
+
+| candidate set | lift at bias 0 | fan-out $ | added wall-clock |
+| --- | ---: | ---: | ---: |
+| **`tier-top`** | +26.9pp | **$140.58** | **+25%** |
+| `strongest` | +30.3pp | $588.71 | +70% |
+
+The 3.4pp quality gap is **not resolvable on this pack** (0 of 5 quality comparisons
+resolve at 95%). The **$448 and the 45 points of wall-clock are** (5 of 5 cost and
+wall-clock comparisons resolve). **`tier-top`.**
+
+### And the round-26 bug stopped being hypothetical
+
+`src/jev.ts` only honours a `retry-after` shorter than its 4-second timeout
+(`retryAfter * 1000 < this.cfg.timeoutMs`). The gateway sends `retry-after: 15`. So the
+shipped router **cannot retry a gateway rate limit** — it fails, falls through to
+`heuristicTier`, whose confidence is always below `minConfidence`, which takes the §0
+branch that keeps the current model **without checking `ledger.isBlocked`**.
+
+A gateway rate limit therefore makes the router **stop routing and stop avoiding blocked
+providers at the same time**. Round 26 found that bug by sweeping an unusual starting
+model and I called it a corner; round 34 found the condition that reaches it in normal
+operation. It is now §0 and §7 of the findings brief.
+
+**Next.** `--classifier live --record` would remove the standing asterisk on every
+`scripted` number — ~206 calls, about three minutes at the gateway's limit, still free.
+That was outside this authorisation.
