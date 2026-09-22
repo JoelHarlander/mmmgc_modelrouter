@@ -55,12 +55,18 @@ export interface AssessArgs {
 	now?: number;
 }
 
-/** The coarse label, and whether configuration asserted it or the registry implied it. */
+/**
+ * The coarse label, and whether configuration asserted it or the registry implied it. A label
+ * written for this exact model wins; a zero catalog price beats a provider-wide glob, so a free
+ * variant of a billed provider is not reported or ranked as if it spent money.
+ */
 export function billingLabel(model: Model<Api>, cfg: RouterConfig, registry: ModelRegistry): { billing: Billing; fromConfig: boolean } {
-	const override = overrideFor(cfg, modelKey(model)).billing;
+	const key = modelKey(model);
+	const exact = cfg.models[key]?.billing;
+	if (exact) return { billing: exact, fromConfig: true };
+	if (zeroCost(model)) return { billing: "free", fromConfig: false };
+	const override = overrideFor(cfg, key).billing;
 	if (override) return { billing: override, fromConfig: true };
-	const c = model.cost;
-	if (c.input === 0 && c.output === 0) return { billing: "free", fromConfig: false };
 	return { billing: registry.isUsingOAuth(model) ? "plan" : "on-demand", fromConfig: false };
 }
 
@@ -129,6 +135,9 @@ function assessFree(
 	const free = zeroCost(model);
 	if (free) evidence.push("catalog list price is zero");
 	else uncertainty.push(`configuration labels ${key} free, but its catalog price is not zero`);
+	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
+		return excluded(free ? "free" : "unknown", "free", "verified", `inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
+	}
 	if (fromConfig && !free) {
 		return {
 			basis: "unknown",

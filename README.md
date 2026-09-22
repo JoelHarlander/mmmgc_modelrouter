@@ -102,10 +102,13 @@ the provider uses on the wire (`5h`, `7d`, `7d_oi`, `primary`, `secondary`, `<fa
 that cannot authenticate is recorded as a failed probe — the route then stays `unverified`, which routing discloses
 rather than guessing either way.
 
-A project `.pi/modelrouter.json` may set only the routing-policy sections (`tiers`, `models`, `billing`, `scopes`,
-`switching`, `parallel`, `thinking`, `plan`, `enabled`, `notifyOnSwitch`). Sections that name an endpoint or a
-credential — `entitlement` and `jev` — are read from the global file only, so a repository cannot point a
-credentialed request at its own host; a project can still switch probing off with `billing.probe.enabled`.
+A project `.pi/modelrouter.json` is trusted with routing preferences and nothing else. Sections that name an
+endpoint or a credential — `entitlement` and `jev` — are read from the global file only, so a repository cannot
+point a credentialed request at its own host. Inside `billing` and `plan` a project may only move a safeguard the
+safe way: `denyPaid` unions with the global list, `allowPayPerToken` and `allowExtraBilled` can only narrow within
+it, `utilizationCeiling` and `evidenceMaxAgeMinutes` can only fall, and a key that declares no safe direction (say
+`probe.minIntervalMinutes`) stays global. A project may rank models with `models.<glob>.capability` but not assert
+their `billing` label. So a repository can make the router stricter than you configured it, never looser.
 
 ## Commands
 

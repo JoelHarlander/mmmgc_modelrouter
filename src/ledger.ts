@@ -50,7 +50,7 @@ export interface CreditState {
 	lastSeen: number;
 }
 
-export type EvidenceSource = "header" | "poll" | "response";
+export type EvidenceSource = "header" | "poll";
 
 export interface ProviderState {
 	/** Plan id as the provider reports it (`plus`, `pro`, ...). Never inferred from a name. */

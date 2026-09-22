@@ -11,8 +11,8 @@ export default function (pi: ExtensionAPI) {
 	const faux = fauxProvider({
 		provider: "faux",
 		models: [
-			{ id: "a", name: "Faux A (heavy)", cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 0 } },
-			{ id: "b", name: "Faux B (light)", cost: { input: 0.1, output: 0.4, cacheRead: 0.01, cacheWrite: 0 } },
+			{ id: "a", name: "Faux A (heavy)", cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
+			{ id: "b", name: "Faux B (light)", cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } },
 		],
 	});
 	const reply = (_c: unknown, _o: unknown, _s: unknown, model: { id: string }) => fauxAssistantMessage(`answered by ${model.id}`, { stopReason: "stop" });

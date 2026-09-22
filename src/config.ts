@@ -3,9 +3,11 @@
  *
  * Model ids are always "provider/modelId" as pi knows them (see `pi --list-models`).
  *
- * The project-local layer arrives with whatever repository is open, so it may not choose an
- * endpoint that receives a credential: `entitlement` is taken from the global layer only. A
- * project can still switch probing off through `billing.probe.enabled`.
+ * The project-local layer arrives with whatever repository is open, so it is trusted with
+ * routing preferences and nothing else: it may set only the sections in `PROJECT_OVERRIDABLE`
+ * (so no repository names the endpoint or credential a request is sent with), and inside a
+ * safety or spend section it may only move a value in the safe direction named by
+ * `PROJECT_SAFEGUARDS`.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -264,9 +266,34 @@ export const PROJECT_OVERRIDABLE: readonly (keyof RouterConfig)[] = [
 	"parallel",
 ];
 
+/** How far a project-local value may move: always towards spending less and proving more. */
+type SafeDirection = "widen" | "narrow" | "on" | "off" | "lower" | "higher";
+
+/**
+ * Sections that carry safety and spend policy. Inside one of these, a key that names no
+ * direction below is global-only, so a safeguard added later is beyond a project file's reach
+ * until it declares how it may move.
+ */
+const SAFEGUARD_SECTIONS: readonly string[] = ["billing", "plan"];
+
+/** The direction each safeguard may be moved in from a project-local config, and no other. */
+const PROJECT_SAFEGUARDS: Record<string, SafeDirection> = {
+	"billing.denyPaid": "widen",
+	"billing.allowPayPerToken": "narrow",
+	"billing.allowExtraBilled": "narrow",
+	"billing.preferVerifiedSubscription": "on",
+	"billing.allowUnverifiedSubscription": "off",
+	"billing.requireVerifiedExtraBilled": "on",
+	"billing.evidenceMaxAgeMinutes": "lower",
+	"billing.probe.enabled": "off",
+	"plan.utilizationCeiling": "lower",
+	"plan.cooldownMinutesOn429": "higher",
+	"parallel.requireRoutingEnabled": "on",
+};
+
 /** Section-level merge. `tiers` and `parallel.models` replace wholesale when given. */
 export function mergeConfig(base: RouterConfig, rawPatch: Partial<RouterConfig>, scope: ConfigScope = "global"): RouterConfig {
-	const patch = scope === "project" ? projectPatch(rawPatch) : rawPatch;
+	const patch = scope === "project" ? projectPatch(base, rawPatch) : rawPatch;
 	return {
 		enabled: patch.enabled ?? base.enabled,
 		notifyOnSwitch: patch.notifyOnSwitch ?? base.notifyOnSwitch,
@@ -283,13 +310,70 @@ export function mergeConfig(base: RouterConfig, rawPatch: Partial<RouterConfig>,
 	};
 }
 
-/** Keeps only the sections a project-local config is allowed to set. */
-function projectPatch(patch: Partial<RouterConfig>): Partial<RouterConfig> {
+/** Keeps only what a project-local config may set, each value already moved the safe way. */
+function projectPatch(base: RouterConfig, patch: Partial<RouterConfig>): Partial<RouterConfig> {
 	const out: Record<string, unknown> = {};
 	for (const section of PROJECT_OVERRIDABLE) {
-		if (patch[section] !== undefined) out[section] = patch[section];
+		if (patch[section] === undefined) continue;
+		const kept = tighten((base as unknown as Record<string, unknown>)[section], patch[section], section);
+		if (kept !== undefined) out[section] = kept;
 	}
+	if (isRecord(out.models)) out.models = projectModels(base.models, out.models);
 	return out as Partial<RouterConfig>;
+}
+
+/**
+ * A project may rank models against each other but not assert what pays for one: a billing label
+ * is a claim about money that only the global layer, or live evidence, gets to make.
+ */
+function projectModels(base: Record<string, ModelOverride>, models: Record<string, unknown>): Record<string, ModelOverride> {
+	const out: Record<string, ModelOverride> = {};
+	for (const [pattern, override] of Object.entries(models)) {
+		const capability = isRecord(override) ? override.capability : undefined;
+		out[pattern] = { ...base[pattern], ...(typeof capability === "number" ? { capability } : {}) };
+	}
+	return out;
+}
+
+function tighten(base: unknown, patch: unknown, path: string): unknown {
+	const direction = PROJECT_SAFEGUARDS[path];
+	if (direction) return saferValue(base, patch, direction);
+	const guarded = SAFEGUARD_SECTIONS.includes(path.split(".")[0]!);
+	if (isRecord(patch)) {
+		const out: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(patch)) {
+			const kept = tighten(isRecord(base) ? base[key] : undefined, value, `${path}.${key}`);
+			if (kept !== undefined) out[key] = kept;
+		}
+		return guarded && Object.keys(out).length === 0 ? undefined : out;
+	}
+	return guarded ? undefined : patch;
+}
+
+/** The safer of the global and project values. A value of the wrong shape keeps the global one. */
+function saferValue(base: unknown, patch: unknown, direction: SafeDirection): unknown {
+	switch (direction) {
+		case "widen":
+			return isStringList(patch) ? [...new Set([...(isStringList(base) ? base : []), ...patch])] : base;
+		case "narrow":
+			return isStringList(patch) && isStringList(base) ? patch.filter((p) => anyGlobMatch(base, p)) : base;
+		case "on":
+			return typeof patch === "boolean" ? base === true || patch : base;
+		case "off":
+			return typeof patch === "boolean" ? base === true && patch : base;
+		case "lower":
+			return typeof patch === "number" && typeof base === "number" ? Math.min(base, patch) : base;
+		case "higher":
+			return typeof patch === "number" && typeof base === "number" ? Math.max(base, patch) : base;
+	}
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+	return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isStringList(v: unknown): v is string[] {
+	return Array.isArray(v) && v.every((e) => typeof e === "string");
 }
 
 /** True when any glob in `patterns` matches `modelKey`. */

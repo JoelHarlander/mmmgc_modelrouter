@@ -9,8 +9,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
-import { DEFAULT_CONFIG, loadConfig, PROJECT_OVERRIDABLE, type RouterConfig } from "../src/config.ts";
+import { assessBilling } from "../src/billing.ts";
+import { DEFAULT_CONFIG, loadConfig, mergeConfig, PROJECT_OVERRIDABLE, type RouterConfig } from "../src/config.ts";
 import { JevClient, type JsonValue } from "../src/jev.ts";
+import { Ledger, ledgerPath } from "../src/ledger.ts";
 
 function projectDir(config: unknown): string {
 	const dir = mkdtempSync(join(tmpdir(), "mr-project-"));
@@ -77,4 +79,86 @@ test("a project config cannot redirect the Jev call that carries the gateway cre
 		trusted.some((u) => requested[0]!.startsWith(u)),
 		requested[0],
 	);
+});
+
+// ---- safeguards may only move towards spending less ------------------------
+
+/** The shipped defaults are the global layer here, so the policy under test is the shipped one. */
+function withProject(patch: unknown): RouterConfig {
+	return mergeConfig(DEFAULT_CONFIG, patch as Partial<RouterConfig>, "project");
+}
+
+test("a project config cannot empty, replace or widen the paid-inference deny list", () => {
+	const cfg = withProject({ billing: { denyPaid: [], allowPayPerToken: ["*"], allowExtraBilled: ["*"] } });
+	for (const glob of DEFAULT_CONFIG.billing.denyPaid) assert.ok(cfg.billing.denyPaid.includes(glob), glob);
+	assert.deepEqual(cfg.billing.allowPayPerToken, [], "a broader allow list narrows to nothing rather than widening");
+	assert.deepEqual(cfg.billing.allowExtraBilled, []);
+});
+
+test("a project config may tighten the same safeguards", () => {
+	const cfg = withProject({
+		billing: {
+			denyPaid: ["openrouter/*"],
+			allowPayPerToken: ["openrouter/z-ai/glm-5.3"],
+			allowUnverifiedSubscription: false,
+			evidenceMaxAgeMinutes: 5,
+		},
+		plan: { utilizationCeiling: 0.5, cooldownMinutesOn429: 120 },
+	});
+	assert.deepEqual(cfg.billing.denyPaid, [...DEFAULT_CONFIG.billing.denyPaid, "openrouter/*"]);
+	assert.deepEqual(cfg.billing.allowPayPerToken, ["openrouter/z-ai/glm-5.3"]);
+	assert.equal(cfg.billing.allowUnverifiedSubscription, false);
+	assert.equal(cfg.billing.evidenceMaxAgeMinutes, 5);
+	assert.equal(cfg.plan.utilizationCeiling, 0.5);
+	assert.equal(cfg.plan.cooldownMinutesOn429, 120);
+});
+
+test("a project config cannot relax the safeguards it is allowed to tighten", () => {
+	const strict = mergeConfig(DEFAULT_CONFIG, {
+		billing: { ...DEFAULT_CONFIG.billing, allowUnverifiedSubscription: false, evidenceMaxAgeMinutes: 5 },
+		plan: { utilizationCeiling: 0.5, cooldownMinutesOn429: 120 },
+	});
+	const cfg = mergeConfig(
+		strict,
+		{
+			billing: { allowUnverifiedSubscription: true, requireVerifiedExtraBilled: false, preferVerifiedSubscription: false, evidenceMaxAgeMinutes: 600 },
+			plan: { utilizationCeiling: 1, cooldownMinutesOn429: 0 },
+			parallel: { requireRoutingEnabled: false },
+		} as Partial<RouterConfig>,
+		"project",
+	);
+	assert.equal(cfg.billing.allowUnverifiedSubscription, false);
+	assert.equal(cfg.billing.requireVerifiedExtraBilled, true);
+	assert.equal(cfg.billing.preferVerifiedSubscription, true);
+	assert.equal(cfg.billing.evidenceMaxAgeMinutes, 5);
+	assert.equal(cfg.plan.utilizationCeiling, 0.5);
+	assert.equal(cfg.plan.cooldownMinutesOn429, 120);
+	assert.equal(cfg.parallel.requireRoutingEnabled, true);
+});
+
+test("a safeguard key that declares no safe direction is global-only", () => {
+	const cfg = withProject({ billing: { probe: { enabled: false, minIntervalMinutes: 1440, timeoutMs: 60_000 } } });
+	assert.equal(cfg.billing.probe.enabled, false, "switching probing off is a project's to make");
+	assert.equal(cfg.billing.probe.minIntervalMinutes, DEFAULT_CONFIG.billing.probe.minIntervalMinutes);
+	assert.equal(cfg.billing.probe.timeoutMs, DEFAULT_CONFIG.billing.probe.timeoutMs);
+});
+
+test("a project config cannot route paid Anthropic inference by any of its allowed sections", () => {
+	const cfg = withProject({
+		tiers: { light: ["anthropic/claude-opus-5"], standard: ["anthropic/claude-opus-5"], heavy: ["anthropic/claude-opus-5"] },
+		models: { "anthropic/*": { billing: "free", capability: 99 } },
+		billing: { denyPaid: [], allowPayPerToken: ["*"], allowExtraBilled: ["*"], requireVerifiedExtraBilled: false },
+	});
+	const claude = {
+		id: "claude-opus-5",
+		provider: "anthropic",
+		cost: { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18 },
+	} as unknown as Parameters<typeof assessBilling>[0]["model"];
+	const registry = { isUsingOAuth: () => false } as unknown as Parameters<typeof assessBilling>[0]["registry"];
+	const a = assessBilling({ model: claude, cfg, registry, ledger: new Ledger(ledgerPath(mkdtempSync(join(tmpdir(), "mr-cfg-")))) });
+
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /denied for anthropic\/claude-opus-5/);
+	assert.equal(cfg.models["anthropic/*"]?.billing, DEFAULT_CONFIG.models["anthropic/*"]?.billing, "a project may not assert what pays for a model");
+	assert.equal(cfg.models["anthropic/*"]?.capability, 99, "but it may still rank models");
 });

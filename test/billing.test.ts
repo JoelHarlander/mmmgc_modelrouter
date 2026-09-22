@@ -304,7 +304,9 @@ test("a spent prepaid balance leaves the free variants it never paid for usable"
 		parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 0, free_model_daily_requests: { used: 5, limit: 50 } } }),
 	);
 	assert.equal(assess(router, l).eligibility, "excluded");
-	assert.equal(assess(routerFree, l).eligibility, "allowed");
+	const free = assess(routerFree, l);
+	assert.notEqual(free.eligibility, "excluded");
+	assert.equal(free.basis, "free");
 });
 
 test("a gateway with nothing left to spend is excluded on its credit evidence", () => {
@@ -474,4 +476,25 @@ test("a free label the catalog price contradicts is still costed as money", () =
 	const c = d.candidates.find((x) => x.key === "openrouter/z-ai/glm-5.3")!;
 	assert.equal(c.assessment?.basis, "unknown");
 	assert.ok(c.costUsd > 0, "an unresolved basis at a non-zero list price is not free");
+});
+
+test("a genuinely zero-priced model is free even where a provider-wide label says on-demand", () => {
+	// `openrouter/*` is labelled on-demand by the defaults; the `:free` variant costs nothing.
+	const a = assess(routerFree, ledger());
+	assert.equal(a.basis, "free");
+	assert.equal(a.eligibility, "preferred");
+	assert.equal(a.rank, assess(model("ds4", "deepseek-v4-flash"), ledger()).rank);
+	assert.ok(a.evidence.some((e) => /catalog list price is zero/.test(e)), a.evidence.join(" | "));
+
+	// A label written for that exact model still wins: it is a statement about one known price.
+	const named = mergeConfig(cfg, { models: { ...cfg.models, "openrouter/z-ai/glm-5.3:free": { billing: "on-demand" } } });
+	assert.equal(assess(routerFree, ledger(), named).basis, "pay-per-token");
+});
+
+test("a free route in billing.denyPaid is excluded, not quietly preferred", () => {
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: [...cfg.billing.denyPaid, "openrouter/*"] } });
+	const a = assess(routerFree, ledger(), denied);
+	assert.equal(a.basis, "free");
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /denied for openrouter\/z-ai\/glm-5.3:free by billing\.denyPaid/);
 });
