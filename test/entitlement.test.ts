@@ -75,11 +75,13 @@ test("the Codex poll path yields windows, credits and per-model families", () =>
 	assert.equal(facts.credits?.balance, "12");
 });
 
-test("an OpenRouter key cap becomes a window and its remaining credit a balance", () => {
+test("an OpenRouter key cap is remaining credit, not a utilization window", () => {
 	const capped = parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 2.5, free_model_daily_requests: { used: 25, limit: 50 } } });
-	assert.equal(capped.windows!.key_limit!.utilization, 0.75);
+	assert.deepEqual(Object.keys(capped.windows!), ["free_daily"], "the prepaid cap is not metered as a quota window");
 	assert.equal(capped.windows!.free_daily!.utilization, 0.5);
 	assert.equal(capped.credits?.hasCredits, true);
+	assert.equal(capped.credits?.balance, "2.5");
+	assert.equal(parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 0 } }).credits?.hasCredits, false);
 
 	const uncapped = parseEntitlement("openrouter-key", { data: { limit: null } });
 	assert.equal(uncapped.credits?.unlimited, true);

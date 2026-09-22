@@ -108,7 +108,7 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 		evidence.push(`account window exhausted (${spent})`);
 		return excluded(labelBasis(billing), billing, freshness, `${model.provider} account quota exhausted (${spent})`, evidence, uncertainty);
 	}
-	if (quota.credits && creditsSpent(quota.credits)) {
+	if (quota.credits && !zeroCost(model) && creditsSpent(quota.credits)) {
 		const state = describeCredits(quota.credits);
 		evidence.push(state);
 		return excluded(labelBasis(billing), billing, freshness, `${model.provider} account cannot pay for this route (${state})`, evidence, uncertainty);
@@ -126,10 +126,10 @@ function assessFree(
 	evidence: string[],
 	uncertainty: string[],
 ): BillingAssessment {
-	const zeroCost = model.cost.input === 0 && model.cost.output === 0;
-	if (zeroCost) evidence.push("catalog list price is zero");
+	const free = zeroCost(model);
+	if (free) evidence.push("catalog list price is zero");
 	else uncertainty.push(`configuration labels ${key} free, but its catalog price is not zero`);
-	if (fromConfig && !zeroCost) {
+	if (fromConfig && !free) {
 		return {
 			basis: "unknown",
 			verification: "assumed",
@@ -305,6 +305,11 @@ function excluded(
 	uncertainty: string[],
 ): BillingAssessment {
 	return { basis, verification, eligibility: "excluded", reason, evidence, uncertainty, billing, rank: RANK.excluded };
+}
+
+/** A route at a zero list price spends no balance, whatever the credential's own state is. */
+function zeroCost(model: Model<Api>): boolean {
+	return model.cost.input === 0 && model.cost.output === 0;
 }
 
 /** Credit evidence that positively says the credential cannot pay. Unknown is never "spent". */

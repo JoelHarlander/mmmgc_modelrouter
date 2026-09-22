@@ -272,7 +272,7 @@ test("a Codex per-model family limit is model-scoped too", () => {
 		{ "x-codex-primary-used-percent": "10", "x-codex-bengalfox-primary-used-percent": "100", "x-codex-plan-type": "plus" },
 		scoped,
 	);
-	assert.equal(l.isBlocked("openai-codex", scoped).blocked, false, "the account limit still has room");
+	assert.deepEqual(l.assess("openai-codex", undefined, scoped).exhaustedAccount, [], "the account limit still has room");
 	const a = assess(codex, l, scoped);
 	assert.equal(a.eligibility, "excluded");
 	assert.match(a.reason, /model-scoped quota exhausted \(bengalfox:primary/);
@@ -280,13 +280,31 @@ test("a Codex per-model family limit is model-scoped too", () => {
 
 // ---- account-wide exhaustion off the subscription path ---------------------
 
-test("a spent pay-per-token key is excluded rather than reported eligible", () => {
+test("a spent prepaid key is excluded rather than reported eligible", () => {
 	const l = ledger();
 	l.applyEntitlement("openrouter", parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 0 } }));
 	const a = assess(router, l);
 	assert.equal(a.basis, "pay-per-token");
 	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /account quota exhausted \(key_limit/);
+	assert.match(a.reason, /cannot pay for this route \(no credits\)/);
+});
+
+test("a prepaid balance is spendable to its last cent, not to the plan utilization ceiling", () => {
+	const l = ledger();
+	l.applyEntitlement("openrouter", parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 1.4 } }));
+	const a = assess(router, l);
+	assert.equal(a.basis, "pay-per-token");
+	assert.equal(a.eligibility, "allowed");
+});
+
+test("a spent prepaid balance leaves the free variants it never paid for usable", () => {
+	const l = ledger();
+	l.applyEntitlement(
+		"openrouter",
+		parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 0, free_model_daily_requests: { used: 5, limit: 50 } } }),
+	);
+	assert.equal(assess(router, l).eligibility, "excluded");
+	assert.equal(assess(routerFree, l).eligibility, "allowed");
 });
 
 test("a gateway with nothing left to spend is excluded on its credit evidence", () => {

@@ -34,8 +34,6 @@ export interface WindowState {
 	status?: string;
 	/** Epoch ms when this window resets. */
 	resetAt?: number;
-	/** Server-driven warning flag that can arrive without a utilization value. */
-	surpassed?: boolean;
 	source: EvidenceSource;
 	lastSeen: number;
 }
@@ -59,8 +57,6 @@ export interface ProviderState {
 	plan?: string;
 	windows: Record<string, WindowState>;
 	credits?: CreditState;
-	/** Window the provider says is binding right now. */
-	bindingWindow?: string;
 	/** Epoch ms until which the provider is considered unusable (429/402). */
 	cooldownUntil?: number;
 	cooldownReason?: string;
@@ -176,7 +172,7 @@ export class Ledger {
 	applyEntitlement(provider: string, facts: EntitlementFacts, now = Date.now()): void {
 		const state = this.providerState(provider, now);
 		state.probedAt = now;
-		state.probeError = facts.error;
+		state.probeError = undefined;
 		if (facts.plan) state.plan = facts.plan;
 		for (const [id, w] of Object.entries(facts.windows ?? {})) {
 			state.windows[id] = { ...w, source: "poll", lastSeen: now };
@@ -237,14 +233,6 @@ export class Ledger {
 		return out;
 	}
 
-	/** Provider-level block check. Kept for status rendering and callers without a model in hand. */
-	isBlocked(provider: string, cfg: RouterConfig, now = Date.now()): { blocked: boolean; reason?: string } {
-		const a = this.assess(provider, undefined, cfg, now);
-		if (a.cooldown) return { blocked: true, reason: `${a.cooldown.reason} until ${new Date(a.cooldown.until).toLocaleTimeString()}` };
-		if (a.exhaustedAccount.length > 0) return { blocked: true, reason: a.exhaustedAccount[0]!.reason };
-		return { blocked: false };
-	}
-
 	providerState(provider: string, now = Date.now()): ProviderState {
 		const state = (this.data.providers[provider] ??= { windows: {}, lastSeen: now });
 		state.lastSeen = now;
@@ -253,10 +241,6 @@ export class Ledger {
 
 	peekProvider(provider: string): ProviderState | undefined {
 		return this.data.providers[provider];
-	}
-
-	providers(): string[] {
-		return Object.keys(this.data.providers);
 	}
 
 	summaryLines(): string[] {
@@ -322,7 +306,6 @@ export interface EntitlementFacts {
 	plan?: string;
 	windows?: Record<string, Omit<WindowState, "source" | "lastSeen">>;
 	credits?: Omit<CreditState, "source" | "lastSeen">;
-	error?: string;
 }
 
 /**
@@ -369,7 +352,7 @@ export function describeCredits(c: CreditState): string {
 
 // ---- header parsing --------------------------------------------------------
 
-const ANTHROPIC_WINDOW = /^anthropic-ratelimit-unified-(.+)-(utilization|status|reset|surpassed-threshold)$/;
+const ANTHROPIC_WINDOW = /^anthropic-ratelimit-unified-(.+)-(utilization|status|reset)$/;
 const CODEX_FIELD = /^x-codex-(?:(.+)-)?(primary|secondary)-(used-percent|reset-after-seconds|reset-at)$/;
 
 /**
@@ -389,17 +372,11 @@ function applyAnthropicHeaders(state: ProviderState, headers: Record<string, str
 		if (field === "utilization") w.utilization = clamp01(num(rawValue));
 		else if (field === "status") w.status = rawValue;
 		else if (field === "reset") w.resetAt = epochMs(rawValue);
-		else if (field === "surpassed-threshold") w.surpassed = truthy(rawValue);
 		touched = true;
 	}
 	const disabled = headers["anthropic-ratelimit-unified-overage-disabled-reason"];
 	if (disabled !== undefined && disabled !== "") {
 		state.credits = { ...(state.credits ?? {}), disabledReason: disabled, hasCredits: false, source: "header", lastSeen: now };
-		touched = true;
-	}
-	const claim = headers["anthropic-ratelimit-unified-representative-claim"];
-	if (claim) {
-		state.bindingWindow = claim;
 		touched = true;
 	}
 	if (touched) state.lastSeen = now;
@@ -430,11 +407,6 @@ function applyCodexHeaders(state: ProviderState, headers: Record<string, string>
 	const plan = headers["x-codex-plan-type"];
 	if (plan) {
 		state.plan = plan;
-		touched = true;
-	}
-	const active = headers["x-codex-active-limit"];
-	if (active) {
-		state.bindingWindow = active;
 		touched = true;
 	}
 	const hasCredits = headers["x-codex-credits-has-credits"];

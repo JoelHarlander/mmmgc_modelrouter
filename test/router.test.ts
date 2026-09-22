@@ -80,8 +80,9 @@ test("exhausted plan provider is skipped and the tier falls back to on-demand", 
 test("429 puts the provider in cooldown using retry-after", () => {
 	const l = ledger();
 	l.observeResponse("plan", 429, { "retry-after": "120" }, cfg);
-	assert.equal(l.isBlocked("plan", cfg).blocked, true);
-	assert.equal(l.isBlocked("plan", cfg, Date.now() + 121_000).blocked, false);
+	const d = chooseModel({ tier: "standard", confidence: 0.9, current: undefined, registry: fakeRegistry(models), cfg, ledger: l, contextTokens: 0 });
+	assert.match(d.candidates.find((c) => c.key === "plan/mid")?.skipped ?? "", /rate limited \(429\)/);
+	assert.equal(l.assess("plan", "plan/mid", cfg, Date.now() + 121_000).cooldown, undefined);
 });
 
 test("codex used-percent headers map to 0..1 utilization per window", () => {
@@ -90,7 +91,7 @@ test("codex used-percent headers map to 0..1 utilization per window", () => {
 	const state = l.peekProvider("openai-codex")!;
 	assert.equal(state.windows.primary?.utilization, 0.42);
 	assert.equal(state.windows.secondary?.utilization, 0.88);
-	assert.equal(l.isBlocked("openai-codex", cfg).blocked, true);
+	assert.ok(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).exhaustedAccount.some((w) => w.id === "secondary"));
 	assert.equal(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).accountUtilization, 0.88);
 });
 

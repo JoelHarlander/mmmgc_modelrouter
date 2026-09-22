@@ -243,11 +243,30 @@ export function loadConfig(cwd: string): { config: RouterConfig; sources: string
 	return { config: cfg, sources, errors };
 }
 
-/** Which layer a patch came from. Only the global layer may name a credential-bearing endpoint. */
+/** Which layer a patch came from. Only the global layer may name an endpoint or a credential. */
 export type ConfigScope = "global" | "project";
 
+/**
+ * The sections a project-local config may set. It is an allowlist, so a section that is not
+ * named here — `jev` and `entitlement` today, anything added later until it is listed — stays
+ * whatever the global layer says, and no repository can point a credential at its own endpoint.
+ */
+export const PROJECT_OVERRIDABLE: readonly (keyof RouterConfig)[] = [
+	"enabled",
+	"notifyOnSwitch",
+	"tiers",
+	"thinking",
+	"models",
+	"plan",
+	"billing",
+	"scopes",
+	"switching",
+	"parallel",
+];
+
 /** Section-level merge. `tiers` and `parallel.models` replace wholesale when given. */
-export function mergeConfig(base: RouterConfig, patch: Partial<RouterConfig>, scope: ConfigScope = "global"): RouterConfig {
+export function mergeConfig(base: RouterConfig, rawPatch: Partial<RouterConfig>, scope: ConfigScope = "global"): RouterConfig {
+	const patch = scope === "project" ? projectPatch(rawPatch) : rawPatch;
 	return {
 		enabled: patch.enabled ?? base.enabled,
 		notifyOnSwitch: patch.notifyOnSwitch ?? base.notifyOnSwitch,
@@ -257,11 +276,20 @@ export function mergeConfig(base: RouterConfig, patch: Partial<RouterConfig>, sc
 		models: { ...base.models, ...(patch.models ?? {}) },
 		plan: { ...base.plan, ...(patch.plan ?? {}) },
 		billing: { ...base.billing, ...(patch.billing ?? {}), probe: { ...base.billing.probe, ...(patch.billing?.probe ?? {}) } },
-		entitlement: scope === "project" ? base.entitlement : { ...base.entitlement, ...(patch.entitlement ?? {}) },
+		entitlement: { ...base.entitlement, ...(patch.entitlement ?? {}) },
 		scopes: { ...base.scopes, ...(patch.scopes ?? {}) },
 		switching: { ...base.switching, ...(patch.switching ?? {}) },
 		parallel: { ...base.parallel, ...(patch.parallel ?? {}) },
 	};
+}
+
+/** Keeps only the sections a project-local config is allowed to set. */
+function projectPatch(patch: Partial<RouterConfig>): Partial<RouterConfig> {
+	const out: Record<string, unknown> = {};
+	for (const section of PROJECT_OVERRIDABLE) {
+		if (patch[section] !== undefined) out[section] = patch[section];
+	}
+	return out as Partial<RouterConfig>;
 }
 
 /** True when any glob in `patterns` matches `modelKey`. */

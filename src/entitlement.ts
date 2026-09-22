@@ -189,14 +189,16 @@ function addCodexRateLimit(windows: Record<string, RawWindow>, prefix: string, r
 	if (reached && worst) windows[worst.id]!.status = "rejected";
 }
 
-/** `GET /api/v1/key`. A prepaid key cap, not a subscription: recorded so a spent key blocks. */
+/**
+ * `GET /api/v1/key`. A prepaid key cap, not a subscription window: the balance is recorded as
+ * remaining credit, so what is left is spendable to the last cent and only an empty key blocks.
+ */
 function parseOpenRouterKey(body: unknown): EntitlementFacts {
 	const data = obj(obj(body)?.data) ?? obj(body);
 	const facts: EntitlementFacts = { windows: {} };
 	const limit = numOf(data?.limit);
 	const remaining = numOf(data?.limit_remaining);
 	if (limit !== undefined && limit > 0 && remaining !== undefined) {
-		facts.windows!.key_limit = { utilization: Math.min(1, Math.max(0, 1 - remaining / limit)) };
 		facts.credits = { hasCredits: remaining > 0, balance: String(remaining) };
 	} else if (data !== undefined && "limit" in data && data.limit === null) {
 		// An explicit null cap means the key is uncapped, not that the field was missing.
