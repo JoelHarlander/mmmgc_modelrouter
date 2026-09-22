@@ -161,16 +161,21 @@ export class Ledger {
 		applyAnthropicHeaders(state, headers, now);
 		applyCodexHeaders(state, headers, now);
 
+		const spent = spentWindows(state, cfg, provider, now);
 		if (status === 429 || status === 402) {
-			// A bare 429 with no quota headers is Anthropic's entitlement gate, not quota pressure
-			// (docs/research/plan-quotas.md §1): cool down briefly, but never record it as utilization.
-			const retryAfter = num(h("retry-after"));
-			const fallbackMs = cfg.plan.cooldownMinutesOn429 * 60_000;
-			const rejectedReset = earliestRejectedReset(state, now, cfg, provider);
-			const until = retryAfter !== undefined ? now + retryAfter * 1000 : (rejectedReset ?? now + fallbackMs);
-			state.cooldownUntil = until;
-			state.cooldownReason = status === 402 ? "budget exhausted (402)" : "rate limited (429)";
-		} else if (status >= 200 && status < 300 && state.cooldownUntil && !hasRejectedWindow(state, now, cfg, provider)) {
+			// Whose refusal is this? A model-scoped or overage bucket speaks for its own models, and
+			// `assess` already excludes them, so the credential stays usable for everything else.
+			// Only an account-wide refusal - or a bare entitlement-gate 429 with no window evidence
+			// at all (docs/research/plan-quotas.md §1) - cools the provider, and then only briefly.
+			if (spent.accountWide.length > 0 || spent.scoped.length === 0) {
+				const retryAfter = num(h("retry-after"));
+				const fallbackMs = cfg.plan.cooldownMinutesOn429 * 60_000;
+				const rejectedReset = earliestReset(spent.accountWide);
+				const until = retryAfter !== undefined ? now + retryAfter * 1000 : (rejectedReset ?? now + fallbackMs);
+				state.cooldownUntil = until;
+				state.cooldownReason = status === 402 ? "budget exhausted (402)" : "rate limited (429)";
+			}
+		} else if (status >= 200 && status < 300 && state.cooldownUntil && spent.accountWide.length === 0) {
 			// A successful call clears a stale cooldown.
 			state.cooldownUntil = undefined;
 			state.cooldownReason = undefined;
@@ -359,25 +364,24 @@ export function windowExhausted(w: WindowState, cfg: RouterConfig, now: number):
 }
 
 /**
- * Windows that meter the whole credential. A model-scoped bucket (Fable's weekly, a per-model
- * meter) and the extra-billed overage bucket speak for their own models, so neither may set the
- * provider-wide cooldown nor keep one alive: the answer is a different model, not a cold provider.
+ * The windows this provider currently reports as spent, split by who they speak for. A
+ * model-scoped bucket (Fable's weekly, a per-model meter) and the extra-billed overage bucket
+ * speak for their own models only, so neither may arm, extend or hold the provider-wide cooldown:
+ * the answer to one of those is a different model, not a cold credential.
  */
-function accountWideRejections(state: ProviderState, now: number, cfg: RouterConfig, provider: string): WindowState[] {
-	return Object.entries(state.windows)
-		.filter(([id]) => !OVERAGE_WINDOWS.has(id) && scopeGlobs(cfg, provider, id) === undefined)
-		.map(([, w]) => w)
-		.filter((w) => w.status === "rejected" && (w.resetAt === undefined || w.resetAt > now));
+function spentWindows(state: ProviderState, cfg: RouterConfig, provider: string, now: number): { accountWide: WindowState[]; scoped: WindowState[] } {
+	const accountWide: WindowState[] = [];
+	const scoped: WindowState[] = [];
+	for (const [id, w] of Object.entries(state.windows)) {
+		if (windowExhausted(w, cfg, now) === undefined) continue;
+		if (OVERAGE_WINDOWS.has(id) || scopeGlobs(cfg, provider, id) !== undefined) scoped.push(w);
+		else accountWide.push(w);
+	}
+	return { accountWide, scoped };
 }
 
-function hasRejectedWindow(state: ProviderState, now: number, cfg: RouterConfig, provider: string): boolean {
-	return accountWideRejections(state, now, cfg, provider).length > 0;
-}
-
-function earliestRejectedReset(state: ProviderState, now: number, cfg: RouterConfig, provider: string): number | undefined {
-	const resets = accountWideRejections(state, now, cfg, provider)
-		.filter((w) => w.resetAt !== undefined)
-		.map((w) => w.resetAt!);
+function earliestReset(windows: WindowState[]): number | undefined {
+	const resets = windows.filter((w) => w.resetAt !== undefined).map((w) => w.resetAt!);
 	return resets.length ? Math.min(...resets) : undefined;
 }
 

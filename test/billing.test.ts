@@ -665,38 +665,79 @@ test("a family meter keyed by a dotted limit name still excludes exactly its own
 	assert.deepEqual(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).exhaustedAccount, []);
 });
 
-test("a Fable-only rejection cools Fable, not the whole Claude credential", () => {
-	// docs/research/plan-quotas.md: an overage- or Fable-only rejection with 5h/7d allowed is
+/** The documented Fable-only refusal: its weekly bucket is spent while 5h and 7d are allowed. */
+const FABLE_ONLY_REJECTED = {
+	"anthropic-ratelimit-unified-5h-utilization": "0.12",
+	"anthropic-ratelimit-unified-5h-status": "allowed",
+	"anthropic-ratelimit-unified-7d-utilization": "0.51",
+	"anthropic-ratelimit-unified-7d-status": "allowed",
+	"anthropic-ratelimit-unified-7d_oi-status": "rejected",
+	"anthropic-ratelimit-unified-7d_oi-reset": String(Math.floor((Date.now() + 5 * 24 * 60 * 60_000) / 1000)),
+};
+
+test("a Fable-only rejection seen on a 200 excludes Fable and leaves Opus usable", () => {
+	// docs/research/plan-quotas.md §1: an overage- or Fable-only rejection with 5h/7d allowed is
 	// model-scoped - route to another model on the same credential rather than cooling it down.
 	const l = ledger();
-	const fiveDaysOut = Math.floor((Date.now() + 5 * 24 * 60 * 60_000) / 1000);
+	l.observeResponse("claude-bridge", 200, FABLE_ONLY_REJECTED, cfg);
+
+	assert.equal(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).cooldown, undefined);
+	assert.equal(assess(opus, l).eligibility, "preferred");
+	assert.equal(assess(fable, l).eligibility, "excluded");
+});
+
+test("the same rejection arriving as a 429 with retry-after still only excludes Fable", () => {
+	// The quota-exhaustion 429 carries retry-after set to the weekly reset. Honouring that for the
+	// whole credential would take Opus down for days on an account whose own windows are healthy.
+	const l = ledger();
+	l.observeResponse("claude-bridge", 429, { ...FABLE_ONLY_REJECTED, "retry-after": String(5 * 24 * 60 * 60) }, cfg);
+
+	assert.equal(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).cooldown, undefined, "a scoped refusal never arms the provider cooldown");
+	assert.equal(assess(opus, l).eligibility, "preferred");
+	const fableVerdict = assess(fable, l);
+	assert.equal(fableVerdict.eligibility, "excluded");
+	assert.match(fableVerdict.reason, /model-scoped quota exhausted \(7d_oi rejected\)/);
+});
+
+test("a per-family Codex refusal leaves the rest of the credential usable", () => {
+	// The header path reports a filled family meter as utilization, never as a status, so the
+	// account-wide question has to be asked of what is spent, not of what says "rejected".
+	const l = ledger();
 	l.observeResponse(
-		"claude-bridge",
-		200,
+		"openai-codex",
+		429,
 		{
-			"anthropic-ratelimit-unified-5h-utilization": "0.12",
-			"anthropic-ratelimit-unified-5h-status": "allowed",
-			"anthropic-ratelimit-unified-7d-utilization": "0.51",
-			"anthropic-ratelimit-unified-7d-status": "allowed",
-			"anthropic-ratelimit-unified-7d_oi-status": "rejected",
-			"anthropic-ratelimit-unified-7d_oi-reset": String(fiveDaysOut),
+			"x-codex-primary-used-percent": "20",
+			"x-codex-bengalfox-primary-used-percent": "100",
+			"x-codex-bengalfox-limit-name": "gpt-6-astra",
+			"retry-after": "13873",
 		},
 		cfg,
 	);
-	// The documented bare entitlement-gate 429: no unified headers, no retry-after.
+	const sibling = model("openai-codex", "gpt-6-mini", { input: 1, output: 4 });
+	const registry = fakeRegistry([...ALL, sibling], ["claude-bridge", "openai-codex", "xai"]);
+
+	assert.equal(l.assess("openai-codex", "openai-codex/gpt-6-mini", cfg).cooldown, undefined);
+	assert.notEqual(assessBilling({ model: sibling, cfg, registry, ledger: l }).eligibility, "excluded");
+	assert.equal(assessBilling({ model: codex, cfg, registry, ledger: l }).eligibility, "excluded", "only the family that filled its meter is out");
+});
+
+test("a bare entitlement-gate 429 still cools the credential briefly", () => {
+	// Nothing in the response names a window, so the refusal is the credential's own: cool down,
+	// but only for billing.plan.cooldownMinutesOn429, and let the next success clear it.
+	const l = ledger();
 	l.observeResponse("claude-bridge", 429, {}, cfg);
 
 	const cooled = l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg);
-	assert.ok(cooled.cooldown, "the bare 429 still cools the provider");
+	assert.ok(cooled.cooldown);
 	assert.ok(
 		cooled.cooldown.until <= Date.now() + cfg.plan.cooldownMinutesOn429 * 60_000 + 5_000,
-		`briefly, not until Fable's weekly reset: ${new Date(cooled.cooldown.until).toISOString()}`,
+		`briefly: ${new Date(cooled.cooldown.until).toISOString()}`,
 	);
+	assert.equal(assess(opus, l).eligibility, "excluded");
 
 	l.observeResponse("claude-bridge", 200, {}, cfg);
-	assert.equal(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).cooldown, undefined, "a success clears it; the scoped window must not hold it open");
-	assert.equal(assess(opus, l).eligibility, "preferred", "Opus is usable again");
-	assert.equal(assess(fable, l).eligibility, "excluded", "and Fable is still out on its own window");
+	assert.equal(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).cooldown, undefined, "a success clears it");
 });
 
 test("a spent meter no configured route answers to is disclosed rather than ignored", () => {
