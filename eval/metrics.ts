@@ -29,7 +29,14 @@ export interface RunMetrics {
 	taskResolveRate: number;
 	medianTaskTurnSuccess: number;
 	worstTaskTurnSuccess: number;
+	/** The routed model's own outcome. Measures the router, ignoring any fan-out. */
 	turnSuccessRate: number;
+	/**
+	 * What the session actually ends up with: the adopted candidate where fan-out ran,
+	 * the routed model otherwise. Equal to turnSuccessRate when candidate mode is off.
+	 * This is the whole-system number.
+	 */
+	sessionSuccessRate: number;
 	/** Did the router land in the right tier? The headline: this decides the outcome. */
 	tierAccuracy: number;
 	/** Did the classifier ask for the right tier? Measures the classifier, not the router. */
@@ -154,6 +161,7 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		medianTaskTurnSuccess: median(perTaskSuccess),
 		worstTaskTurnSuccess: perTaskSuccess.length === 0 ? 0 : round(Math.min(...perTaskSuccess), 4),
 		turnSuccessRate: ratio(turns.filter((t) => t.solved).length, turns.length),
+		sessionSuccessRate: ratio(turns.filter((t) => t.candidate?.adoptedSolved ?? t.solved).length, turns.length),
 		tierAccuracy: ratio(exact, turns.length),
 		classifierAccuracy: ratio(classifierExact, turns.length),
 		underRouteRate: ratio(under, turns.length),

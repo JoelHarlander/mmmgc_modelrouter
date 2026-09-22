@@ -23,7 +23,7 @@ import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifi
 import { loadFleet } from "../eval/fleet.ts";
 import { runEval } from "../eval/harness.ts";
 import { computeMetrics, PLAN_POINT_USD } from "../eval/metrics.ts";
-import { compareMetrics, GATED_METRICS, gateRegressions, readRun, type RunRecord, writeRun } from "../eval/results.ts";
+import { compareMetrics, GATED_METRICS, gateRegressions, latestPath, readRun, type RunRecord, writeRun } from "../eval/results.ts";
 import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
 import { buildFleet } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
@@ -35,6 +35,7 @@ import {
 	runConfidenceSweep,
 	runOracleSweep,
 	runPolicySweep,
+	runStrategySweep,
 	runTrafficSweep,
 	type SweepCell,
 	type TrafficCell,
@@ -304,9 +305,16 @@ test("results round-trip and the comparison knows which direction is better", as
 		turns: outcome.turns,
 	};
 	const written = writeRun(root, record);
+	assert.ok(written.latestPath, "an ungated run updates the baseline");
 	const back = readRun(written.latestPath);
 	assert.ok(back);
 	assert.deepEqual(back.metrics, metrics);
+
+	// A regressed run is recorded for inspection but must not become the new baseline.
+	const regressed = writeRun(root, { ...record, runId: "2026-01-02T00-00-00-test-def5678" }, { updateLatest: false });
+	assert.equal(regressed.latestPath, undefined);
+	assert.equal(readRun(latestPath(root, "test"))?.runId, record.runId, "the known-good baseline must survive a failing gate");
+	assert.ok(readRun(regressed.runPath), "...while the failing run is still written out");
 
 	const better = { ...metrics, taskResolveRate: metrics.taskResolveRate + 0.1, listEquivalentUsd: metrics.listEquivalentUsd - 1 };
 	const deltas = compareMetrics(metrics, better);
@@ -862,4 +870,82 @@ test("calibration reads the classifier's own claims and ignores pinned turns", a
 	// An oracle classifier is perfectly accurate at confidence 1: no calibration error.
 	const perfect = computeCalibration((await run({ classifier: "oracle" })).turns, 0.5);
 	assert.equal(perfect.ece, 0);
+});
+
+test("session success and turn success are the same number until fan-out adopts something", async () => {
+	const plain = computeMetrics(...unpack(await run()));
+	assert.equal(plain.sessionSuccessRate, plain.turnSuccessRate, "with no fan-out there is nothing to adopt");
+
+	const fanned = computeMetrics(...unpack(await run({ candidateN: 3, judgeMinConfidence: 0 })));
+	assert.ok(fanned.sessionSuccessRate > fanned.turnSuccessRate, "a helpful judge must move the session number, not the routed one");
+	assert.equal(fanned.turnSuccessRate, plain.turnSuccessRate, "...and must not move the routed one at all");
+});
+
+test("exploration commits the rest of the session to one model", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3, exploreTurns: 2, judgeMinConfidence: 0 });
+	const byTask = new Map<string, typeof outcome.turns>();
+	for (const t of outcome.turns) byTask.set(t.taskId, [...(byTask.get(t.taskId) ?? []), t]);
+
+	for (const [taskId, turns] of byTask) {
+		const explore = turns.filter((t) => t.turn <= 2);
+		const exploit = turns.filter((t) => t.turn > 2);
+		for (const t of explore) assert.ok(t.candidate, `${taskId} t${t.turn} should have fanned out`);
+		for (const t of exploit) {
+			assert.equal(t.candidate, undefined, `${taskId} t${t.turn} should not pay for a fan-out`);
+			assert.equal(t.committed, true);
+			assert.match(t.reason, /committed to .* after 2 exploration turn\(s\)/);
+		}
+		if (exploit.length > 0) {
+			assert.equal(new Set(exploit.map((t) => t.model)).size, 1, `${taskId} kept switching after committing`);
+			// ...and only the first exploit turn can be cold, because nothing moves after it.
+			assert.deepEqual(exploit.slice(1).filter((t) => t.cold), []);
+		}
+	}
+});
+
+test("exploring beats fanning out every turn when the judge is good, and is worse than neither when it is not", async () => {
+	const cells = await runStrategySweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		candidateN: 3,
+		exploreDepths: [3],
+		biases: [0, 20],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const at = (strategy: string, bias: number) => cells.find((c) => c.strategy === strategy && c.bias === bias)!;
+
+	const route = at("route", 0);
+	const always = at("fanout-always", 0);
+	const explore = at("explore-3", 0);
+
+	assert.ok(always.turnSuccessRate > route.turnSuccessRate, "a good judge should help");
+	assert.ok(explore.turnSuccessRate >= always.turnSuccessRate, "committing beats re-rolling the judge every turn");
+	assert.ok(explore.listEquivalentUsd < always.listEquivalentUsd / 1.5, "...for a fraction of the spend");
+	assert.ok(explore.listUsdPerExtraSolve < always.listUsdPerExtraSolve / 3);
+	assert.ok(explore.fanoutTurns < always.fanoutTurns);
+
+	// Commitment amplifies bias: one bad verdict becomes permanent for the whole session.
+	assert.equal(at("route", 20).turnSuccessRate, route.turnSuccessRate, "the baseline cannot see the judge at all");
+	assert.ok(at("explore-3", 20).turnSuccessRate < route.turnSuccessRate, "a biased judge plus commitment is worse than not fanning out");
+});
+
+test("a pinned turn cannot change the thinking level, so it is never charged a cache flush for one", async () => {
+	// src/index.ts returns from before_agent_start on a pinned turn, before the line that
+	// calls pi.setThinkingLevel. The harness must model that early return exactly.
+	const src = readFileSync(join(ROOT, "src", "index.ts"), "utf8");
+	const early = src.indexOf("if (turn <= pinnedUntilTurn)");
+	const setLevel = src.indexOf("pi.setThinkingLevel");
+	assert.ok(early > 0 && setLevel > early, "src/index.ts's pinned early-return moved; re-check the harness");
+	assert.match(src.slice(early, src.indexOf("\n", src.indexOf("return;", early))), /return;/);
+
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3, exploreTurns: 2, judgeMinConfidence: 0 });
+	let previous: (typeof outcome.turns)[number] | undefined;
+	for (const turn of outcome.turns) {
+		if (previous && previous.taskId === turn.taskId && turn.pinned) {
+			assert.equal(turn.thinkingLevel, previous.thinkingLevel, `${turn.taskId} t${turn.turn}: a pinned turn changed the thinking level`);
+			assert.notEqual(turn.coldCause, "thinking-change");
+		}
+		previous = turn;
+	}
 });

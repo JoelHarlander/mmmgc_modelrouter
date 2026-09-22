@@ -304,6 +304,121 @@ export function renderPolicySweep(cells: PolicyCell[], title: string): string {
 	return `${out.join("\n")}\n`;
 }
 
+export interface StrategyCell {
+	strategy: string;
+	exploreTurns: number;
+	candidateN: number;
+	bias: number;
+	seeds: number;
+	/** What the session ends up with: adopted where fan-out ran, routed otherwise. */
+	turnSuccessRate: number;
+	listEquivalentUsd: number;
+	fanoutListEquivalentUsd: number;
+	/** Turns actually fanned out, per run. Exploration only pays for the first few. */
+	fanoutTurns: number;
+	/** Extra list spend per extra turn solved, against the no-fan-out baseline. */
+	listUsdPerExtraSolve: number;
+}
+
+/**
+ * Fan-out as *exploration* rather than as a per-turn cost.
+ *
+ * "2+ responses every turn and the judge picks" is the expensive reading of the idea.
+ * The cheap reading is: fan out for the first few turns of a session, see which model
+ * the judge keeps choosing, then commit to it. This sweep scores both against not
+ * fanning out at all, on turn success and on total spend.
+ *
+ * Harness-side only: it measures the idea and changes nothing about the shipped router
+ * or the shipped fan-out.
+ */
+export async function runStrategySweep(options: SweepOptions & { candidateN?: number; exploreDepths?: number[] }): Promise<StrategyCell[]> {
+	const candidateN = options.candidateN ?? 3;
+	const depths = options.exploreDepths ?? [1, 2, 3, 5];
+	const biases = options.biases ?? [0, 20];
+	const seeds = options.seeds ?? DEFAULT_SEEDS;
+	const cells: StrategyCell[] = [];
+
+	for (const bias of biases) {
+		// Baseline: no fan-out at all. Independent of the judge, so one run is enough.
+		const baseOutcome = await runEval({
+			pack: options.pack,
+			loaded: options.loaded,
+			classifier: options.classifier,
+			startModel: options.startModel,
+		});
+		const baseMetrics = computeMetrics(baseOutcome.turns, baseOutcome.stateChars);
+		const baseSolved = baseMetrics.sessionSuccessRate * baseMetrics.turns;
+		cells.push({
+			strategy: "route",
+			exploreTurns: 0,
+			candidateN: 0,
+			bias,
+			seeds: 1,
+			turnSuccessRate: baseMetrics.sessionSuccessRate,
+			listEquivalentUsd: baseMetrics.listEquivalentUsd,
+			fanoutListEquivalentUsd: 0,
+			fanoutTurns: 0,
+			listUsdPerExtraSolve: Number.POSITIVE_INFINITY,
+		});
+
+		for (const exploreTurns of [0, ...depths]) {
+			const runs: { success: number; list: number; fanout: number; fanoutTurns: number; turns: number }[] = [];
+			for (const seed of seeds) {
+				const outcome = await runEval({
+					pack: options.pack,
+					loaded: options.loaded,
+					classifier: options.classifier,
+					startModel: options.startModel,
+					candidateN,
+					exploreTurns,
+					seed,
+					judge: new NoisyJudge({ noise: 10, seed, bias }),
+				});
+				const m = computeMetrics(outcome.turns, outcome.stateChars);
+				runs.push({
+					success: m.sessionSuccessRate,
+					list: m.listEquivalentUsd,
+					fanout: m.candidate?.fanoutListEquivalentUsd ?? 0,
+					fanoutTurns: outcome.turns.filter((t) => t.candidate).length,
+					turns: m.turns,
+				});
+			}
+			const success = mean(runs.map((r) => r.success));
+			const list = mean(runs.map((r) => r.list));
+			const extra = success * runs[0]!.turns - baseSolved;
+			cells.push({
+				strategy: exploreTurns === 0 ? "fanout-always" : `explore-${exploreTurns}`,
+				exploreTurns,
+				candidateN,
+				bias,
+				seeds: runs.length,
+				turnSuccessRate: success,
+				listEquivalentUsd: list,
+				fanoutListEquivalentUsd: mean(runs.map((r) => r.fanout)),
+				fanoutTurns: mean(runs.map((r) => r.fanoutTurns)),
+				listUsdPerExtraSolve: extra <= 0 ? Number.POSITIVE_INFINITY : round((list - baseMetrics.listEquivalentUsd) / extra, 4),
+			});
+		}
+	}
+	return cells;
+}
+
+export function renderStrategySweep(cells: StrategyCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  strategy         bias   turn ok   fan-out turns      total $    fan-out $    $/extra solve");
+	let lastBias = -1;
+	for (const c of cells) {
+		if (c.bias !== lastBias && lastBias !== -1) out.push("");
+		lastBias = c.bias;
+		out.push(
+			`  ${c.strategy.padEnd(15)} ${String(c.bias).padStart(4)}   ${pct(c.turnSuccessRate).padStart(7)}   ${c.fanoutTurns.toFixed(1).padStart(13)}   ` +
+				`${usd(c.listEquivalentUsd).padStart(10)}   ${usd(c.fanoutListEquivalentUsd).padStart(10)}   ${usd(c.listUsdPerExtraSolve).padStart(14)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
 export interface ConfidenceCell {
 	minConfidence: number;
 	turns: number;

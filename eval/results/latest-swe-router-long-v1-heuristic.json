@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T13-35-45-swe-router-long-v1-heuristic-395afea",
-	"at": "2026-09-22T13:35:45.069Z",
+	"runId": "2026-09-22T13-42-20-swe-router-long-v1-heuristic-c03e855",
+	"at": "2026-09-22T13:42:20.765Z",
 	"profile": "swe-router-long-v1-heuristic",
 	"pack": "swe-router-long-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,7 +11,7 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "395afea",
+	"git": "c03e855",
 	"metrics": {
 		"tasks": 6,
 		"turns": 60,
@@ -21,6 +21,7 @@
 		"medianTaskTurnSuccess": 1,
 		"worstTaskTurnSuccess": 0.9,
 		"turnSuccessRate": 0.9667,
+		"sessionSuccessRate": 0.9667,
 		"tierAccuracy": 0.3333,
 		"classifierAccuracy": 0.3833,
 		"underRouteRate": 0,

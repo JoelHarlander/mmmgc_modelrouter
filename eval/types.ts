@@ -106,6 +106,12 @@ export interface TurnRecord {
 	previousModel?: string;
 	switched: boolean;
 	pinned: boolean;
+	/**
+	 * Set on turns served by a model the exploration phase committed to, rather than by
+	 * the router. Harness-side only: it measures fan-out-as-exploration as an idea and
+	 * changes nothing about how the shipped router or fan-out behaves.
+	 */
+	committed?: boolean;
 	reason: string;
 	/** Did the router pick a model that was authed, unblocked and inside the fleet? */
 	eligible: boolean;

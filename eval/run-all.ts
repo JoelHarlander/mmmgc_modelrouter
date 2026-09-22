@@ -92,12 +92,12 @@ function main(): number {
 
 function render(rows: Row[]): string {
 	const out: string[] = ["", "router eval — all profiles", ""];
-	out.push("  profile                turn   tier acc   in-tier   ineligible      list $   plan pts   cold   cold prem   adopted lift");
+	out.push("  profile                turn   session   tier acc   in-tier   ineligible      list $   plan pts   cold   cold prem   adopted lift");
 	for (const row of rows) {
 		const m = row.metrics;
 		const lift = m.candidate ? signedPct(m.candidate.adoptedLift) : "—";
 		out.push(
-			`  ${row.label.padEnd(20)} ${pct(m.turnSuccessRate).padStart(6)}   ${pct(m.tierAccuracy).padStart(8)}   ${String(m.inTierMisses).padStart(7)}   ` +
+			`  ${row.label.padEnd(20)} ${pct(m.turnSuccessRate).padStart(6)}   ${pct(m.sessionSuccessRate).padStart(7)}   ${pct(m.tierAccuracy).padStart(8)}   ${String(m.inTierMisses).padStart(7)}   ` +
 				`${String(m.ineligibleChoices).padStart(10)}   ${usd(m.listEquivalentUsd).padStart(9)}   ${m.planPointsUsed.toFixed(2).padStart(8)}   ` +
 				`${`${m.coldTurns}/${m.turns}`.padStart(5)}   ${usd(m.coldPremiumUsd).padStart(9)}   ${lift.padStart(12)}`,
 		);

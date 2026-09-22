@@ -14,6 +14,7 @@ npm run eval -- --sweep bias                  # what a judge that prefers the fl
 npm run eval -- --sweep profile               # how far the cost numbers move with the traffic constants
 npm run eval -- --sweep gate                  # does the shipped confidence bar on auto-adopt help?
 npm run eval -- --sweep policy                # what the inherited candidate set costs vs alternatives
+npm run eval -- --sweep strategy              # fan out every turn, or only to learn a winner then commit?
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
@@ -55,10 +56,13 @@ deltas. `--note "..."` appends a round line to [`results/log.md`](results/log.md
 | `4` | `--audit-config` only: the shipped tiers are not a cost ladder, not a capability ladder, or collapse onto one model |
 
 `--gate` watches a deliberately small set — `ineligibleChoices` (no tolerance),
-`turnSuccessRate` and `tierAccuracy` (±2pp), `listEquivalentUsd` and `coldPremiumUsd`
-(±5%), and `candidate.adoptedLift` (±2pp). It watches what a session **adopts**, not
-what the judge would have picked. `--gate-tolerance <x>` scales the band; improvements
-never fail, however large.
+`turnSuccessRate`, `sessionSuccessRate` and `tierAccuracy` (±2pp), `listEquivalentUsd`
+and `coldPremiumUsd` (±5%), and `candidate.adoptedLift` (±2pp). It watches what a
+session **adopts**, not what the judge would have picked. `--gate-tolerance <x>` scales
+the band; improvements never fail, however large.
+
+A run that trips the gate is written out for inspection but **never promoted to the
+baseline** — otherwise the gate fires once and the regression becomes the new normal.
 
 ## What it measures, and what it does not
 
@@ -141,7 +145,8 @@ pays the **full uncached input rate once** and leaves the session's own cache al
 | Metric | Reading |
 | --- | --- |
 | `taskResolveRate` | tasks where every turn was solved |
-| `turnSuccessRate` | turns solved |
+| `turnSuccessRate` | turns the **routed model** solved — measures the router |
+| `sessionSuccessRate` | turns the **session** ended up solving, after any fan-out adoption — measures the whole system. Equal to the above when candidate mode is off. |
 | `tierAccuracy` / `underRouteRate` / `overRouteRate` | chosen tier vs `goldTier`; the three always sum to 1 |
 | `underRouteFailures` | turns that failed *because* the tier was too low |
 | `inTierMisses` | turns that failed with the **right** tier, where another model in that tier would have solved them — the switcher's own miss |
@@ -165,6 +170,11 @@ and the adopted outcome separately. `--judge-min-confidence` moves the bar and
 The candidate set is chosen by the **same policy** as `src/parallel.ts`, and the judge
 question is the **same string** it sends to Jev. `test/eval.test.ts` pins both against
 that file, so if the shipped fan-out changes, the harness fails rather than drifts.
+
+`--explore-turns N` measures fan-out as **exploration**: fan out for the first N turns
+of a session, then commit the rest of it to the model the judge picked most often.
+`--sweep strategy` scores that against fanning out every turn and against not fanning
+out at all. Like the policies below, it measures the idea and changes nothing shipped.
 
 `--candidate-policy` swaps in an alternative set (`strongest`, `cheapest`, `spread`,
 `tier-top`) and `--sweep policy` scores them all against `shipped`. These exist to say
@@ -246,6 +256,9 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `results.ts` | results IO, the round log, run comparison |
 | `sweep.ts` | judge, bias, traffic-profile and oracle sweeps |
 | `probe.ts` | the judge bias probe and its calibration |
+| `calibration.ts` | is the classifier's confidence worth anything? |
+| `audit.ts` | the shipped config priced from `docs/data` |
+| `run-all.ts` | `npm run eval:all` |
 | `validate.ts` | ground-truth invariants and the tier price check |
 | `session.ts` | the fake `ExtensionContext` `buildRoutingState` needs |
 | `tasks/` | the fleet and the task pack |

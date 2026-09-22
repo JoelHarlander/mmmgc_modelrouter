@@ -33,11 +33,17 @@ export function latestPath(root: string, profile: string): string {
 	return join(resultsDir(root), `latest-${profile}.json`);
 }
 
-export function writeRun(root: string, record: RunRecord): { runPath: string; latestPath: string } {
+/**
+ * `updateLatest: false` keeps the recorded baseline where it is. A gated run that
+ * regressed must not become the thing the next run is judged against, or the gate only
+ * ever fires once and the regression quietly becomes the new normal.
+ */
+export function writeRun(root: string, record: RunRecord, options: { updateLatest?: boolean } = {}): { runPath: string; latestPath?: string } {
 	const dir = resultsDir(root);
 	mkdirSync(dir, { recursive: true });
 	const runPath = join(dir, `${record.runId}.json`);
 	writeFileSync(runPath, `${JSON.stringify(record, replacer, "\t")}\n`);
+	if (options.updateLatest === false) return { runPath };
 	const latest = latestPath(root, record.profile);
 	writeFileSync(latest, `${JSON.stringify(record, replacer, "\t")}\n`);
 	return { runPath, latestPath: latest };
@@ -67,6 +73,7 @@ const HIGHER_IS_BETTER = new Set([
 	"medianTaskTurnSuccess",
 	"worstTaskTurnSuccess",
 	"turnSuccessRate",
+	"sessionSuccessRate",
 	"tierAccuracy",
 	"classifierAccuracy",
 	"baselineSuccessRate",
@@ -128,6 +135,7 @@ export function compareMetrics(previous: RunMetrics | undefined, current: RunMet
 export const GATED_METRICS: { key: string; kind: "rate" | "relative" | "absolute"; tolerance: number }[] = [
 	{ key: "ineligibleChoices", kind: "absolute", tolerance: 0 },
 	{ key: "turnSuccessRate", kind: "rate", tolerance: 0.02 },
+	{ key: "sessionSuccessRate", kind: "rate", tolerance: 0.02 },
 	{ key: "tierAccuracy", kind: "rate", tolerance: 0.02 },
 	{ key: "listEquivalentUsd", kind: "relative", tolerance: 0.05 },
 	{ key: "coldPremiumUsd", kind: "relative", tolerance: 0.05 },

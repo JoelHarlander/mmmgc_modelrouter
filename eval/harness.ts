@@ -45,6 +45,12 @@ export interface RunOptions {
 	judgeMinConfidence?: number;
 	/** Which candidate set to fan out to. Defaults to the shipped src/parallel.ts policy. */
 	candidatePolicy?: string;
+	/**
+	 * Fan-out-as-exploration: run candidates only on the first N turns of each session,
+	 * then commit the rest of the session to the model the judge picked most often.
+	 * 0 (default) keeps whatever `candidateN` says for every turn.
+	 */
+	exploreTurns?: number;
 	seed?: string;
 	jev?: JevClient;
 	ledgerFile?: string;
@@ -113,6 +119,9 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 
 	let turnNo = 0;
 	let pinnedUntilTurn = 0;
+	const judgeWins = new Map<string, number>();
+	const exploreTurns = options.exploreTurns ?? 0;
+	let committedKey: string | undefined;
 	let lastThinking: ThinkingLevel | undefined;
 	let previousKey: string | undefined;
 	const records: TurnRecord[] = [];
@@ -127,6 +136,10 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		}
 
 		turnNo += 1;
+		// Exploration is over: commit to whatever the judge favoured and stop routing.
+		if (exploreTurns > 0 && turnNo > exploreTurns && !committedKey && judgeWins.size > 0) {
+			committedKey = [...judgeWins.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]![0];
+		}
 		session.addUser(turn.prompt);
 		const contextTokens = session.contextTokens;
 		const requiredSkill = turn.requiredSkill ?? task.requiredSkill;
@@ -136,7 +149,12 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		const state = buildRoutingState(turn.prompt, session.asContext(), cfg, turnNo);
 		stateChars.push(JSON.stringify(state).length);
 
-		const isPinned = turnNo <= pinnedUntilTurn;
+		const committed = committedKey !== undefined;
+		if (committed) {
+			const model = findModel(loaded, committedKey!);
+			if (model) session.model = model;
+		}
+		const isPinned = turnNo <= pinnedUntilTurn || committed;
 		let decision: Omit<Decision, "at" | "jevMs" | "jevModel" | "needsTools" | "stakes">;
 		let classifierCostUsd = 0;
 		let classifierSource: TurnRecord["classifierSource"] = "pinned";
@@ -151,7 +169,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 				confidence: 1,
 				model: session.model,
 				switched: false,
-				reason: `pinned ${session.model ? modelKey(session.model) : "none"}`,
+				reason: committed ? `committed to ${committedKey} after ${exploreTurns} exploration turn(s)` : `pinned ${session.model ? modelKey(session.model) : "none"}`,
 				candidates: [],
 			};
 		} else {
@@ -182,7 +200,10 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		const chosen = session.model;
 		const chosenKey = chosen ? modelKey(chosen) : "none";
 		const spec = byKey.get(chosenKey);
-		const thinking = chosen?.reasoning ? cfg.thinking[decision.tier] : undefined;
+		// src/index.ts returns from before_agent_start on a pinned turn, *before* it reaches
+		// pi.setThinkingLevel - so a pinned turn cannot change the thinking level, and must
+		// not be charged a cache flush for one.
+		const thinking = isPinned ? lastThinking : chosen?.reasoning ? cfg.thinking[decision.tier] : undefined;
 
 		const coldCause = !previousKey
 			? ("first-turn" as const)
@@ -252,7 +273,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			inTierAlternativeWouldSolve,
 		};
 
-		if (candidateN >= 2) {
+		if (candidateN >= 2 && (exploreTurns === 0 || turnNo <= exploreTurns)) {
 			record.candidate = await runCandidateTurn({
 				task,
 				turn: turnNo,
@@ -272,6 +293,10 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			});
 		}
 
+		if (record.candidate && record.candidate.adoptedKey !== "none") {
+			judgeWins.set(record.candidate.adoptedKey, (judgeWins.get(record.candidate.adoptedKey) ?? 0) + 1);
+		}
+		if (committed) record.committed = true;
 		records.push(record);
 		session.addAssistant(`[${chosenKey}] ${classifierSource === "heuristic" ? "(heuristic route) " : ""}work on ${task.id}`, ["read", "edit"]);
 		session.contextTokens += task.contextGrowthPerTurn;

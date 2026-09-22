@@ -27,6 +27,8 @@ Jump to the round that established each claim, and what it rests on.
 | The shipped routing confidence bar (0.50) is **nearly inert** — 1 turn in 60 falls below it | **12** | both packs |
 | Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
+| **Fan-out as *exploration* is ~20× more cost-effective than fanning out every turn**: +21.3pp for $0.81/solve vs $16.03 | **13** | 5 seeds |
+| …but commitment **amplifies** judge bias: at 20 points, every explore depth is worse than not fanning out at all | **13** | 5 seeds |
 
 **Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
 judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
@@ -762,3 +764,77 @@ are. The directory was 3.6 MB of history that the log already tells better.
 **Next.** Unchanged, and now with a second reason to want it: the calibration curve
 above is of *my handwriting*. `ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --calibration`
 measures Jev's, and `--probe --live-judge` measures the judge's. Neither is closeable offline.
+
+---
+
+## Round 13 — 2026-09-22 — fan out to *learn*, not to *pay*
+
+**Measured.** "2+ responses every turn and the judge picks" is the expensive reading of
+the captain's idea, and rounds 3–9 priced it: **$14–16 per extra solve** at realistic
+context. There is a cheaper reading nobody had tried. Fan out for the **first few turns
+of a session**, see which model the judge keeps choosing, then **commit** to it and stop
+paying. Fan-out as exploration rather than as a per-turn tax.
+
+**Changed.** `--explore-turns N` and `--sweep strategy`, scoring `route` (no fan-out),
+`fanout-always`, and `explore-N` on the same pack. Harness-side only: it measures the
+idea and changes nothing about the shipped router or the shipped fan-out. Also split
+`turnSuccessRate` (the routed model alone) from **`sessionSuccessRate`** (what the
+session actually ends up with after adoption) — the strategy comparison is meaningless
+without that distinction, and the old single number quietly reported `fanout-always` as
+no better than `route`.
+
+**Two bugs this round found, both mine.**
+
+1. **A pinned turn was being charged a cache flush it cannot cause.** `src/index.ts`
+   returns from `before_agent_start` on a pinned turn *before* it reaches
+   `pi.setThinkingLevel`, so a pinned turn cannot change the thinking level. The harness
+   was applying `cfg.thinking[tier]` anyway, inventing up to 7 `thinking-change` cold
+   starts per committed session. Fixed, and pinned against the early return by test.
+   This is why the explore rows below are cheaper than they first appeared.
+2. **The gate promoted regressions to the baseline.** `--gate` wrote
+   `latest-<profile>.json` before comparing, so a regression fired once and then became
+   the thing the next run was judged against. Now a regressed run is recorded for
+   inspection and the known-good baseline is left untouched. Verified end to end:
+   exit 3, baseline `$11.4794` before and after.
+
+**What the numbers did** (`swe-router-long-v1`, n=3, mean of 5 seeds; negative
+`$/extra solve` means the strategy is **cheaper *and* better** than not fanning out):
+
+| strategy | bias | session ok | fan-out turns | total $ | $/extra solve |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `route` | 0 | 75.0% | 0 | $69.27 | — |
+| `fanout-always` | 0 | 91.3% | 60 | $226.35 | **$16.03** |
+| `explore-1` | 0 | 89.7% | 6 | **$49.91** | **−$2.20** |
+| `explore-2` | 0 | 88.0% | 12 | $58.56 | −$1.37 |
+| **`explore-3`** | 0 | **96.3%** | 18 | $79.67 | **$0.81** |
+| `explore-5` | 0 | 96.3% | 30 | $117.07 | $3.73 |
+| `route` | 20 | 75.0% | 0 | $69.27 | — |
+| `fanout-always` | 20 | 72.3% | 60 | $226.35 | — |
+| `explore-1` | 20 | 63.3% | 6 | $62.26 | — |
+| `explore-2` | 20 | **50.0%** | 12 | $54.99 | — |
+| `explore-3` | 20 | 61.0% | 18 | $88.46 | — |
+
+**When the judge is good, exploration is the right shape of the idea by a wide margin.**
+`explore-3` reaches **96.3%** against `fanout-always`'s 91.3% — *better* — for **$79.67
+against $226.35**, which is **$0.81 per extra solve against $16.03**: roughly **20×**
+more cost-effective. Two reasons compound: you pay for 18 fan-outs instead of 60, and
+committing stops the router switching, which removes 34 model switches and their cold
+starts. `explore-1` and `explore-2` are literally **cheaper than not fanning out at
+all** while scoring 13–15pp higher, because the switching they prevent costs more than
+the exploration they add.
+
+**When the judge is biased, exploration is the worst shape of the idea.** At 20 points
+every depth lands **below** the 75.0% baseline, bottoming at **50.0%**. Fanning out
+every turn is bad (72.3%); committing to a biased verdict is worse, because one wrong
+judgement stops being a per-turn tax and becomes a decision that governs the rest of
+the session. Depth does not rescue it — `explore-5` only recovers to 73.3%, still below
+doing nothing.
+
+**So the candidate question now has a shape, not just a number.** The idea is worth
+roughly **+21pp for under a dollar a solve** if Jev judges cleanly, and it is
+**actively harmful, more so the more you commit to it**, if Jev carries ~20 points of
+presentation bias. The gap between those two worlds is larger than any other lever
+measured in thirteen rounds, and the measurement that decides which one we are in
+remains one command and under a cent.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

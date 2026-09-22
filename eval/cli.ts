@@ -39,12 +39,14 @@ import {
 } from "./results.ts";
 import {
 	renderConfidenceSweep,
+	renderStrategySweep,
 	renderGateSweep,
 	renderOracleSweep,
 	renderPolicySweep,
 	renderSweep,
 	renderTrafficSweep,
 	runConfidenceSweep,
+	runStrategySweep,
 	runJudgeSweep,
 	runOracleSweep,
 	runPolicySweep,
@@ -75,7 +77,8 @@ interface Args {
 	allowInconsistent: boolean;
 	gate: boolean;
 	gateTolerance: number;
-	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence";
+	sweep?: "judge" | "bias" | "profile" | "oracle" | "gate" | "policy" | "confidence" | "strategy";
+	exploreTurns?: number;
 	calibration: boolean;
 	candidatePolicy?: string;
 	judgeMinConfidence?: number;
@@ -185,6 +188,9 @@ function parseArgs(argv: string[]): Args {
 			case "--validate":
 				args.validateOnly = true;
 				break;
+			case "--explore-turns":
+				args.exploreTurns = Number(next());
+				break;
 			case "--calibration":
 				args.calibration = true;
 				break;
@@ -268,6 +274,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep gate           sweep the confidence bar src/parallel.ts auto-adopts above
   --sweep policy         compare the shipped candidate set against alternatives
   --sweep confidence     sweep switching.minConfidence, the routing bar
+  --sweep strategy       fan out every turn, or only to learn a winner then commit?
+  --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --calibration          is the classifier's confidence worth anything?
   --candidate-policy <p> shipped | strongest | cheapest | spread | tier-top
   --judge-min-confidence <c>  that bar (default: switching.minConfidence)
@@ -362,6 +370,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "strategy") {
+			title = `strategy sweep — pack ${pack.id}, classifier ${args.classifier}, n=${args.candidates || 3}, mean of 5 seeds`;
+			const c = await runStrategySweep({ ...base, candidateN: args.candidates || 3 });
+			cells = c;
+			rendered = renderStrategySweep(c, title);
 		} else if (args.sweep === "confidence") {
 			title = `confidence sweep — pack ${pack.id}, classifier ${args.classifier}`;
 			const c = await runConfidenceSweep(base);
@@ -415,6 +428,7 @@ async function main(): Promise<number> {
 		judge: new NoisyJudge({ noise: args.judgeNoise, seed: args.seed, bias: args.judgeBias }),
 		judgeMinConfidence: args.judgeMinConfidence,
 		candidatePolicy: args.candidatePolicy,
+		exploreTurns: args.exploreTurns,
 		seed: args.seed,
 		jev,
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
@@ -450,15 +464,16 @@ async function main(): Promise<number> {
 	const baselinePath = args.compare ?? latestPath(ROOT, profile);
 	const baseline = readRun(baselinePath);
 	const deltas = compareMetrics(baseline?.metrics, metrics);
+	const failures = args.gate ? gateRegressions(deltas, args.gateTolerance) : [];
 
 	if (!args.noWrite) {
-		const written = writeRun(ROOT, record);
+		// A regressed run is recorded but never promoted to the baseline, or the gate
+		// would fire once and the regression would quietly become the new normal.
+		const written = writeRun(ROOT, record, { updateLatest: failures.length === 0 });
 		if (args.note) {
 			appendLog(ROOT, `- **${at.toISOString().slice(0, 10)}** \`${profile}\` — ${args.note} (\`${written.runPath.replace(`${ROOT}/`, "")}\`)`);
 		}
 	}
-
-	const failures = args.gate ? gateRegressions(deltas, args.gateTolerance) : [];
 
 	if (args.json) {
 		process.stdout.write(
@@ -482,6 +497,7 @@ async function main(): Promise<number> {
 		for (const f of failures) {
 			process.stderr.write(`  ${f.key}: ${fmtNum(f.previous)} -> ${fmtNum(f.current)} (${fmtDelta(f.delta)}, tolerance ${f.kind} ${f.tolerance})\n`);
 		}
+		process.stderr.write("  baseline left untouched; fix the regression, or re-record by running without --gate\n");
 		return 3;
 	}
 	return 0;
@@ -530,7 +546,8 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 	row("task resolve rate", "taskResolveRate", pct(m.taskResolveRate));
 	row("  median task turn rate", "medianTaskTurnSuccess", pct(m.medianTaskTurnSuccess));
 	row("  worst task turn rate", "worstTaskTurnSuccess", pct(m.worstTaskTurnSuccess));
-	row("turn success rate", "turnSuccessRate", pct(m.turnSuccessRate));
+	row("turn success (routed)", "turnSuccessRate", pct(m.turnSuccessRate));
+	row("session success (adopted)", "sessionSuccessRate", pct(m.sessionSuccessRate));
 	row("tier accuracy (landed)", "tierAccuracy", pct(m.tierAccuracy));
 	row("  classifier accuracy", "classifierAccuracy", pct(m.classifierAccuracy));
 	row("under-routed", "underRouteRate", pct(m.underRouteRate));
