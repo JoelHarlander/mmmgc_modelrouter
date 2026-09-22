@@ -100,7 +100,9 @@ the provider uses on the wire (`5h`, `7d`, `7d_oi`, `primary`, `secondary`, `<fa
 `entitlement` maps a provider to its read-only usage endpoint. The shipped entries are Anthropic's
 `/api/oauth/usage`, Codex's `/wham/usage`, OpenRouter's `/api/v1/key` and the Vercel gateway credit balance. A probe
 that cannot authenticate is recorded as a failed probe — the route then stays `unverified`, which routing discloses
-rather than guessing either way.
+rather than guessing either way. Because a probe sends a provider credential, `entitlement` is read from the global
+file only: a project `.pi/modelrouter.json` cannot point a probe somewhere else, though it can still switch probing
+off with `billing.probe.enabled`.
 
 ## Commands
 

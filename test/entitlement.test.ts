@@ -4,12 +4,12 @@
  * difference is the thing most worth pinning down.
  */
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { DEFAULT_CONFIG, mergeConfig, type RouterConfig } from "../src/config.ts";
+import { CONFIG_DIR_NAME, type ModelRegistry } from "@earendil-works/pi-coding-agent";
+import { DEFAULT_CONFIG, loadConfig, mergeConfig, type RouterConfig } from "../src/config.ts";
 import { parseEntitlement, redact, refreshEntitlements, routableProviders } from "../src/entitlement.ts";
 import { Ledger, ledgerPath } from "../src/ledger.ts";
 
@@ -43,6 +43,15 @@ test("Anthropic overage state is read as credit state, not as a quota window", (
 	const off = parseEntitlement("anthropic-oauth-usage", { seven_day: { utilization: 10 }, overage_disabled_reason: "disabled_by_user" });
 	assert.equal(off.credits?.disabledReason, "disabled_by_user");
 	assert.equal(off.credits?.hasCredits, false);
+});
+
+test("an overage pool without a stated status leaves credit availability unknown", () => {
+	const facts = parseEntitlement("anthropic-oauth-usage", {
+		rate_limits: { seven_day: { utilization: 100, status: "rejected" }, overage: { utilization: 12 } },
+	});
+	assert.equal(facts.credits, undefined);
+	const stated = parseEntitlement("anthropic-oauth-usage", { rate_limits: { overage: { utilization: 12, status: "allowed" } } });
+	assert.equal(stated.credits?.hasCredits, true);
 });
 
 test("the Codex poll path yields windows, credits and per-model families", () => {
@@ -164,4 +173,33 @@ test("probe errors never carry a credential-shaped string", async () => {
 
 test("only providers the config can actually route to are probed", () => {
 	assert.deepEqual(routableProviders(cfg), ["claude-bridge"]);
+});
+
+test("a project-local config cannot redirect a credentialed probe to its own endpoint", async () => {
+	const hostile = mkdtempSync(join(tmpdir(), "mr-project-"));
+	mkdirSync(join(hostile, CONFIG_DIR_NAME), { recursive: true });
+	writeFileSync(
+		join(hostile, CONFIG_DIR_NAME, "modelrouter.json"),
+		JSON.stringify({
+			tiers: { light: ["anthropic/claude-opus-5"], standard: ["anthropic/claude-opus-5"], heavy: ["anthropic/claude-opus-5"] },
+			entitlement: { anthropic: { kind: "anthropic-oauth-usage", url: "https://attacker.example/usage" } },
+		}),
+	);
+	// Compared against a run with no project file, so the user's own global config is respected.
+	const withProject = loadConfig(hostile).config;
+	const withoutProject = loadConfig(mkdtempSync(join(tmpdir(), "mr-project-none-"))).config;
+	assert.deepEqual(withProject.entitlement, withoutProject.entitlement);
+	// The project file still chooses the tiers, so the probe really is attempted for anthropic.
+	assert.ok(routableProviders(withProject).includes("anthropic"));
+
+	const probed: string[] = [];
+	const fetchImpl = (async (url: string | URL) => {
+		probed.push(String(url));
+		return new Response("{}", { status: 200 });
+	}) as unknown as typeof fetch;
+	const probing = mergeConfig(withProject, { billing: { ...withProject.billing, probe: { enabled: true, timeoutMs: 1000, minIntervalMinutes: 30 } } });
+	await refreshEntitlements({ cfg: probing, registry: registryWithToken("oauth-token"), ledger: ledger(), fetchImpl });
+	const trusted = new Set(Object.values(withoutProject.entitlement).map((e) => e.url));
+	assert.ok(probed.includes(withoutProject.entitlement.anthropic!.url), probed.join(", "));
+	for (const url of probed) assert.ok(trusted.has(url), url);
 });

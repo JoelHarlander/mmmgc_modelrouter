@@ -8,11 +8,9 @@
  */
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { assessBilling, type BillingAssessment, billingFor, describeBasis } from "./billing.ts";
+import { assessBilling, type BillingAssessment, type BillingBasis, billsPerToken, describeBasis } from "./billing.ts";
 import { type Billing, modelKey, overrideFor, type RouterConfig, type Tier, TIERS } from "./config.ts";
 import type { Ledger } from "./ledger.ts";
-
-export { billingFor };
 
 export interface Candidate {
 	key: string;
@@ -46,9 +44,12 @@ export interface Decision {
 	at: number;
 }
 
-/** USD for one turn: context re-read (cache miss) or cache read (warm) + expected output. */
-export function estimateTurnCost(model: Model<Api>, billing: Billing, contextTokens: number, cfg: RouterConfig, warm: boolean): number {
-	if (billing !== "on-demand") return 0;
+/**
+ * USD for one turn: context re-read (cache miss) or cache read (warm) + expected output.
+ * Priced off the billing basis, so extra billed usage costs real money rather than $0.
+ */
+export function estimateTurnCost(model: Model<Api>, basis: BillingBasis, contextTokens: number, cfg: RouterConfig, warm: boolean): number {
+	if (!billsPerToken(basis)) return 0;
 	const inputRate = warm && model.cost.cacheRead > 0 ? model.cost.cacheRead : model.cost.input;
 	const input = (contextTokens * inputRate) / 1_000_000;
 	const output = (cfg.switching.expectedOutputTokens * model.cost.output) / 1_000_000;
@@ -166,9 +167,9 @@ export function evaluateCandidate(key: string, args: ChooseArgs, currentKey?: st
 		return { key, model, billing, assessment, costUsd: 0, switchPenaltyUsd: 0, capability, skipped: assessment.reason };
 	}
 	const warm = key === currentKey;
-	const costUsd = estimateTurnCost(model, billing, contextTokens, cfg, warm);
+	const costUsd = estimateTurnCost(model, assessment.basis, contextTokens, cfg, warm);
 	const switchPenaltyUsd =
-		!warm && cfg.switching.cacheSwitchPenalty && billing === "on-demand"
+		!warm && cfg.switching.cacheSwitchPenalty && billsPerToken(assessment.basis)
 			? (contextTokens * Math.max(0, model.cost.input - model.cost.cacheRead)) / 1_000_000
 			: 0;
 	return { key, model, billing, assessment, costUsd, switchPenaltyUsd, capability };

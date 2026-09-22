@@ -341,7 +341,7 @@ export function scopeGlobs(cfg: RouterConfig, provider: string, windowId: string
 }
 
 /** Human reason when a window is spent, or undefined when it still has room. */
-function windowExhausted(w: WindowState, cfg: RouterConfig, now: number): string | undefined {
+export function windowExhausted(w: WindowState, cfg: RouterConfig, now: number): string | undefined {
 	if (w.resetAt !== undefined && w.resetAt <= now) return undefined;
 	if (w.status === "rejected") return "rejected";
 	if (w.utilization !== undefined && w.utilization >= cfg.plan.utilizationCeiling) return `${Math.round(w.utilization * 100)}% used`;

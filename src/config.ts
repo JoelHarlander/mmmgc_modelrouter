@@ -2,6 +2,10 @@
  * Router configuration: defaults <- ~/.pi/agent/modelrouter.json <- <cwd>/.pi/modelrouter.json
  *
  * Model ids are always "provider/modelId" as pi knows them (see `pi --list-models`).
+ *
+ * The project-local layer arrives with whatever repository is open, so it may not choose an
+ * endpoint that receives a credential: `entitlement` is taken from the global layer only. A
+ * project can still switch probing off through `billing.probe.enabled`.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -180,6 +184,8 @@ export const DEFAULT_CONFIG: RouterConfig = {
 		"claude-bridge:7d_opus": ["*/claude-opus-*"],
 		"anthropic:7d_sonnet": ["*/claude-sonnet-*"],
 		"claude-bridge:7d_sonnet": ["*/claude-sonnet-*"],
+		// OpenRouter's daily allowance meters its `:free` variants only; the key's own cap is account-wide.
+		"openrouter:free_daily": ["*:free"],
 	},
 	switching: { minConfidence: 0.5, cacheSwitchPenalty: true, manualPinTurns: 3, expectedOutputTokens: 1500 },
 	parallel: {
@@ -228,7 +234,7 @@ export function loadConfig(cwd: string): { config: RouterConfig; sources: string
 		if (!existsSync(file)) continue;
 		try {
 			const raw = JSON.parse(readFileSync(file, "utf8")) as Partial<RouterConfig>;
-			cfg = mergeConfig(cfg, raw);
+			cfg = mergeConfig(cfg, raw, file === paths.project ? "project" : "global");
 			sources.push(file);
 		} catch (err) {
 			errors.push(`${file}: ${err instanceof Error ? err.message : String(err)}`);
@@ -237,8 +243,11 @@ export function loadConfig(cwd: string): { config: RouterConfig; sources: string
 	return { config: cfg, sources, errors };
 }
 
+/** Which layer a patch came from. Only the global layer may name a credential-bearing endpoint. */
+export type ConfigScope = "global" | "project";
+
 /** Section-level merge. `tiers` and `parallel.models` replace wholesale when given. */
-export function mergeConfig(base: RouterConfig, patch: Partial<RouterConfig>): RouterConfig {
+export function mergeConfig(base: RouterConfig, patch: Partial<RouterConfig>, scope: ConfigScope = "global"): RouterConfig {
 	return {
 		enabled: patch.enabled ?? base.enabled,
 		notifyOnSwitch: patch.notifyOnSwitch ?? base.notifyOnSwitch,
@@ -248,7 +257,7 @@ export function mergeConfig(base: RouterConfig, patch: Partial<RouterConfig>): R
 		models: { ...base.models, ...(patch.models ?? {}) },
 		plan: { ...base.plan, ...(patch.plan ?? {}) },
 		billing: { ...base.billing, ...(patch.billing ?? {}), probe: { ...base.billing.probe, ...(patch.billing?.probe ?? {}) } },
-		entitlement: { ...base.entitlement, ...(patch.entitlement ?? {}) },
+		entitlement: scope === "project" ? base.entitlement : { ...base.entitlement, ...(patch.entitlement ?? {}) },
 		scopes: { ...base.scopes, ...(patch.scopes ?? {}) },
 		switching: { ...base.switching, ...(patch.switching ?? {}) },
 		parallel: { ...base.parallel, ...(patch.parallel ?? {}) },

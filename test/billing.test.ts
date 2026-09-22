@@ -12,6 +12,7 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { assessBilling, describeBasis } from "../src/billing.ts";
 import { DEFAULT_CONFIG, mergeConfig, type RouterConfig } from "../src/config.ts";
+import { parseEntitlement } from "../src/entitlement.ts";
 import { Ledger } from "../src/ledger.ts";
 import { chooseModel } from "../src/router.ts";
 
@@ -48,7 +49,9 @@ const codex = model("openai-codex", "gpt-6-astra", { input: 1.25, output: 10 });
 const grok = model("xai", "grok-4.7", { input: 3, output: 15 });
 const claudeApi = model("anthropic", "claude-opus-5", { input: 15, output: 75 });
 const router = model("openrouter", "z-ai/glm-5.3", { input: 0.5, output: 2 });
-const ALL = [opus, fable, codex, grok, claudeApi, router];
+const routerFree = model("openrouter", "z-ai/glm-5.3:free");
+const gateway = model("vercel-ai-gateway", "deepseek/deepseek-v4.1-flash", { input: 0.3, output: 1 });
+const ALL = [opus, fable, codex, grok, claudeApi, router, routerFree, gateway];
 
 /** Tiers pointing at the real provider ids, so the shipped default policy is what is exercised. */
 const cfg: RouterConfig = mergeConfig(DEFAULT_CONFIG, {
@@ -181,6 +184,33 @@ test("an account with extra usage switched off is excluded once its subscription
 	assert.match(a.reason, /extra usage is off on the account/);
 });
 
+test("an overage pool the provider states nothing about is not evidence of credits", () => {
+	const allowAnthropicCredits = mergeConfig(cfg, { billing: { ...cfg.billing, allowExtraBilled: ["claude-bridge/*"] } });
+	const l = ledger();
+	l.applyEntitlement(
+		"claude-bridge",
+		parseEntitlement("anthropic-oauth-usage", { rate_limits: { seven_day: { utilization: 100, status: "rejected" }, overage: { utilization: 12 } } }),
+	);
+	const a = assess(opus, l, allowAnthropicCredits);
+	assert.equal(a.basis, "extra-credits");
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /needs verified credits/);
+});
+
+test("an extra-usage window that is itself spent excludes extra billed usage", () => {
+	const allowAnthropicCredits = mergeConfig(cfg, { billing: { ...cfg.billing, allowExtraBilled: ["claude-bridge/*"] } });
+	const l = ledger();
+	l.applyEntitlement(
+		"claude-bridge",
+		parseEntitlement("anthropic-oauth-usage", {
+			rate_limits: { seven_day: { utilization: 100, status: "rejected" }, overage: { utilization: 100, status: "allowed" } },
+		}),
+	);
+	const a = assess(opus, l, allowAnthropicCredits);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /extra-usage window is 100% used/);
+});
+
 // ---- deny paid fallback ----------------------------------------------------
 
 test("paid Anthropic API inference is denied by the shipped policy", () => {
@@ -246,6 +276,49 @@ test("a Codex per-model family limit is model-scoped too", () => {
 	const a = assess(codex, l, scoped);
 	assert.equal(a.eligibility, "excluded");
 	assert.match(a.reason, /model-scoped quota exhausted \(bengalfox:primary/);
+});
+
+// ---- account-wide exhaustion off the subscription path ---------------------
+
+test("a spent pay-per-token key is excluded rather than reported eligible", () => {
+	const l = ledger();
+	l.applyEntitlement("openrouter", parseEntitlement("openrouter-key", { data: { limit: 10, limit_remaining: 0 } }));
+	const a = assess(router, l);
+	assert.equal(a.basis, "pay-per-token");
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /account quota exhausted \(key_limit/);
+});
+
+test("a gateway with nothing left to spend is excluded on its credit evidence", () => {
+	const l = ledger();
+	l.applyEntitlement("vercel-ai-gateway", parseEntitlement("vercel-credits", { balance: 0 }));
+	const a = assess(gateway, l);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /cannot pay for this route \(no credits\)/);
+});
+
+test("an exhausted account window excludes a zero-cost route too", () => {
+	const local = model("ds4", "deepseek-v4-flash");
+	const l = ledger();
+	l.applyEntitlement("ds4", { windows: { daily: { status: "rejected" } } });
+	const a = assessBilling({ model: local, cfg, registry: fakeRegistry([local]), ledger: l });
+	assert.equal(a.basis, "free");
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /account quota exhausted \(daily rejected\)/);
+});
+
+test("OpenRouter's free-model allowance governs its free variants, not the paid routes", () => {
+	const l = ledger();
+	l.applyEntitlement(
+		"openrouter",
+		parseEntitlement("openrouter-key", { data: { limit: null, free_model_daily_requests: { used: 50, limit: 50 } } }),
+	);
+	const paid = assess(router, l);
+	assert.equal(paid.eligibility, "allowed");
+	assert.equal(paid.basis, "pay-per-token");
+	const free = assess(routerFree, l);
+	assert.equal(free.eligibility, "excluded");
+	assert.match(free.reason, /model-scoped quota exhausted \(free_daily/);
 });
 
 // ---- selection ordering ----------------------------------------------------
@@ -341,4 +414,46 @@ test("preferVerifiedSubscription false falls back to pure cost ordering", () => 
 	});
 	// Both estimate $0, so capability and config order decide rather than the billing rank.
 	assert.equal(d.model?.provider, "claude-bridge");
+});
+
+test("extra billed usage is priced as money, so a cheaper billed route can win on cost", () => {
+	const l = ledger();
+	l.observeResponse("openai-codex", 200, CODEX_EXHAUSTED_WITH_CREDITS, cfg);
+	const costOnly = mergeConfig(cfg, {
+		tiers: { ...cfg.tiers, standard: ["openai-codex/gpt-6-astra", "openrouter/z-ai/glm-5.3"] },
+		billing: { ...cfg.billing, preferVerifiedSubscription: false },
+	});
+	const d = chooseModel({
+		tier: "standard",
+		confidence: 0.9,
+		current: undefined,
+		registry: fakeRegistry(ALL, ["claude-bridge", "openai-codex", "xai"]),
+		cfg: costOnly,
+		ledger: l,
+		contextTokens: 50_000,
+	});
+	const extra = d.candidates.find((c) => c.key === "openai-codex/gpt-6-astra")!;
+	assert.equal(extra.assessment?.basis, "extra-credits");
+	assert.ok(extra.costUsd > 0, "credit spend is estimated as real money");
+	assert.ok(extra.switchPenaltyUsd > 0, "re-reading context on credits costs money too");
+	assert.equal(d.model?.provider, "openrouter", "the genuinely cheaper billed route wins on cost");
+});
+
+test("a free label the catalog price contradicts is still costed as money", () => {
+	const mislabelled = mergeConfig(cfg, {
+		models: { ...cfg.models, "openrouter/*": { billing: "free" } },
+		tiers: { ...cfg.tiers, light: ["openrouter/z-ai/glm-5.3"] },
+	});
+	const d = chooseModel({
+		tier: "light",
+		confidence: 0.9,
+		current: undefined,
+		registry: fakeRegistry(ALL),
+		cfg: mislabelled,
+		ledger: ledger(),
+		contextTokens: 50_000,
+	});
+	const c = d.candidates.find((x) => x.key === "openrouter/z-ai/glm-5.3")!;
+	assert.equal(c.assessment?.basis, "unknown");
+	assert.ok(c.costUsd > 0, "an unresolved basis at a non-zero list price is not free");
 });

@@ -18,7 +18,7 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { anyGlobMatch, type Billing, modelKey, overrideFor, type RouterConfig } from "./config.ts";
-import { describeCredits, type Ledger, type QuotaAssessment } from "./ledger.ts";
+import { type CreditState, describeCredits, type Ledger, type QuotaAssessment, windowExhausted } from "./ledger.ts";
 
 /** What pays for this turn. */
 export type BillingBasis = "free" | "subscription" | "extra-credits" | "pay-per-token" | "unknown";
@@ -64,9 +64,13 @@ export function billingLabel(model: Model<Api>, cfg: RouterConfig, registry: Mod
 	return { billing: registry.isUsingOAuth(model) ? "plan" : "on-demand", fromConfig: false };
 }
 
-/** Back-compatible coarse label for display and cost estimation. */
-export function billingFor(model: Model<Api>, cfg: RouterConfig, registry: ModelRegistry): Billing {
-	return billingLabel(model, cfg, registry).billing;
+/**
+ * Bases that spend money per token, so the catalog price is a real estimate rather than $0.
+ * `unknown` counts: it is only reached when a catalog price contradicts a free label, and an
+ * unresolved basis with a non-zero price is money until something proves otherwise.
+ */
+export function billsPerToken(basis: BillingBasis): boolean {
+	return basis === "pay-per-token" || basis === "extra-credits" || basis === "unknown";
 }
 
 export function assessBilling(args: AssessArgs): BillingAssessment {
@@ -94,8 +98,23 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 		return excluded(labelBasis(billing), billing, freshness, `model-scoped quota exhausted (${w.reason}); ${model.provider} stays usable for other models`, evidence, uncertainty);
 	}
 
-	if (billing === "free") return assessFree(model, key, cfg, fromConfig, evidence, uncertainty);
 	if (billing === "plan") return assessSubscription(key, cfg, quota, freshness, fromConfig, evidence, uncertainty, now);
+
+	// Account-wide exhaustion and a spent credit balance are facts about the credential, not about
+	// the basis: they disqualify a free or pay-per-token route as surely as a subscription one.
+	// Only the subscription path goes on, because there extra billed usage may still be permitted.
+	if (quota.exhaustedAccount.length > 0) {
+		const spent = quota.exhaustedAccount.map((w) => w.reason).join(", ");
+		evidence.push(`account window exhausted (${spent})`);
+		return excluded(labelBasis(billing), billing, freshness, `${model.provider} account quota exhausted (${spent})`, evidence, uncertainty);
+	}
+	if (quota.credits && creditsSpent(quota.credits)) {
+		const state = describeCredits(quota.credits);
+		evidence.push(state);
+		return excluded(labelBasis(billing), billing, freshness, `${model.provider} account cannot pay for this route (${state})`, evidence, uncertainty);
+	}
+
+	if (billing === "free") return assessFree(model, key, cfg, fromConfig, evidence, uncertainty);
 	return assessPayPerToken(key, cfg, evidence, uncertainty);
 }
 
@@ -209,7 +228,11 @@ function assessExtraCredits(
 ): BillingAssessment {
 	const credits = quota.credits;
 	if (credits) evidence.push(describeCredits(credits));
-	if (quota.overage?.status) evidence.push(`overage window ${quota.overage.status}`);
+	if (quota.overage) {
+		const bits = [quota.overage.status, quota.overage.utilization !== undefined ? `${Math.round(quota.overage.utilization * 100)}% used` : undefined];
+		const described = bits.filter((b) => b !== undefined).join(" ");
+		if (described) evidence.push(`overage window ${described}`);
+	}
 
 	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
 		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and paid fallback is denied for ${key}`, evidence, uncertainty);
@@ -220,8 +243,9 @@ function assessExtraCredits(
 	if (credits?.disabledReason) {
 		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and extra usage is off on the account`, evidence, uncertainty);
 	}
-	if (quota.overage && quota.overage.status === "rejected") {
-		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and the extra-usage window is rejected`, evidence, uncertainty);
+	const overageSpent = quota.overage ? windowExhausted(quota.overage, cfg, now) : undefined;
+	if (overageSpent) {
+		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and the extra-usage window is ${overageSpent}`, evidence, uncertainty);
 	}
 	const creditsFresh = credits !== undefined && now - credits.lastSeen <= cfg.billing.evidenceMaxAgeMinutes * 60_000;
 	const haveCredits = credits?.unlimited === true || credits?.hasCredits === true;
@@ -281,6 +305,12 @@ function excluded(
 	uncertainty: string[],
 ): BillingAssessment {
 	return { basis, verification, eligibility: "excluded", reason, evidence, uncertainty, billing, rank: RANK.excluded };
+}
+
+/** Credit evidence that positively says the credential cannot pay. Unknown is never "spent". */
+function creditsSpent(credits: CreditState): boolean {
+	if (credits.unlimited === true) return false;
+	return credits.disabledReason !== undefined || credits.hasCredits === false;
 }
 
 /** The basis a coarse label implies, for verdicts reached before the basis is resolved. */

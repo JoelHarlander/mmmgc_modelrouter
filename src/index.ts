@@ -56,7 +56,11 @@ export default function modelRouter(pi: ExtensionAPI) {
 		}
 	};
 
-	/** Read-only entitlement refresh. Never blocks a turn and never sends inference. */
+	/**
+	 * Read-only entitlement refresh. Never sends inference. It runs before the routing decision,
+	 * so a turn whose probe interval has elapsed waits for it (bounded by billing.probe.timeoutMs);
+	 * probing off the turn's critical path would route on older evidence and is a follow-up.
+	 */
 	const refreshBilling = async (ctx: ExtensionContext) => {
 		try {
 			await refreshEntitlements({ cfg, registry: ctx.modelRegistry, ledger });

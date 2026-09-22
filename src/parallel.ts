@@ -10,7 +10,7 @@ import { uuidv7 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import { convertToLlm } from "@earendil-works/pi-coding-agent";
 import { Container, matchesKey, Text } from "@earendil-works/pi-tui";
-import { assessBilling, billingFor, describeBasis } from "./billing.ts";
+import { assessBilling, describeBasis } from "./billing.ts";
 import { modelKey, type RouterConfig, TIERS } from "./config.ts";
 import type { JevChoiceAnswer, JevClient, JsonValue } from "./jev.ts";
 import type { Ledger } from "./ledger.ts";
@@ -289,9 +289,4 @@ export function renderParallelEntry(data: ParallelEntryData | undefined, expande
 	}
 	if (!expanded) c.addChild(new Text(theme.fg("dim", "(expand tool output to read full responses)"), 1, 0));
 	return c;
-}
-
-export function describeBilling(model: Model<Api>, cfg: RouterConfig, ctx: ExtensionCommandContext, ledger?: Ledger): string {
-	if (!ledger) return billingFor(model, cfg, ctx.modelRegistry);
-	return describeBasis(assessBilling({ model, cfg, registry: ctx.modelRegistry, ledger }));
 }

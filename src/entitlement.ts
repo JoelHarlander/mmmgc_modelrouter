@@ -130,8 +130,11 @@ function parseAnthropicUsage(body: unknown): EntitlementFacts {
 	if (plan) facts.plan = plan;
 	const overage = obj(pools?.overage);
 	const disabledReason = strOf(root?.overage_disabled_reason ?? overage?.disabled_reason);
+	// The overage pool's mere presence says nothing about credit availability: without an explicit
+	// status the credit state stays unknown rather than being read as "credits available".
+	const overageStatus = strOf(overage?.status);
 	if (disabledReason) facts.credits = { disabledReason, hasCredits: false };
-	else if (overage) facts.credits = { hasCredits: overage.status !== "rejected" };
+	else if (overageStatus) facts.credits = { hasCredits: overageStatus !== "rejected" };
 	return facts;
 }
 
