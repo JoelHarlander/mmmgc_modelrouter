@@ -110,7 +110,7 @@ test("a successful probe records live windows the router can verify against", as
 	assert.equal(calls.length, 1);
 	assert.equal(calls[0]!.url, "https://api.anthropic.com/api/oauth/usage");
 	assert.equal(calls[0]!.headers["anthropic-beta"], "oauth-2025-04-20", "the beta flag the unified quota surface needs");
-	const state = l.peekProvider("claude-bridge")!;
+	const state = l.peekProvider("anthropic")!; // the credential `claude-bridge` routes on
 	assert.equal(state.windows["7d"]!.utilization, 0.51);
 	assert.equal(state.windows["7d"]!.source, "poll");
 	assert.equal(state.probeError, undefined);
@@ -135,8 +135,8 @@ test("a failing probe is recorded as unverified rather than assumed either way",
 	const l = ledger();
 	const fetchImpl = (async () => new Response("nope", { status: 401 })) as unknown as typeof fetch;
 	await refreshEntitlements({ cfg, registry: registryWithToken("t"), ledger: l, fetchImpl });
-	assert.match(l.peekProvider("claude-bridge")!.probeError ?? "", /HTTP 401/);
-	assert.deepEqual(l.peekProvider("claude-bridge")!.windows, {});
+	assert.match(l.peekProvider("anthropic")!.probeError ?? "", /HTTP 401/);
+	assert.deepEqual(l.peekProvider("anthropic")!.windows, {});
 });
 
 test("a missing credential is recorded without inventing an entitlement", async () => {
@@ -148,7 +148,7 @@ test("a missing credential is recorded without inventing an entitlement", async 
 	}) as unknown as typeof fetch;
 	await refreshEntitlements({ cfg, registry: registryWithToken(undefined), ledger: l, fetchImpl });
 	assert.equal(called, false);
-	assert.match(l.peekProvider("claude-bridge")!.probeError ?? "", /no anthropic credential/);
+	assert.match(l.peekProvider("anthropic")!.probeError ?? "", /no anthropic credential/);
 });
 
 test("probing is skipped entirely when billing.probe.enabled is false", async () => {
@@ -169,7 +169,7 @@ test("probe errors never carry a credential-shaped string", async () => {
 		throw new Error(`connect failed using ${token}`);
 	}) as unknown as typeof fetch;
 	await refreshEntitlements({ cfg, registry: registryWithToken(token), ledger: l, fetchImpl });
-	const recorded = l.peekProvider("claude-bridge")!.probeError!;
+	const recorded = l.peekProvider("anthropic")!.probeError!;
 	assert.ok(!recorded.includes(token), recorded);
 	assert.match(recorded, /\[redacted\]/);
 	assert.equal(redact("bearer sk-abcdefghijkl"), "bearer [redacted]");
@@ -224,4 +224,29 @@ test("a poll that states nothing about a window leaves what the headers recorded
 test("a stated limit_reached is recorded even when no window carries a utilization", () => {
 	const facts = parseEntitlement("codex-wham-usage", { rate_limit: { limit_reached: true, primary_window: { reset_after_seconds: 600 } } });
 	assert.equal(facts.windows!.primary!.status, "rejected");
+});
+
+test("provider ids that share one credential are probed once, not once each", async () => {
+	// `claude-bridge` declares `authProvider: "anthropic"`: one account, one authenticated GET.
+	const both = mergeConfig(DEFAULT_CONFIG, {
+		tiers: {
+			light: ["claude-bridge/claude-opus-5"],
+			standard: ["anthropic/claude-opus-5"],
+			heavy: ["claude-bridge/claude-opus-5", "anthropic/claude-opus-5"],
+		},
+	});
+	const requested: string[] = [];
+	const fetchImpl = (async (url: string | URL) => {
+		requested.push(String(url));
+		return new Response(JSON.stringify({ rate_limits: { five_hour: { utilization: 10 } } }), { status: 200 });
+	}) as unknown as typeof fetch;
+
+	const l = ledger();
+	await refreshEntitlements({ cfg: both, registry: registryWithToken("oauth"), ledger: l, fetchImpl });
+	assert.equal(requested.length, 1, requested.join(", "));
+	assert.equal(l.peekProvider("anthropic")?.windows["5h"]?.utilization, 0.1, "recorded against the credential");
+	assert.equal(l.peekProvider("claude-bridge"), undefined, "not duplicated under the routed id");
+
+	await refreshEntitlements({ cfg: both, registry: registryWithToken("oauth"), ledger: l, fetchImpl });
+	assert.equal(requested.length, 1, "and the interval is per credential too");
 });

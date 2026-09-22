@@ -26,7 +26,10 @@ export interface EntitlementSource {
 	kind: EntitlementKind;
 	/** Read-only usage/entitlement endpoint. Never an inference endpoint. */
 	url: string;
-	/** pi provider whose credential authenticates the probe, when it differs from the routed provider. */
+	/**
+	 * pi provider whose credential this one routes on, when it differs. It is the same account:
+	 * one probe covers both, and quota evidence seen through either id belongs to both.
+	 */
 	authProvider?: string;
 	/** Extra request headers the endpoint requires (e.g. Anthropic's OAuth beta flag). */
 	headers?: Record<string, string>;
@@ -165,13 +168,11 @@ export const DEFAULT_CONFIG: RouterConfig = {
 		"vercel-ai-gateway": { kind: "vercel-credits", url: "https://ai-gateway.vercel.sh/v1/credits" },
 	},
 	scopes: {
-		// Anthropic's model-scoped weekly buckets (docs/research/plan-quotas.md §1).
+		// Anthropic's model-scoped weekly buckets (docs/research/plan-quotas.md §1). Keyed by the
+		// credential, so `claude-bridge` - which routes on the same account - needs no second entry.
 		"anthropic:7d_oi": ["*/claude-fable-*"],
-		"claude-bridge:7d_oi": ["*/claude-fable-*"],
 		"anthropic:7d_opus": ["*/claude-opus-*"],
-		"claude-bridge:7d_opus": ["*/claude-opus-*"],
 		"anthropic:7d_sonnet": ["*/claude-sonnet-*"],
-		"claude-bridge:7d_sonnet": ["*/claude-sonnet-*"],
 		// OpenRouter's daily allowance meters its `:free` variants only; the key's own cap is account-wide.
 		"openrouter:free_daily": ["*:free"],
 	},
@@ -312,6 +313,15 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 	return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+
+/**
+ * The account a provider id routes on. Several pi provider ids can front one subscription - the
+ * config says so with `entitlement.<id>.authProvider` - and quota is a fact about the account, so
+ * evidence, probes and scopes are all keyed by this rather than by the routed provider id.
+ */
+export function credentialOf(cfg: RouterConfig, provider: string): string {
+	return cfg.entitlement[provider]?.authProvider ?? provider;
+}
 
 /** Every model key the router can actually route to, from the tiers and the fan-out list. */
 export function routableModels(cfg: RouterConfig): string[] {

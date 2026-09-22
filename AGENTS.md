@@ -20,12 +20,17 @@ must live, since a project file may not state them) and the user's real global c
 - `src/billing.ts` keeps three questions separate and every explanation should too: the **basis** (what pays), the
   **verification** (how well that is established), and the **eligibility** (what the config permits). Only a
   verified subscription route is `preferred`. Never let a config label stand in for evidence.
+- Quota state is keyed by *credential*, not provider id: `credentialOf()` resolves both `ledger.assess` and
+  `observeResponse`, `cfg.scopes` keys name the credential, and `refreshEntitlements` probes each credential once
+  per interval and records it under that id. Provider ids sharing one (`entitlement.<p>.authProvider`) must never
+  grow a second copy of the same account's windows.
 - Quota window ids are the provider's own wire names (`5h`, `7d`, `7d_oi`, `primary`); a per-model meter is keyed
   `<model>:<role>` from the limit name the provider reports, which is what lets `scopeGlobs` match it with no config.
   A scoped or overage window governs its own models only. A 429/402 is attributed to the windows *that response*
   reported spent; when it names none, the refusal is the credential's own and is stored as one more account-wide
   window (`REFUSAL_WINDOWS`) rather than a second kind of state — keep it that way, since every earlier attempt to
-  hold a provider-wide cooldown beside the windows traded one wrong answer for another. A spent meter that matches
+  hold a provider-wide cooldown beside the windows traded one wrong answer for another. Clearing one is an expired
+  window carrying its own `lastSeen`, never a deleted key, so `mergeLedgers` can settle it. A spent meter that matches
   no routable model is carried as uncertainty, never as account-wide exhaustion.
   `docs/research/plan-quotas.md` is the authority for header names, JSON shapes and value scales — note especially
   that Anthropic utilization is 0..1 in headers but 0..100 from `/api/oauth/usage`.
@@ -33,7 +38,7 @@ must live, since a project file may not state them) and the user's real global c
 
 ## Sharp edges
 
-- `~/.pi/agent/modelrouter/usage.json` is shared by every concurrent pi session. `Ledger.save()` merges token
+- `~/.pi/agent/modelrouter/usage.json` (version 3) is shared by every concurrent pi session. `Ledger.save()` merges token
   totals as deltas against the last disk sync under a directory lock; adding a field means teaching
   `mergeLedgers` how it settles. A reader for an older file version must upgrade rather than discard, or a running
   session on the old version will erase the new one's data.

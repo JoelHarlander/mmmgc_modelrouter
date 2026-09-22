@@ -15,7 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Usage } from "@earendil-works/pi-ai";
-import { anyGlobMatch, globMatch, routableModels, type RouterConfig } from "./config.ts";
+import { anyGlobMatch, credentialOf, globMatch, routableModels, type RouterConfig } from "./config.ts";
 
 export interface ModelTotals {
 	calls: number;
@@ -64,7 +64,7 @@ export interface ProviderState {
 }
 
 interface LedgerFile {
-	version: 2;
+	version: 3;
 	totals: Record<string, ModelTotals>;
 	providers: Record<string, ProviderState>;
 }
@@ -74,8 +74,10 @@ const OVERAGE_WINDOWS = new Set(["overage"]);
 
 /**
  * A refusal the response attributed to no window of its own is the credential's own refusal, and
- * is recorded as one more account-wide window rather than as a second kind of state: what governs
- * which models, and until when, is then answered in exactly one place for every kind of evidence.
+ * is recorded as one more window rather than as a second kind of state: what governs which models,
+ * and until when, is then answered in exactly one place for every kind of evidence. A refusal that
+ * is over is stored expired rather than deleted, because a deleted key is invisible to the
+ * strictly-newer-wins merge in `mergeLedgers` and the next save would resurrect it.
  */
 const REFUSAL_WINDOWS: Record<string, string> = {
 	"rate-limited": "rate limited (429)",
@@ -84,7 +86,6 @@ const REFUSAL_WINDOWS: Record<string, string> = {
 
 /** What the router needs to know about one provider/model pair right now. */
 export interface QuotaAssessment {
-	cooldown?: { until: number; reason: string };
 	/** Account-wide windows that are exhausted (the whole credential is spent). */
 	exhaustedAccount: ExhaustedWindow[];
 	/** Model-scoped windows governing this model that are exhausted. */
@@ -120,7 +121,7 @@ export interface WindowScope {
 
 export class Ledger {
 	readonly session: Record<string, ModelTotals> = {};
-	private data: LedgerFile = { version: 2, totals: {}, providers: {} };
+	private data: LedgerFile = { version: 3, totals: {}, providers: {} };
 	/** `data.totals` as of the last disk sync; the delta against it is what a merged save applies. */
 	private baseline: Record<string, ModelTotals> = {};
 	private saveTimer: NodeJS.Timeout | undefined;
@@ -162,7 +163,7 @@ export class Ledger {
 
 	/** Called from after_provider_response. Headers are lower-cased by pi. */
 	observeResponse(provider: string, status: number, headers: Record<string, string>, cfg: RouterConfig, now = Date.now()): void {
-		const state = this.providerState(provider, now);
+		const state = this.providerState(credentialOf(cfg, provider), now);
 		const h = (name: string) => headers[name] ?? headers[name.toLowerCase()];
 
 		applyAnthropicHeaders(state, headers, now);
@@ -185,9 +186,12 @@ export class Ledger {
 				};
 			}
 		} else if (status >= 200 && status < 300) {
-			// The credential answered, so its own refusal is over. A window that is genuinely spent
-			// stays spent and keeps excluding what it governs on its own terms.
-			for (const id of Object.keys(REFUSAL_WINDOWS)) delete state.windows[id];
+			// The credential answered, so its own refusal is over: record that as an expired refusal,
+			// which merges like any other window. A window that is genuinely spent stays spent and
+			// keeps excluding what it governs on its own terms.
+			for (const id of Object.keys(REFUSAL_WINDOWS)) {
+				if (state.windows[id]) state.windows[id] = { status: "rejected", resetAt: now, source: "header", lastSeen: now };
+			}
 		}
 		this.scheduleSave();
 	}
@@ -219,7 +223,8 @@ export class Ledger {
 	 */
 	assess(provider: string, modelKey: string | undefined, cfg: RouterConfig, now = Date.now()): QuotaAssessment {
 		const out: QuotaAssessment = { exhaustedAccount: [], exhaustedScoped: [], unattributed: [], accountWindows: [], sources: [] };
-		const state = this.data.providers[provider];
+		const account = credentialOf(cfg, provider);
+		const state = this.data.providers[account];
 		if (!state) return out;
 		out.plan = state.plan;
 		out.credits = state.credits;
@@ -230,14 +235,19 @@ export class Ledger {
 			sources.add(w.source);
 			newest = Math.max(newest ?? 0, w.lastSeen);
 			if (REFUSAL_WINDOWS[id] !== undefined) {
-				if (w.resetAt !== undefined && w.resetAt > now) out.cooldown = { until: w.resetAt, reason: REFUSAL_WINDOWS[id]! };
+				// The credential's own refusal is account-wide exhaustion like any other: it says the
+				// whole credential is spent until it resets, and it is never quota evidence about a
+				// window the provider reported, so it stays out of `accountWindows`.
+				if (windowExhausted(w, cfg, now) !== undefined) {
+					out.exhaustedAccount.push({ id, reason: `${REFUSAL_WINDOWS[id]} until ${new Date(w.resetAt!).toLocaleTimeString()}` });
+				}
 				continue;
 			}
 			if (OVERAGE_WINDOWS.has(id)) {
 				out.overage = w;
 				continue;
 			}
-			const scope = scopeGlobs(cfg, provider, id);
+			const scope = scopeGlobs(cfg, account, id);
 			const spent = windowExhausted(w, cfg, now);
 			if (scope !== undefined) {
 				if (!(modelKey && anyGlobMatch(scope.globs, modelKey))) {
@@ -478,12 +488,24 @@ function applyCodexHeaders(state: ProviderState, headers: Record<string, string>
 
 // ---- persistence -----------------------------------------------------------
 
+function withoutLegacyCooldowns(providers: Record<string, ProviderState>): Record<string, ProviderState> {
+	return Object.fromEntries(
+		Object.entries(providers).map(([provider, state]) => {
+			const { cooldownUntil, cooldownReason, ...rest } = state as ProviderState & { cooldownUntil?: number; cooldownReason?: string };
+			return [provider, rest];
+		}),
+	);
+}
+
 function readLedgerFile(file: string): LedgerFile | undefined {
 	if (!existsSync(file)) return undefined;
 	try {
 		const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<LedgerFile> & { version?: number; plans?: Record<string, unknown> };
-		if (parsed?.version === 2) return { version: 2, totals: parsed.totals ?? {}, providers: parsed.providers ?? {} };
-		if (parsed?.version === 1) return { version: 2, totals: (parsed.totals as Record<string, ModelTotals>) ?? {}, providers: {} };
+		if (parsed?.version === 3) return { version: 3, totals: parsed.totals ?? {}, providers: parsed.providers ?? {} };
+		// v2 kept a provider-level cooldown beside the windows. Cooldowns are short-lived, so the
+		// quota state comes across and the stale scalars are simply dropped; totals are untouched.
+		if (parsed?.version === 2) return { version: 3, totals: parsed.totals ?? {}, providers: withoutLegacyCooldowns(parsed.providers ?? {}) };
+		if (parsed?.version === 1) return { version: 3, totals: (parsed.totals as Record<string, ModelTotals>) ?? {}, providers: {} };
 	} catch {
 		// corrupt ledger: start fresh, keep the old file until the next save replaces it
 	}
@@ -527,7 +549,7 @@ export function mergeLedgers(disk: LedgerFile, mine: LedgerFile, baseline: Recor
 		merged.lastSeen = Math.max(mineState.lastSeen, theirs.lastSeen);
 		providers[name] = merged;
 	}
-	return { version: 2, totals, providers };
+	return { version: 3, totals, providers };
 }
 
 const LOCK_STALE_MS = 10_000;

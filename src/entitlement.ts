@@ -9,7 +9,7 @@
  * Nothing here logs, stores or returns a credential value.
  */
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import { type EntitlementSource, type RouterConfig, routableModels } from "./config.ts";
+import { credentialOf, type EntitlementSource, type RouterConfig, routableModels } from "./config.ts";
 import { type EntitlementFacts, type Ledger, meteredModel, type WindowState } from "./ledger.ts";
 
 type RawWindow = Omit<WindowState, "source" | "lastSeen">;
@@ -41,35 +41,45 @@ export function routableProviders(cfg: RouterConfig): string[] {
 }
 
 /**
- * Probe every configured provider whose evidence is missing or older than the configured
- * interval. Always resolves; individual failures are recorded, not thrown.
+ * Probe every credential the router can route on whose evidence is missing or older than the
+ * configured interval. Provider ids that share one credential - `claude-bridge` routes on
+ * `anthropic`'s - are one account and get one probe, not one each. Always resolves; individual
+ * failures are recorded, not thrown.
  */
 export async function refreshEntitlements(opts: ProbeOptions): Promise<void> {
 	const { cfg, ledger } = opts;
 	if (!cfg.billing.probe.enabled) return;
 	const now = opts.now ?? Date.now();
 	const providers = opts.providers ?? routableProviders(cfg);
-	const due = providers.filter((p) => cfg.entitlement[p] && isDue(ledger, p, cfg, now));
-	await Promise.all(due.map((p) => probeProvider(p, cfg.entitlement[p]!, opts, now)));
+	const sources = new Map<string, EntitlementSource>();
+	for (const provider of providers) {
+		const source = cfg.entitlement[provider];
+		if (!source) continue;
+		const account = credentialOf(cfg, provider);
+		// The credential's own entry describes the account best when the config carries one.
+		if (provider === account || !sources.has(account)) sources.set(account, cfg.entitlement[account] ?? source);
+	}
+	const due = [...sources].filter(([account]) => isDue(ledger, account, cfg, now));
+	await Promise.all(due.map(([account, source]) => probeProvider(account, source, opts, now)));
 }
 
-function isDue(ledger: Ledger, provider: string, cfg: RouterConfig, now: number): boolean {
-	const probedAt = ledger.peekProvider(provider)?.probedAt;
+function isDue(ledger: Ledger, account: string, cfg: RouterConfig, now: number): boolean {
+	const probedAt = ledger.peekProvider(account)?.probedAt;
 	return probedAt === undefined || now - probedAt >= cfg.billing.probe.minIntervalMinutes * 60_000;
 }
 
-async function probeProvider(provider: string, source: EntitlementSource, opts: ProbeOptions, now: number): Promise<void> {
+async function probeProvider(account: string, source: EntitlementSource, opts: ProbeOptions, now: number): Promise<void> {
 	const { cfg, registry, ledger } = opts;
 	const doFetch = opts.fetchImpl ?? fetch;
 	let token: string | undefined;
 	try {
-		token = await registry.getApiKeyForProvider(source.authProvider ?? provider);
+		token = await registry.getApiKeyForProvider(source.authProvider ?? account);
 	} catch (err) {
-		ledger.recordProbeError(provider, `credential unavailable: ${redact(errText(err))}`, now);
+		ledger.recordProbeError(account, `credential unavailable: ${redact(errText(err))}`, now);
 		return;
 	}
 	if (!token) {
-		ledger.recordProbeError(provider, `no ${source.authProvider ?? provider} credential to query entitlement with`, now);
+		ledger.recordProbeError(account, `no ${source.authProvider ?? account} credential to query entitlement with`, now);
 		return;
 	}
 	try {
@@ -79,13 +89,13 @@ async function probeProvider(provider: string, source: EntitlementSource, opts: 
 			signal: AbortSignal.timeout(cfg.billing.probe.timeoutMs),
 		});
 		if (!res.ok) {
-			ledger.recordProbeError(provider, `entitlement query returned HTTP ${res.status}`, now);
+			ledger.recordProbeError(account, `entitlement query returned HTTP ${res.status}`, now);
 			return;
 		}
 		const facts = parseEntitlement(source.kind, (await res.json()) as unknown);
-		ledger.applyEntitlement(provider, facts, now);
+		ledger.applyEntitlement(account, facts, now);
 	} catch (err) {
-		ledger.recordProbeError(provider, `entitlement query failed: ${redact(errText(err))}`, now);
+		ledger.recordProbeError(account, `entitlement query failed: ${redact(errText(err))}`, now);
 	}
 }
 

@@ -102,10 +102,7 @@ function assessRoute(args: AssessArgs, key: string, quota: QuotaAssessment, now:
 	}
 	if (quota.plan) evidence.push(`provider reports plan "${quota.plan}"`);
 
-	// A cooldown or a spent model-scoped window excludes the route whatever the basis is.
-	if (quota.cooldown) {
-		return excluded(labelBasis(billing), billing, freshness, `${quota.cooldown.reason} until ${new Date(quota.cooldown.until).toLocaleTimeString()}`, evidence, uncertainty);
-	}
+	// A spent model-scoped window excludes the route whatever the basis is.
 	if (quota.exhaustedScoped.length > 0) {
 		const w = quota.exhaustedScoped[0]!;
 		evidence.push(`model-scoped window ${w.reason}`);

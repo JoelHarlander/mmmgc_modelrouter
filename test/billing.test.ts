@@ -13,7 +13,7 @@ import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { assessBilling, describeBasis } from "../src/billing.ts";
 import { DEFAULT_CONFIG, mergeConfig, modelKey, type RouterConfig } from "../src/config.ts";
 import { parseEntitlement } from "../src/entitlement.ts";
-import { Ledger } from "../src/ledger.ts";
+import { Ledger, ledgerPath } from "../src/ledger.ts";
 import { chooseModel } from "../src/router.ts";
 
 function model(provider: string, id: string, cost: Partial<Model<Api>["cost"]> = {}): Model<Api> {
@@ -181,7 +181,7 @@ test("an overage pool the provider states nothing about is not evidence of credi
 	const allowAnthropicCredits = mergeConfig(cfg, { billing: { ...cfg.billing, allowExtraBilled: ["claude-bridge/*"] } });
 	const l = ledger();
 	l.applyEntitlement(
-		"claude-bridge",
+		"anthropic",
 		parseEntitlement("anthropic-oauth-usage", { rate_limits: { seven_day: { utilization: 100, status: "rejected" }, overage: { utilization: 12 } } }),
 	);
 	const a = assess(opus, l, allowAnthropicCredits);
@@ -194,7 +194,7 @@ test("an extra-usage window that is itself spent excludes extra billed usage", (
 	const allowAnthropicCredits = mergeConfig(cfg, { billing: { ...cfg.billing, allowExtraBilled: ["claude-bridge/*"] } });
 	const l = ledger();
 	l.applyEntitlement(
-		"claude-bridge",
+		"anthropic",
 		parseEntitlement("anthropic-oauth-usage", {
 			rate_limits: { seven_day: { utilization: 100, status: "rejected" }, overage: { utilization: 100, status: "allowed" } },
 		}),
@@ -681,7 +681,7 @@ test("a Fable-only rejection seen on a 200 excludes Fable and leaves Opus usable
 	const l = ledger();
 	l.observeResponse("claude-bridge", 200, FABLE_ONLY_REJECTED, cfg);
 
-	assert.equal(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).cooldown, undefined);
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).exhaustedAccount, [], "the credential itself was not refused");
 	assert.equal(assess(opus, l).eligibility, "preferred");
 	assert.equal(assess(fable, l).eligibility, "excluded");
 });
@@ -692,7 +692,7 @@ test("the same rejection arriving as a 429 with retry-after still only excludes 
 	const l = ledger();
 	l.observeResponse("claude-bridge", 429, { ...FABLE_ONLY_REJECTED, "retry-after": String(5 * 24 * 60 * 60) }, cfg);
 
-	assert.equal(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).cooldown, undefined, "a scoped refusal never arms the provider cooldown");
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).exhaustedAccount, [], "a scoped refusal never cools the credential");
 	assert.equal(assess(opus, l).eligibility, "preferred");
 	const fableVerdict = assess(fable, l);
 	assert.equal(fableVerdict.eligibility, "excluded");
@@ -717,7 +717,7 @@ test("a per-family Codex refusal leaves the rest of the credential usable", () =
 	const sibling = model("openai-codex", "gpt-6-mini", { input: 1, output: 4 });
 	const registry = fakeRegistry([...ALL, sibling], ["claude-bridge", "openai-codex", "xai"]);
 
-	assert.equal(l.assess("openai-codex", "openai-codex/gpt-6-mini", cfg).cooldown, undefined);
+	assert.deepEqual(l.assess("openai-codex", "openai-codex/gpt-6-mini", cfg).exhaustedAccount, []);
 	assert.notEqual(assessBilling({ model: sibling, cfg, registry, ledger: l }).eligibility, "excluded");
 	assert.equal(assessBilling({ model: codex, cfg, registry, ledger: l }).eligibility, "excluded", "only the family that filled its meter is out");
 });
@@ -730,7 +730,7 @@ test("a scoped window spent days ago does not suppress a later unrelated refusal
 	l.observeResponse("claude-bridge", 429, {}, cfg, Date.now() + 60_000);
 
 	const cooled = l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, Date.now() + 60_000);
-	assert.ok(cooled.cooldown, "the credential's own refusal still cools it");
+	assert.match(cooled.exhaustedAccount.map((w) => w.reason).join(","), /rate limited \(429\)/, "the credential's own refusal still cools it");
 	assert.equal(assess(opus, l, cfg, Date.now() + 60_000).eligibility, "excluded");
 });
 
@@ -759,18 +759,52 @@ test("a bare entitlement-gate 429 still cools the credential briefly", () => {
 	// Nothing in the response names a window, so the refusal is the credential's own: cool down,
 	// but only for billing.plan.cooldownMinutesOn429, and let the next success clear it.
 	const l = ledger();
+	const t0 = Date.now();
+	// A verified window first, so what the refusal takes away and gives back is visible.
+	l.observeResponse("claude-bridge", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.2" }, cfg, t0);
+	assert.equal(assess(opus, l, cfg, t0).eligibility, "preferred");
+
+	l.observeResponse("claude-bridge", 429, {}, cfg, t0 + 1_000);
+	assert.equal(assess(opus, l, cfg, t0 + 1_000).eligibility, "excluded");
+	assert.match(assess(opus, l, cfg, t0 + 1_000).reason, /rate limited \(429\)/);
+	// Brief: gone once billing.plan.cooldownMinutesOn429 has passed.
+	const later = t0 + cfg.plan.cooldownMinutesOn429 * 60_000 + 5_000;
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, later).exhaustedAccount, [], "and it lifts on its own");
+
+	l.observeResponse("claude-bridge", 200, {}, cfg, t0 + 2_000);
+	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0 + 2_000).exhaustedAccount, [], "a success clears it early");
+	assert.equal(assess(opus, l, cfg, t0 + 2_000).eligibility, "preferred");
+});
+
+test("a cleared refusal stays cleared through a save and merge cycle", () => {
+	// The clear has to be a state the per-window merge can settle, or the next save brings the
+	// refusal back and strands a credential that has demonstrably answered.
+	const dir = mkdtempSync(join(tmpdir(), "mr-refusal-"));
+	const t0 = Date.now();
+	const l = new Ledger(ledgerPath(dir));
+	l.observeResponse("claude-bridge", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.2" }, cfg, t0);
+	l.observeResponse("claude-bridge", 429, {}, cfg, t0 + 1_000);
+	l.save();
+	assert.equal(assess(opus, l, cfg, t0 + 1_000).eligibility, "excluded");
+
+	l.observeResponse("claude-bridge", 200, {}, cfg, t0 + 2_000);
+	l.save();
+
+	const now = t0 + 3_000;
+	assert.equal(assess(opus, l, cfg, now).eligibility, "preferred", "the session that cleared it keeps it cleared");
+	const reopened = new Ledger(ledgerPath(dir));
+	assert.equal(assess(opus, reopened, cfg, now).eligibility, "preferred", "and so does a session that reads the file");
+});
+
+test("quota seen through one provider id is quota for every id on that credential", () => {
+	// `claude-bridge` routes on `anthropic`'s credential, so a refusal seen through one is a fact
+	// about the account: routing must not escalate onto the sibling id and burn another turn.
+	const l = ledger();
 	l.observeResponse("claude-bridge", 429, {}, cfg);
 
-	const cooled = l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg);
-	assert.ok(cooled.cooldown);
-	assert.ok(
-		cooled.cooldown.until <= Date.now() + cfg.plan.cooldownMinutesOn429 * 60_000 + 5_000,
-		`briefly: ${new Date(cooled.cooldown.until).toISOString()}`,
-	);
-	assert.equal(assess(opus, l).eligibility, "excluded");
-
-	l.observeResponse("claude-bridge", 200, {}, cfg);
-	assert.equal(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).cooldown, undefined, "a success clears it");
+	const sibling = assessBilling({ model: claudeApi, cfg, registry: fakeRegistry(ALL, ["claude-bridge", "anthropic"]), ledger: l });
+	assert.equal(sibling.eligibility, "excluded", "anthropic/* is the same subscription that just refused");
+	assert.match(sibling.reason, /rate limited \(429\)/);
 });
 
 test("a spent meter no configured route answers to is disclosed rather than ignored", () => {

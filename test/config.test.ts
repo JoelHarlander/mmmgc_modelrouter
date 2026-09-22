@@ -90,12 +90,12 @@ test("a project config cannot neutralise a quota scope or re-enable disabled rou
 	const off = mergeConfig(DEFAULT_CONFIG, { enabled: false });
 	const cfg = mergeConfig(
 		off,
-		{ enabled: true, scopes: { "claude-bridge:7d": ["zzz/*"], "claude-bridge:7d_opus": ["zzz/*"] } } as Partial<RouterConfig>,
+		{ enabled: true, scopes: { "anthropic:7d": ["zzz/*"], "anthropic:7d_opus": ["zzz/*"] } } as Partial<RouterConfig>,
 		"project",
 	);
 	assert.equal(cfg.enabled, false, "a repository may switch routing off, never back on");
-	assert.equal(cfg.scopes["claude-bridge:7d"], undefined, "an account-wide window cannot be given a scope that skips it");
-	assert.deepEqual(cfg.scopes["claude-bridge:7d_opus"], DEFAULT_CONFIG.scopes["claude-bridge:7d_opus"]);
+	assert.equal(cfg.scopes["anthropic:7d"], undefined, "an account-wide window cannot be given a scope that skips it");
+	assert.deepEqual(cfg.scopes["anthropic:7d_opus"], DEFAULT_CONFIG.scopes["anthropic:7d_opus"]);
 });
 
 test("a project config cannot widen any spend gate", () => {

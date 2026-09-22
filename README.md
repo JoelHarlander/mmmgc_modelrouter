@@ -67,7 +67,7 @@ heuristic, which by default keeps the current model.
     "evidenceMaxAgeMinutes": 30,
     "probe": { "enabled": true, "timeoutMs": 4000, "minIntervalMinutes": 30 }
   },
-  "scopes": { "claude-bridge:7d_oi": ["*/claude-fable-*"] },
+  "scopes": { "anthropic:7d_oi": ["*/claude-fable-*"] },
   "switching": { "minConfidence": 0.5, "cacheSwitchPenalty": true, "manualPinTurns": 3 },
   "parallel": { "defaultN": 2, "judge": "jev", "autoAdopt": false, "switchToWinner": false }
 }
@@ -92,7 +92,7 @@ paid path behind it.
 | `evidenceMaxAgeMinutes` | Evidence older than this is `stale`, not `verified` — in both directions, so an ageing "no credits" fact stops excluding a route |
 | `probe` | Read-only entitlement polling. Never touches an inference endpoint |
 
-`scopes` maps a provider's model-scoped limit window (`"<providerGlob>:<windowId>"`) to the models it governs, so an
+`scopes` maps a credential's model-scoped limit window (`"<providerGlob>:<windowId>"`) to the models it governs, so an
 exhausted Fable weekly bucket excludes Fable while the same credential keeps serving Opus. Window ids are the ones
 the provider uses on the wire (`5h`, `7d`, `7d_oi`, `primary`, `secondary`, `<model>:primary`). `scopes` is the only
 place that decides which windows are model-scoped; a `<model>:<role>` window is the one case it answers without an
@@ -102,11 +102,18 @@ the model in the usage poll, so the header path keys the window by the `x-codex-
 both evidence paths then name the same meter, and a later poll refreshes what a header recorded.
 
 A scoped window speaks only for its own models: a Fable-only or overage rejection excludes the models that window
-governs and nothing else, whether it arrives on a 200 or on a 429 with `retry-after`. A refusal the response
-attributes to no window of its own is the credential's own — that one cools the provider, for
-`plan.cooldownMinutesOn429` or the `retry-after` it came with, until a later call succeeds. And when a provider reports a spent
+governs and nothing else, whether it arrives on a 200 or on a 429 with `retry-after`. Only the windows *that*
+response reported spent can answer whose refusal it is; a window stored hours ago cannot. A refusal the response
+attributes to no window of its own is the credential's own, and is recorded as one more account-wide window —
+`rate limited (429)` or `budget exhausted (402)` — that expires after the `retry-after` it came with or
+`plan.cooldownMinutesOn429`, and that the credential's next successful answer clears. And when a provider reports a spent
 meter that names no route your config can reach, the router neither ignores it nor calls the whole credential
 spent — it carries it as uncertainty on every route of that provider and stops calling those verdicts `verified`.
+
+Quota is a fact about a credential, not about a provider id. `entitlement.<provider>.authProvider` names the
+credential a provider id routes on — `claude-bridge` routes on `anthropic`'s — so ids that share one are one
+account: one probe per interval between them, one set of windows, and a refusal seen through either excludes the
+routes of both.
 
 `entitlement` maps a provider to its read-only usage endpoint. The shipped entries are Anthropic's
 `/api/oauth/usage`, Codex's `/wham/usage`, OpenRouter's `/api/v1/key` and the Vercel gateway credit balance. A probe

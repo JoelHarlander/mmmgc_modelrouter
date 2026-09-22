@@ -75,11 +75,11 @@ test("the newer quota window wins when two sessions observed different responses
 	a.save();
 	b.observeResponse("claude-bridge", 200, { "anthropic-ratelimit-unified-7d-utilization": "0.9" }, cfg, t0 + 1000);
 	b.save();
-	assert.equal(readFile(file).providers["claude-bridge"]!.windows["7d"]!.utilization, 0.9);
+	assert.equal(readFile(file).providers["anthropic"]!.windows["7d"]!.utilization, 0.9);
 
 	// And the older observation replayed afterwards does not roll the fresher one back.
 	a.save();
-	assert.equal(readFile(file).providers["claude-bridge"]!.windows["7d"]!.utilization, 0.9);
+	assert.equal(readFile(file).providers["anthropic"]!.windows["7d"]!.utilization, 0.9);
 });
 
 test("a stale lock left by a crashed session is broken instead of blocking forever", () => {
@@ -106,7 +106,7 @@ test("a v1 ledger file is read and upgraded without losing totals", () => {
 	l.save();
 	const after = readFile(file);
 	assert.equal(after.totals["p/m"]!.calls, 4);
-	assert.equal(JSON.parse(readFileSync(file, "utf8")).version, 2);
+	assert.equal(JSON.parse(readFileSync(file, "utf8")).version, 3);
 });
 
 test("a corrupt ledger file does not throw and is replaced on the next save", () => {

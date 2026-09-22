@@ -82,7 +82,7 @@ test("429 puts the provider in cooldown using retry-after", () => {
 	l.observeResponse("plan", 429, { "retry-after": "120" }, cfg);
 	const d = chooseModel({ tier: "standard", confidence: 0.9, current: undefined, registry: fakeRegistry(models), cfg, ledger: l, contextTokens: 0 });
 	assert.match(d.candidates.find((c) => c.key === "plan/mid")?.skipped ?? "", /rate limited \(429\)/);
-	assert.equal(l.assess("plan", "plan/mid", cfg, Date.now() + 121_000).cooldown, undefined);
+	assert.deepEqual(l.assess("plan", "plan/mid", cfg, Date.now() + 121_000).exhaustedAccount, [], "and it lifts when retry-after has passed");
 });
 
 test("codex used-percent headers map to 0..1 utilization per window", () => {
