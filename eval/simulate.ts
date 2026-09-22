@@ -19,6 +19,24 @@ export const CALLS_PER_TURN = 5;
 export const CACHE_GROWTH_TOKENS_PER_CALL = 650;
 export const OUTPUT_TOKENS_PER_CALL = 550;
 
+/**
+ * The three numbers every cost figure in this harness rests on. They are measurements
+ * from one machine's logs, not constants of nature, and the cache-cost study says
+ * break-even scales roughly with 1/callsPerTurn — so `--sweep profile` varies them
+ * rather than leaving the conclusions resting on a single sample.
+ */
+export interface TrafficProfile {
+	callsPerTurn: number;
+	cacheGrowthTokensPerCall: number;
+	outputTokensPerCall: number;
+}
+
+export const DEFAULT_TRAFFIC: TrafficProfile = {
+	callsPerTurn: CALLS_PER_TURN,
+	cacheGrowthTokensPerCall: CACHE_GROWTH_TOKENS_PER_CALL,
+	outputTokensPerCall: OUTPUT_TOKENS_PER_CALL,
+};
+
 export function effectiveSkill(model: FleetModel, category: string): number {
 	return model.skill + (model.skillByCategory?.[category] ?? 0);
 }
@@ -31,8 +49,10 @@ export interface TurnUsageArgs {
 	model: FleetModel;
 	contextTokens: number;
 	cold: boolean;
+	/** Per-task override of the profile's callsPerTurn. */
 	calls?: number;
 	outputTokensPerCall?: number;
+	traffic?: TrafficProfile;
 }
 
 export interface TurnUsage {
@@ -46,8 +66,10 @@ export interface TurnUsage {
 
 export function simulateTurnUsage(args: TurnUsageArgs): TurnUsage {
 	const { model, contextTokens, cold } = args;
-	const calls = args.calls ?? CALLS_PER_TURN;
-	const outPerCall = args.outputTokensPerCall ?? OUTPUT_TOKENS_PER_CALL;
+	const traffic = args.traffic ?? DEFAULT_TRAFFIC;
+	const calls = args.calls ?? traffic.callsPerTurn;
+	const outPerCall = args.outputTokensPerCall ?? traffic.outputTokensPerCall;
+	const growth = traffic.cacheGrowthTokensPerCall;
 
 	let cacheRead = 0;
 	let cacheWrite = 0;
@@ -57,9 +79,9 @@ export function simulateTurnUsage(args: TurnUsageArgs): TurnUsage {
 			cacheWrite += prefix;
 		} else {
 			cacheRead += prefix;
-			cacheWrite += CACHE_GROWTH_TOKENS_PER_CALL;
+			cacheWrite += growth;
 		}
-		prefix += CACHE_GROWTH_TOKENS_PER_CALL;
+		prefix += growth;
 	}
 	const output = outPerCall * calls;
 	const rates = model.cost;

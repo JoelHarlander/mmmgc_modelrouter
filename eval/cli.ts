@@ -21,8 +21,9 @@ import { NoisyJudge } from "./candidates.ts";
 import { loadFleet } from "./fleet.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
+import { DEFAULT_TRAFFIC } from "./simulate.ts";
 import { appendLog, compareMetrics, ensureDirFor, latestPath, readRun, resultsDir, type RunRecord, writeRun } from "./results.ts";
-import { renderSweep, runJudgeSweep } from "./sweep.ts";
+import { renderSweep, renderTrafficSweep, runJudgeSweep, runTrafficSweep } from "./sweep.ts";
 import { formatProblems, validatePack } from "./validate.ts";
 import type { ClassifierMode, TaskPack } from "./types.ts";
 
@@ -44,7 +45,8 @@ interface Args {
 	noWrite: boolean;
 	validateOnly: boolean;
 	allowInconsistent: boolean;
-	sweep?: "judge" | "bias";
+	sweep?: "judge" | "bias" | "profile";
+	callsPerTurn?: number;
 	judgeBias: number;
 	help: boolean;
 }
@@ -92,7 +94,10 @@ function parseArgs(argv: string[]): Args {
 				args.judgeBias = Number(next());
 				break;
 			case "--sweep":
-				args.sweep = next() as "judge" | "bias";
+				args.sweep = next() as Args["sweep"];
+				break;
+			case "--calls-per-turn":
+				args.callsPerTurn = Number(next());
 				break;
 			case "--seed":
 				args.seed = next();
@@ -149,6 +154,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --judge-bias <n>       skill points the judge hands the flashiest candidate regardless
   --sweep judge          sweep candidate count x judge noise x seed and print the lift curve
   --sweep bias           sweep the judge's preference for the flashy candidate
+  --sweep profile        sweep the measured traffic constants the cost model rests on
+  --calls-per-turn <n>   provider calls per user turn (default 5, the measured median)
   --seed <s>             deterministic seed for the offline judge
   --start-model <key>    model each task session starts on
   --no-auth <key>        mark a fleet model unauthed (repeatable)
@@ -207,14 +214,24 @@ async function main(): Promise<number> {
 	}
 
 	if (args.sweep) {
-		const shape =
-			args.sweep === "bias"
-				? { noises: [10, 30], biases: [0, 10, 20, 40], candidateNs: [2, 3] }
-				: { biases: [0] };
-		const cells = await runJudgeSweep({ pack, loaded, classifier: args.classifier, startModel: args.startModel, ...shape });
-		const title = `${args.sweep} sweep — pack ${pack.id}, classifier ${args.classifier}, mean of 5 seeds per cell`;
+		const base = { pack, loaded, classifier: args.classifier, startModel: args.startModel };
+		let title: string;
+		let cells: unknown[];
+		let rendered: string;
+		if (args.sweep === "profile") {
+			title = `profile sweep — pack ${pack.id}, classifier ${args.classifier}, candidates ${args.candidates || 3}`;
+			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
+			cells = c;
+			rendered = renderTrafficSweep(c, title);
+		} else {
+			const shape = args.sweep === "bias" ? { noises: [10, 30], biases: [0, 10, 20, 40], candidateNs: [2, 3] } : { biases: [0] };
+			title = `${args.sweep} sweep — pack ${pack.id}, classifier ${args.classifier}, mean of 5 seeds per cell`;
+			const c = await runJudgeSweep({ ...base, ...shape });
+			cells = c;
+			rendered = renderSweep(c, title);
+		}
 		if (args.json) process.stdout.write(`${JSON.stringify({ title, cells }, null, "\t")}\n`);
-		else process.stdout.write(renderSweep(cells, title));
+		else process.stdout.write(rendered);
 		if (!args.noWrite) {
 			const path = join(resultsDir(ROOT), `sweep-${args.sweep}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}-${shortGit()}.json`);
 			ensureDirFor(path);
@@ -233,6 +250,7 @@ async function main(): Promise<number> {
 		judge: new NoisyJudge({ noise: args.judgeNoise, seed: args.seed, bias: args.judgeBias }),
 		seed: args.seed,
 		jev,
+		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
 	});
 	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
 
@@ -279,6 +297,7 @@ function defaultProfile(args: Args, packId: string): string {
 	const bits: string[] = [packId, args.classifier];
 	if (args.candidates >= 2) bits.push(`cand${args.candidates}`);
 	if (args.judgeBias) bits.push(`bias${args.judgeBias}`);
+	if (args.callsPerTurn) bits.push(`calls${args.callsPerTurn}`);
 	if (args.unauthed.length) bits.push(`noauth${args.unauthed.length}`);
 	return bits.join("-");
 }

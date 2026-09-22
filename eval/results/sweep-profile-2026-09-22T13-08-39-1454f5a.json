@@ -1,0 +1,95 @@
+{
+	"title": "profile sweep — pack swe-router-long-v1, classifier scripted, candidates 3",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"callsPerTurn": 2,
+			"cacheGrowthTokensPerCall": 650,
+			"outputTokensPerCall": 550,
+			"listEquivalentUsd": 209.9296,
+			"coldPremiumUsd": 34.2596,
+			"coldPremiumShare": 0.6483,
+			"planPointsUsed": 5.247,
+			"fanoutListEquivalentUsd": 157.083,
+			"listUsdPerExtraSolve": 14.2803
+		},
+		{
+			"callsPerTurn": 5,
+			"cacheGrowthTokensPerCall": 650,
+			"outputTokensPerCall": 550,
+			"listEquivalentUsd": 226.3487,
+			"coldPremiumUsd": 34.2596,
+			"coldPremiumShare": 0.4946,
+			"planPointsUsed": 5.65,
+			"fanoutListEquivalentUsd": 157.083,
+			"listUsdPerExtraSolve": 14.2803
+		},
+		{
+			"callsPerTurn": 10,
+			"cacheGrowthTokensPerCall": 650,
+			"outputTokensPerCall": 550,
+			"listEquivalentUsd": 254.0702,
+			"coldPremiumUsd": 34.2596,
+			"coldPremiumShare": 0.3532,
+			"planPointsUsed": 6.332,
+			"fanoutListEquivalentUsd": 157.083,
+			"listUsdPerExtraSolve": 14.2803
+		},
+		{
+			"callsPerTurn": 20,
+			"cacheGrowthTokensPerCall": 650,
+			"outputTokensPerCall": 550,
+			"listEquivalentUsd": 310.8488,
+			"coldPremiumUsd": 34.2596,
+			"coldPremiumShare": 0.2228,
+			"planPointsUsed": 7.728,
+			"fanoutListEquivalentUsd": 157.083,
+			"listUsdPerExtraSolve": 14.2803
+		},
+		{
+			"callsPerTurn": 5,
+			"cacheGrowthTokensPerCall": 100,
+			"outputTokensPerCall": 550,
+			"listEquivalentUsd": 225.1098,
+			"coldPremiumUsd": 34.3915,
+			"coldPremiumShare": 0.5056,
+			"planPointsUsed": 5.62,
+			"fanoutListEquivalentUsd": 157.083,
+			"listUsdPerExtraSolve": 14.2803
+		},
+		{
+			"callsPerTurn": 5,
+			"cacheGrowthTokensPerCall": 3000,
+			"outputTokensPerCall": 550,
+			"listEquivalentUsd": 231.6425,
+			"coldPremiumUsd": 33.6958,
+			"coldPremiumShare": 0.4519,
+			"planPointsUsed": 5.783,
+			"fanoutListEquivalentUsd": 157.083,
+			"listUsdPerExtraSolve": 14.2803
+		},
+		{
+			"callsPerTurn": 5,
+			"cacheGrowthTokensPerCall": 650,
+			"outputTokensPerCall": 150,
+			"listEquivalentUsd": 222.9765,
+			"coldPremiumUsd": 34.2596,
+			"coldPremiumShare": 0.5199,
+			"planPointsUsed": 5.566,
+			"fanoutListEquivalentUsd": 157.083,
+			"listUsdPerExtraSolve": 14.2803
+		},
+		{
+			"callsPerTurn": 5,
+			"cacheGrowthTokensPerCall": 650,
+			"outputTokensPerCall": 2000,
+			"listEquivalentUsd": 238.573,
+			"coldPremiumUsd": 34.2596,
+			"coldPremiumShare": 0.4204,
+			"planPointsUsed": 5.957,
+			"fanoutListEquivalentUsd": 157.083,
+			"listUsdPerExtraSolve": 14.2803
+		}
+	]
+}

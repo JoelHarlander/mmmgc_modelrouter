@@ -244,3 +244,49 @@ it was measured at; rounds 1–3 quoted the cheap end without saying so.
 shipped fan-out and on the ~5 calls / 650 growth / 550 output traffic profile. The
 first is pinned by a test; the second is three constants nobody has varied. Find out
 how much the conclusions move when they do.
+
+---
+
+## Round 5 — 2026-09-22 — find out which conclusions rest on the constants
+
+**Measured.** How far round 4's cost findings move when the three numbers underneath
+them move. `callsPerTurn = 5`, `cacheGrowthTokensPerCall = 650` and
+`outputTokensPerCall = 550` are measurements from one machine's logs, quoted by every
+dollar figure in this log, and until now nobody had varied them.
+
+**Changed.** The three constants became a `TrafficProfile` that `runEval` takes,
+`--calls-per-turn` overrides and `--sweep profile` varies. Two tests pin the
+invariances below, so a future change to the cost model that breaks them fails loudly.
+
+**What the numbers did** (`swe-router-long-v1`, scripted, `--candidates 3`):
+
+| calls | growth | output | list $ | cold prem | share | fan-out $ | $/extra solve |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2 | 650 | 550 | $209.93 | **$34.26** | 64.8% | $157.08 | **$14.28** |
+| 5 | 650 | 550 | $226.35 | **$34.26** | 49.5% | $157.08 | **$14.28** |
+| 10 | 650 | 550 | $254.07 | **$34.26** | 35.3% | $157.08 | **$14.28** |
+| 20 | 650 | 550 | $310.85 | **$34.26** | 22.3% | $157.08 | **$14.28** |
+| 5 | 100 | 550 | $225.11 | $34.39 | 50.6% | $157.08 | $14.28 |
+| 5 | 3000 | 550 | $231.64 | $33.70 | 45.2% | $157.08 | $14.28 |
+| 5 | 650 | 150 | $222.98 | $34.26 | 52.0% | $157.08 | $14.28 |
+| 5 | 650 | 2000 | $238.57 | $34.26 | 42.0% | $157.08 | $14.28 |
+
+**Two conclusions are load-bearing and one is not.**
+
+- **Robust: the cold-start bill.** $34.26 across a 10× range of calls per turn, and
+  within 2% across a 30× range of cache growth. A cold start writes the prefix once,
+  whatever the turn does afterwards, so the *dollars* the router loses to switching do
+  not depend on the traffic profile at all.
+- **Robust: the whole candidate-selection verdict.** `$14.28 per extra solve` is
+  identical in every row. `src/parallel.ts` makes one uncached call per candidate and
+  runs no tools, so the fan-out bill is a function of context alone. Rounds 3 and 4's
+  candidate findings survive the constants entirely.
+- **Not robust: "half of what a long session costs is cold starts."** That share runs
+  from **64.8%** at 2 calls/turn to **22.3%** at 20. Round 4's "49%" is the measured
+  median and should always be quoted with the profile it came from. The defensible
+  form is the absolute one: *switching cost this run $34.26, between a fifth and two
+  thirds of its spend depending on how tool-heavy the work is.*
+
+**Next.** Everything measured so far is offline. The one number that would settle
+round 3's open question — how much systematic bias Jev's own judging carries — needs a
+live call, and live mode currently reaches the classifier but not the judge.

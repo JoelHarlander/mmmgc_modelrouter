@@ -25,7 +25,7 @@ import { compareMetrics, readRun, type RunRecord, writeRun } from "../eval/resul
 import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
 import { buildFleet } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
-import { runJudgeSweep, type SweepCell } from "../eval/sweep.ts";
+import { runJudgeSweep, runTrafficSweep, type SweepCell, type TrafficCell } from "../eval/sweep.ts";
 import type { Fleet, TaskPack } from "../eval/types.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -381,6 +381,41 @@ test("a judge that systematically prefers the flashy answer makes the fan-out wo
 	assert.ok(unbiased.judgeLift > 0, "the unbiased judge should still help");
 	assert.ok(biased.judgeLift < 0, "a strong flagship bias should cost more turns than it wins");
 	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
+});
+
+test("the cold-start bill does not depend on the traffic constants; only its share of spend does", async () => {
+	const cells = await runTrafficSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		profiles: [{ callsPerTurn: 2 }, { callsPerTurn: 5 }, { callsPerTurn: 20 }],
+		candidateN: 3,
+	});
+	const [few, measured, many] = cells as [TrafficCell, TrafficCell, TrafficCell];
+
+	// A cold start writes the prefix once, whatever happens afterwards in the turn.
+	assert.equal(few.coldPremiumUsd, measured.coldPremiumUsd);
+	assert.equal(many.coldPremiumUsd, measured.coldPremiumUsd);
+	// ...so more calls per turn only dilute it.
+	assert.ok(few.coldPremiumShare > measured.coldPremiumShare);
+	assert.ok(measured.coldPremiumShare > many.coldPremiumShare);
+	assert.ok(few.listEquivalentUsd < many.listEquivalentUsd);
+});
+
+test("the candidate-selection verdict does not rest on the traffic constants at all", async () => {
+	const cells = await runTrafficSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		profiles: [{ callsPerTurn: 2 }, { callsPerTurn: 20 }, { cacheGrowthTokensPerCall: 3000 }, { outputTokensPerCall: 2000 }],
+		candidateN: 3,
+	});
+	// src/parallel.ts makes one uncached call per candidate and runs no tools, so the
+	// fan-out bill is a function of context alone.
+	for (const cell of cells as TrafficCell[]) {
+		assert.equal(cell.fanoutListEquivalentUsd, (cells[0] as TrafficCell).fanoutListEquivalentUsd);
+		assert.equal(cell.listUsdPerExtraSolve, (cells[0] as TrafficCell).listUsdPerExtraSolve);
+	}
 });
 
 test("the shipped pack's ground truth is consistent with the shipped fleet", () => {

@@ -14,6 +14,7 @@ import { NoisyJudge } from "./candidates.ts";
 import type { LoadedFleet } from "./fleet.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics } from "./metrics.ts";
+import { DEFAULT_TRAFFIC, type TrafficProfile } from "./simulate.ts";
 import type { ClassifierMode, TaskPack } from "./types.ts";
 
 export interface SweepCell {
@@ -107,6 +108,78 @@ export function renderSweep(cells: SweepCell[], title: string): string {
 				`${pct(c.baselineSuccessRate).padStart(8)} ${pct(c.judgeSuccessRate).padStart(8)} ${pct(c.oracleSuccessRate).padStart(8)}   ` +
 				`${signedPct(c.judgeLift).padStart(8)} ± ${pct(c.liftSpread).padStart(6)}  ${pct(c.judgeRecall).padStart(6)}  ${c.judgeRegressions.toFixed(1).padStart(7)}   ` +
 				`${usd(c.fanoutListEquivalentUsd).padStart(9)} ${usd(c.listUsdPerExtraSolve).padStart(9)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
+export interface TrafficCell {
+	callsPerTurn: number;
+	cacheGrowthTokensPerCall: number;
+	outputTokensPerCall: number;
+	listEquivalentUsd: number;
+	coldPremiumUsd: number;
+	coldPremiumShare: number;
+	planPointsUsed: number;
+	fanoutListEquivalentUsd: number;
+	listUsdPerExtraSolve: number;
+}
+
+/**
+ * How much the cost conclusions depend on the three measured traffic constants.
+ * Quality never moves here — the routing decisions are identical — so every column is
+ * a spend column, and the question is only how far the numbers travel.
+ */
+export async function runTrafficSweep(options: SweepOptions & { profiles?: Partial<TrafficProfile>[]; candidateN?: number }): Promise<TrafficCell[]> {
+	const profiles = options.profiles ?? DEFAULT_TRAFFIC_PROFILES;
+	const candidateN = options.candidateN ?? 3;
+	const cells: TrafficCell[] = [];
+	for (const partial of profiles) {
+		const traffic: TrafficProfile = { ...DEFAULT_TRAFFIC, ...partial };
+		const outcome = await runEval({
+			pack: options.pack,
+			loaded: options.loaded,
+			classifier: options.classifier,
+			startModel: options.startModel,
+			candidateN,
+			seed: (options.seeds ?? DEFAULT_SEEDS)[0]!,
+			traffic,
+		});
+		const m = computeMetrics(outcome.turns, outcome.stateChars);
+		cells.push({
+			...traffic,
+			listEquivalentUsd: m.listEquivalentUsd,
+			coldPremiumUsd: m.coldPremiumUsd,
+			coldPremiumShare: m.coldPremiumShare,
+			planPointsUsed: m.planPointsUsed,
+			fanoutListEquivalentUsd: m.candidate?.fanoutListEquivalentUsd ?? 0,
+			listUsdPerExtraSolve: m.candidate?.listUsdPerExtraSolve ?? Number.POSITIVE_INFINITY,
+		});
+	}
+	return cells;
+}
+
+/** The measured profile, plus the light- and heavy-tool-use ends the study's range allows. */
+export const DEFAULT_TRAFFIC_PROFILES: Partial<TrafficProfile>[] = [
+	{ callsPerTurn: 2 },
+	{ callsPerTurn: 5 },
+	{ callsPerTurn: 10 },
+	{ callsPerTurn: 20 },
+	{ callsPerTurn: 5, cacheGrowthTokensPerCall: 100 },
+	{ callsPerTurn: 5, cacheGrowthTokensPerCall: 3000 },
+	{ callsPerTurn: 5, outputTokensPerCall: 150 },
+	{ callsPerTurn: 5, outputTokensPerCall: 2000 },
+];
+
+export function renderTrafficSweep(cells: TrafficCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  calls  growth  output       list $   cold prem    share   plan pts    fan-out $    $/extra");
+	for (const c of cells) {
+		out.push(
+			`  ${String(c.callsPerTurn).padStart(5)}  ${String(c.cacheGrowthTokensPerCall).padStart(6)}  ${String(c.outputTokensPerCall).padStart(6)}   ` +
+				`${usd(c.listEquivalentUsd).padStart(10)}  ${usd(c.coldPremiumUsd).padStart(10)}   ${pct(c.coldPremiumShare).padStart(6)}   ` +
+				`${c.planPointsUsed.toFixed(2).padStart(8)}   ${usd(c.fanoutListEquivalentUsd).padStart(10)} ${usd(c.listUsdPerExtraSolve).padStart(10)}`,
 		);
 	}
 	out.push("");

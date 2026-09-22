@@ -9,6 +9,7 @@ npm run eval -- --classifier oracle           # the routing ceiling
 npm run eval -- --candidates 3                # candidate-selection mode: 3 responses, judge picks
 npm run eval -- --sweep judge                 # over what range of judge quality does the lift survive?
 npm run eval -- --sweep bias                  # what a judge that prefers the flagship's style costs
+npm run eval -- --sweep profile               # how far the cost numbers move with the traffic constants
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
 npm run eval -- --pack eval/tasks/swe-router-long-v1.json   # long sessions at realistic context
 npm run eval -- --help
@@ -91,6 +92,11 @@ still steers the next.
 Token counts come from the traffic profile measured in the cache-cost study: ~5
 provider calls per user turn, ~650 newly cached tokens per call, ~550 output tokens
 per call, and a ~100% prefix hit rate while the model and thinking level hold still.
+Those are measurements from one machine, so `--sweep profile` varies them and
+`--calls-per-turn` overrides the first. What moves: the cold premium's *share* of
+spend (22%-65% as calls/turn goes 20 -> 2). What does not: the cold premium in dollars,
+and the entire candidate-selection verdict - a fan-out candidate makes one uncached
+call and runs no tools, so its bill is a function of context alone.
 A turn goes **cold** — the whole prefix is re-written instead of read — on the first
 turn of a session, on a model switch, **or on a thinking-level change**, which is the
 invalidation Anthropic documents and the study measured on this machine.

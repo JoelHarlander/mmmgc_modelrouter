@@ -24,7 +24,7 @@ import { applyStakesOverride, classify } from "./classifier.ts";
 import { type Judge, type JudgeCandidate, NoisyJudge, pickCandidates, syntheticResponse } from "./candidates.ts";
 import type { LoadedFleet } from "./fleet.ts";
 import { FakeSession } from "./session.ts";
-import { effectiveSkill, simulateFanoutUsage, simulateTurnUsage, solves } from "./simulate.ts";
+import { DEFAULT_TRAFFIC, effectiveSkill, simulateFanoutUsage, simulateTurnUsage, solves, type TrafficProfile } from "./simulate.ts";
 import { cheapestCapableTier } from "./validate.ts";
 import type { CandidateOutcome, CandidateTurnRecord, ClassifierMode, EvalTask, FleetModel, TaskPack, TurnRecord } from "./types.ts";
 
@@ -41,6 +41,8 @@ export interface RunOptions {
 	seed?: string;
 	jev?: JevClient;
 	ledgerFile?: string;
+	/** Overrides the measured calls/growth/output profile the cost model rests on. */
+	traffic?: TrafficProfile;
 	signal?: AbortSignal;
 }
 
@@ -183,10 +185,13 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 					? ("thinking-change" as const)
 					: undefined;
 
+		const traffic = options.traffic ?? DEFAULT_TRAFFIC;
+		const calls = task.callsPerTurn ?? traffic.callsPerTurn;
 		const usageArgs = {
 			contextTokens,
-			calls: task.callsPerTurn,
-			outputTokensPerCall: turn.expectedOutputTokens ? turn.expectedOutputTokens / (task.callsPerTurn ?? 5) : undefined,
+			calls,
+			traffic,
+			outputTokensPerCall: turn.expectedOutputTokens ? turn.expectedOutputTokens / calls : undefined,
 		};
 		const usage = spec ? simulateTurnUsage({ model: spec, cold: coldCause !== undefined, ...usageArgs }) : undefined;
 		// The same turn priced warm, so the cold premium can be reported exactly.
