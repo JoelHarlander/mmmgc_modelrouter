@@ -10,7 +10,7 @@
  */
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import type { EntitlementSource, RouterConfig } from "./config.ts";
-import type { EntitlementFacts, Ledger, WindowState } from "./ledger.ts";
+import { type EntitlementFacts, type Ledger, slug, type WindowState } from "./ledger.ts";
 
 type RawWindow = Omit<WindowState, "source" | "lastSeen">;
 
@@ -253,10 +253,6 @@ function epochMs(v: unknown): number | undefined {
 	if (!s) return undefined;
 	const parsed = Date.parse(s);
 	return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-export function slug(name: string): string {
-	return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function errText(err: unknown): string {

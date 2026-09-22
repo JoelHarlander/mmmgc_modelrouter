@@ -124,3 +124,17 @@ test("the fan-out is refused while automatic routing is disabled", async () => {
 	assert.equal(notices[0]!.level, "error");
 });
 
+
+test("the fan-out slots go to the best-ranked routes, not the first ones listed", () => {
+	// Both openrouter routes bill per token; the claude-bridge plan route is included usage.
+	const wide = mergeConfig(cfg, {
+		tiers: { light: ["openrouter/z-ai/glm-5.3"], standard: ["openrouter/z-ai/glm-5.3"], heavy: ["claude-bridge/claude-opus-5"] },
+		billing: { ...cfg.billing, allowPayPerToken: ["openrouter/*"] },
+	});
+	const { models } = pickParallelModels({ ctx: fakeCtx(glm), cfg: wide, n: 1, ledger: ledger() });
+	assert.deepEqual(
+		models.map((m) => `${m.provider}/${m.id}`),
+		["claude-bridge/claude-opus-5"],
+		"a billed route does not take the slot while an included-usage route is eligible",
+	);
+});

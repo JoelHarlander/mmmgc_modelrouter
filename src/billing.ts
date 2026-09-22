@@ -26,7 +26,7 @@ import { type CreditState, describeCredits, type Ledger, type QuotaAssessment, w
 export type BillingBasis = "free" | "subscription" | "extra-credits" | "pay-per-token";
 
 /** How well the basis is established. Only `verified` rests on live provider evidence. */
-export type Verification = "verified" | "stale" | "assumed" | "unverified";
+export type Verification = "verified" | "stale" | "unverified";
 
 export type Eligibility = "preferred" | "allowed" | "excluded";
 
@@ -122,7 +122,10 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 	if (quota.credits && creditsSpent(quota.credits)) {
 		const state = describeCredits(quota.credits);
 		evidence.push(state);
-		return excluded(labelBasis(billing), billing, freshness, `${model.provider} account cannot pay for this route (${state})`, evidence, uncertainty);
+		if (freshnessOf(quota.credits.lastSeen, cfg, now) === "verified") {
+			return excluded(labelBasis(billing), billing, freshness, `${model.provider} account cannot pay for this route (${state})`, evidence, uncertainty);
+		}
+		uncertainty.push(`the last word on ${model.provider} credit was "${state}", older than ${cfg.billing.evidenceMaxAgeMinutes}m`);
 	}
 
 	if (billing === "free") return assessFree(model, key, cfg, fromConfig, evidence, uncertainty);
@@ -192,14 +195,11 @@ function assessSubscription(
 	else if (quota.accountWindows.length === 0) uncertainty.push("provider reported no subscription quota window");
 	else uncertainty.push("no quota or entitlement evidence seen for this provider yet");
 
-	if (!cfg.billing.allowUnverifiedSubscription) {
-		return excluded("subscription", "plan", freshness, "subscription backing is not verified and billing.allowUnverifiedSubscription is false", evidence, uncertainty);
-	}
 	return {
 		basis: "subscription",
-		verification: freshness === "verified" ? "assumed" : freshness,
+		verification: freshness,
 		eligibility: "allowed",
-		reason: "assumed subscription usage: allowed by billing.allowUnverifiedSubscription, not verified",
+		reason: "assumed subscription usage: nothing has verified the plan behind this route",
 		evidence,
 		uncertainty,
 		billing: "plan",
@@ -228,31 +228,30 @@ function assessExtraCredits(
 	if (!anyGlobMatch(cfg.billing.allowExtraBilled, key)) {
 		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}); ${key} is not in billing.allowExtraBilled`, evidence, uncertainty);
 	}
-	if (credits?.disabledReason) {
+	const creditFreshness = freshnessOf(credits?.lastSeen, cfg, now);
+	if (credits?.disabledReason && creditFreshness === "verified") {
 		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and extra usage is off on the account`, evidence, uncertainty);
 	}
 	const overageSpent = quota.overage ? windowExhausted(quota.overage, cfg, now) : undefined;
 	if (overageSpent) {
 		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and the extra-usage window is ${overageSpent}`, evidence, uncertainty);
 	}
-	const creditsFresh = credits !== undefined && now - credits.lastSeen <= cfg.billing.evidenceMaxAgeMinutes * 60_000;
-	const haveCredits = credits?.unlimited === true || credits?.hasCredits === true;
-	if (cfg.billing.requireVerifiedExtraBilled && !(creditsFresh && haveCredits)) {
+	const verifiedCredits = creditFreshness === "verified" && (credits?.unlimited === true || credits?.hasCredits === true);
+	if (!verifiedCredits) {
 		uncertainty.push(credits ? "credit evidence is stale or says no credits" : "no live credit evidence for this account");
 		return excluded(
 			"extra-credits",
 			"plan",
 			freshness,
-			`subscription exhausted (${spent}); extra billed usage needs verified credits (billing.requireVerifiedExtraBilled)`,
+			`subscription exhausted (${spent}); extra billed usage is only spent on verified credits`,
 			evidence,
 			uncertainty,
 		);
 	}
-	if (!haveCredits) uncertainty.push("credit availability not confirmed by the provider");
 	uncertainty.push("this turn bills extra usage on top of the subscription, not included usage");
 	return {
 		basis: "extra-credits",
-		verification: creditsFresh && haveCredits ? "verified" : freshness,
+		verification: "verified",
 		eligibility: "allowed",
 		reason: `subscription exhausted (${spent}); allowed to spend extra billed credits`,
 		evidence,

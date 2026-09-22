@@ -100,11 +100,10 @@ test("a project config cannot neutralise a quota scope or re-enable disabled rou
 
 test("a project config cannot widen any spend gate", () => {
 	const cfg = withProject({
-		billing: { allowPayPerToken: ["*"], allowExtraBilled: ["*"], requireVerifiedExtraBilled: false, allowUnverifiedSubscription: true, evidenceMaxAgeMinutes: 600 },
-	});
+		billing: { allowPayPerToken: ["*"], allowExtraBilled: ["*"], evidenceMaxAgeMinutes: 600 },
+	} as unknown);
 	assert.deepEqual(cfg.billing.allowPayPerToken, DEFAULT_CONFIG.billing.allowPayPerToken);
 	assert.deepEqual(cfg.billing.allowExtraBilled, DEFAULT_CONFIG.billing.allowExtraBilled);
-	assert.equal(cfg.billing.requireVerifiedExtraBilled, true);
 	assert.equal(cfg.billing.evidenceMaxAgeMinutes, DEFAULT_CONFIG.billing.evidenceMaxAgeMinutes);
 });
 

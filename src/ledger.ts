@@ -222,9 +222,15 @@ export class Ledger {
 				if (spent) out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
 				continue;
 			}
-			// `<family>:<role>` is one model family's meter. Unless a scope says which models it
-			// governs, it governs none of them: a full family meter is not a spent credential.
-			if (id.includes(":")) continue;
+			// `<family>:<role>` is one model family's meter, discovered at runtime. It governs the
+			// model whose id slugs to that family and nothing else: never the whole credential.
+			const family = familyOf(id);
+			if (family !== undefined) {
+				if (spent && modelKey !== undefined && slug(modelId(modelKey)) === family) {
+					out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
+				}
+				continue;
+			}
 			out.accountWindows.push(id);
 			out.accountWindowsAt = Math.max(out.accountWindowsAt ?? 0, w.lastSeen);
 			if (w.utilization !== undefined) out.accountUtilization = Math.max(out.accountUtilization ?? 0, w.utilization);
@@ -329,6 +335,21 @@ export function scopeGlobs(cfg: RouterConfig, provider: string, windowId: string
 	return undefined;
 }
 
+/** The model family a `<family>:<role>` window meters, or undefined for an account-wide window. */
+function familyOf(windowId: string): string | undefined {
+	const colon = windowId.lastIndexOf(":");
+	return colon > 0 ? windowId.slice(0, colon) : undefined;
+}
+
+function modelId(key: string): string {
+	return key.slice(key.indexOf("/") + 1);
+}
+
+/** The id form both evidence paths agree on: a provider's family token, lower-case and hyphenated. */
+export function slug(name: string): string {
+	return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 /** Human reason when a window is spent, or undefined when it still has room. */
 export function windowExhausted(w: WindowState, cfg: RouterConfig, now: number): string | undefined {
 	if (w.resetAt !== undefined && w.resetAt <= now) return undefined;
@@ -399,7 +420,7 @@ function applyCodexHeaders(state: ProviderState, headers: Record<string, string>
 		const m = CODEX_FIELD.exec(name);
 		if (!m) continue;
 		const [, family, role, field] = m as unknown as [string, string | undefined, string, string];
-		const id = family ? `${family}:${role}` : role;
+		const id = family ? `${slug(family)}:${role}` : role;
 		const w = (state.windows[id] ??= { source: "header", lastSeen: now });
 		w.source = "header";
 		w.lastSeen = now;

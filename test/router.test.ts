@@ -158,32 +158,32 @@ test("a low-confidence turn keeps the current model only once billing has cleare
 });
 
 test("a low-confidence turn routes away from a current model the billing gate refuses", () => {
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowUnverifiedSubscription: false } });
-	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[2], registry: fakeRegistry(models), cfg: denied, ledger: ledger(), contextTokens: 0 });
-	assert.notEqual(d.model?.provider, "plan", "an ineligible route is not kept for want of confidence");
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowPayPerToken: [] } });
+	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[3], registry: fakeRegistry(models), cfg: denied, ledger: ledger(), contextTokens: 0 });
+	assert.notEqual(d.model?.provider, "cheap", "an ineligible route is not kept for want of confidence");
 	assert.equal(d.switched, true);
 	assert.notEqual(d.billing?.eligibility, "excluded");
 });
 
 test("a low-confidence turn with nothing eligible names the current model as ineligible", () => {
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowUnverifiedSubscription: false } });
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowPayPerToken: [] } });
 	const d = chooseModel({
 		tier: "light",
 		confidence: 0.2,
-		current: models[2],
-		registry: fakeRegistry(models, [], ["cheap", "local"]),
+		current: models[3],
+		registry: fakeRegistry(models, [], ["plan", "local"]),
 		cfg: denied,
 		ledger: ledger(),
 		contextTokens: 0,
 	});
-	assert.equal(d.model?.id, "mid", "there is nowhere else to go, so the session stays put");
-	assert.match(d.ineligibleCurrent ?? "", /not verified/, "but it is never kept silently");
+	assert.equal(d.model?.id, "big", "there is nowhere else to go, so the session stays put");
+	assert.match(d.ineligibleCurrent ?? "", /not in billing\.allowPayPerToken/, "but it is never kept silently");
 });
 
 test("the model the router refused to keep is still named in the explanation", () => {
 	// A manual /model pick can leave the session on a model no tier lists; leaving it must be explained.
-	const legacy = model("plan", "legacy", { input: 10, output: 50 });
-	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowUnverifiedSubscription: false } });
+	const legacy = model("cheap", "legacy", { input: 10, output: 50 });
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowPayPerToken: [] } });
 	const d = chooseModel({
 		tier: "light",
 		confidence: 0.2,
@@ -194,6 +194,6 @@ test("the model the router refused to keep is still named in the explanation", (
 		contextTokens: 0,
 	});
 	assert.equal(d.switched, true);
-	const held = d.candidates.find((c) => c.key === "plan/legacy");
-	assert.match(held?.skipped ?? "", /not verified/);
+	const held = d.candidates.find((c) => c.key === "cheap/legacy");
+	assert.match(held?.skipped ?? "", /not in billing\.allowPayPerToken/);
 });

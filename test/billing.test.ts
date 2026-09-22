@@ -107,13 +107,6 @@ test("evidence older than billing.evidenceMaxAgeMinutes degrades to stale, not v
 	assert.ok(a.uncertainty.some((u) => /older than 30m/.test(u)), a.uncertainty.join(" | "));
 });
 
-test("allowUnverifiedSubscription false excludes a plan route until it is verified", () => {
-	const strict = mergeConfig(cfg, { billing: { ...cfg.billing, allowUnverifiedSubscription: false } });
-	const a = assess(opus, ledger(), strict);
-	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /not verified/);
-});
-
 test("a zero-cost model is free, verified from the catalog price, and preferred", () => {
 	const local = model("ds4", "deepseek-v4-flash");
 	const a = assessBilling({ model: local, cfg, registry: fakeRegistry([local]), ledger: ledger() });
@@ -150,7 +143,7 @@ test("extra billed usage is refused without live credit evidence", () => {
 	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "100", "x-codex-plan-type": "plus" }, cfg);
 	const a = assess(codex, l);
 	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /needs verified credits/);
+	assert.match(a.reason, /only spent on verified credits/);
 });
 
 test("extra billed usage is refused for providers outside billing.allowExtraBilled", () => {
@@ -194,7 +187,7 @@ test("an overage pool the provider states nothing about is not evidence of credi
 	const a = assess(opus, l, allowAnthropicCredits);
 	assert.equal(a.basis, "extra-credits");
 	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /needs verified credits/);
+	assert.match(a.reason, /only spent on verified credits/);
 });
 
 test("an extra-usage window that is itself spent excludes extra billed usage", () => {
@@ -554,4 +547,44 @@ test("one filled per-family meter does not condemn the whole subscription", () =
 	assert.equal(a.basis, "subscription", "the plan is not spent, so the turn must not move onto credits");
 	assert.notEqual(a.eligibility, "excluded");
 	assert.equal(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).exhaustedAccount.length, 0);
+});
+
+test("a stale no-credits fact stops excluding a route instead of stranding it forever", () => {
+	// The gateway reported an empty balance, the user topped it up, and the next probe failed.
+	const l = ledger();
+	l.applyEntitlement("vercel-ai-gateway", parseEntitlement("vercel-credits", { balance: 0 }));
+	const fresh = assess(gateway, l);
+	assert.equal(fresh.eligibility, "excluded");
+
+	const later = Date.now() + 90 * 60_000;
+	const stale = assess(gateway, l, cfg, later);
+	assert.equal(stale.eligibility, "allowed", "evidence nobody has refreshed cannot keep a route unusable");
+	assert.ok(stale.uncertainty.some((u) => /no credits.*older than 30m/.test(u)), stale.uncertainty.join(" | "));
+});
+
+test("an exhausted family meter excludes its own model and leaves the credential usable", () => {
+	// Per-family headers carry the same fields as the account ones (docs/research/plan-quotas.md).
+	const l = ledger();
+	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "20", "x-codex-GPT-6-Astra-primary-used-percent": "100" }, cfg);
+	const a = assess(codex, l);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /model-scoped quota exhausted \(gpt-6-astra:primary/);
+	assert.match(a.reason, /openai-codex stays usable for other models/);
+
+	const sibling = model("openai-codex", "gpt-6-mini", { input: 1, output: 4 });
+	assert.notEqual(assessBilling({ model: sibling, cfg, registry: fakeRegistry([...ALL, sibling], ["openai-codex"]), ledger: l }).eligibility, "excluded");
+});
+
+test("the poll path and the header path name a family window the same way", () => {
+	const polled = ledger();
+	polled.applyEntitlement(
+		"openai-codex",
+		parseEntitlement("codex-wham-usage", {
+			rate_limit: { primary_window: { used_percent: 20 } },
+			additional_rate_limits: [{ limit_name: "GPT-6-Astra", rate_limit: { primary_window: { used_percent: 100 } } }],
+		}),
+	);
+	const a = assess(codex, polled);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /gpt-6-astra:primary/);
 });

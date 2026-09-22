@@ -7,7 +7,7 @@ A [pi](https://github.com/earendil-works/pi) extension that routes every turn to
   `light | standard | heavy`, plus `needs_tools` and `stakes`. Code then picks the cheapest authed model in that tier.
 - **Billing eligibility**: every candidate is assessed before it can be picked. The router separates *what pays*
   (`subscription`, `extra-credits`, `pay-per-token`, `free`) from *how well that is established*
-  (`verified`, `stale`, `assumed`, `unverified`), and only a verified subscription-backed route is `preferred`.
+  (`verified`, `stale`, `unverified`), and only a verified subscription-backed route is `preferred`.
   Paid routes are ordered, not banned: included usage first, then the account's own credits, then per-token
   billing — so when the subscription really is used up the turn still runs, and the explanation says what paid.
 - **Plan vs on-demand**: subscription (OAuth) providers cost nothing at the margin until their window fills.
@@ -62,9 +62,7 @@ heuristic, which by default keeps the current model.
   },
   "plan": { "utilizationCeiling": 0.85, "cooldownMinutesOn429": 30 },
   "billing": {
-    "allowUnverifiedSubscription": true,
     "allowExtraBilled": ["openai-codex/*"],
-    "requireVerifiedExtraBilled": true,
     "allowPayPerToken": ["openrouter/*", "vercel-ai-gateway/*", "ds4/*", "anthropic/*", "xai/*"],
     "evidenceMaxAgeMinutes": 30,
     "probe": { "enabled": true, "timeoutMs": 4000, "minIntervalMinutes": 30 }
@@ -89,16 +87,16 @@ paid path behind it.
 
 | Key | Effect |
 | --- | --- |
-| `allowUnverifiedSubscription` | Keep a `plan`-labelled route usable while its backing is still unverified (it is never *preferred*) |
-| `allowExtraBilled` | Model globs that may spend credits **after** their subscription window is exhausted |
-| `requireVerifiedExtraBilled` | Refuse extra billed usage unless live credit evidence says credits exist |
+| `allowExtraBilled` | Model globs that may spend credits **after** their subscription window is exhausted, and only on fresh credit evidence |
 | `allowPayPerToken` | Model globs that may bill per token. Not `["*"]`: a route that costs money is reachable only where it is named. Naming one orders it last, it does not promote it |
-| `evidenceMaxAgeMinutes` | Evidence older than this is `stale`, not `verified` |
+| `evidenceMaxAgeMinutes` | Evidence older than this is `stale`, not `verified` — in both directions, so an ageing "no credits" fact stops excluding a route |
 | `probe` | Read-only entitlement polling. Never touches an inference endpoint |
 
 `scopes` maps a provider's model-scoped limit window (`"<providerGlob>:<windowId>"`) to the models it governs, so an
 exhausted Fable weekly bucket excludes Fable while the same credential keeps serving Opus. Window ids are the ones
-the provider uses on the wire (`5h`, `7d`, `7d_oi`, `primary`, `secondary`, `<family>:primary`).
+the provider uses on the wire (`5h`, `7d`, `7d_oi`, `primary`, `secondary`, `<family>:primary`). A `<family>:<role>`
+window needs no scope entry: it governs the model whose id matches the family — discovered at runtime, from either
+the headers or the usage poll — and never the whole credential.
 
 `entitlement` maps a provider to its read-only usage endpoint. The shipped entries are Anthropic's
 `/api/oauth/usage`, Codex's `/wham/usage`, OpenRouter's `/api/v1/key` and the Vercel gateway credit balance. A probe
@@ -123,8 +121,8 @@ can never name an endpoint a credential is sent to, assert what pays for a model
 | `/duo <prompt>` / `/trio <prompt>` | 2 or 3 parallel responses |
 | `/par [N] <prompt>` | N parallel responses (2..8) |
 
-The parallel commands share routing's gate: a model that routing would refuse cannot be fanned out to, and while
-routing is off they refuse outright.
+The parallel commands share routing's gate *and* its ordering: a model that routing would refuse cannot be fanned
+out to, the slots go to the best-ranked eligible candidates, and while routing is off they refuse outright.
 
 ## Development
 

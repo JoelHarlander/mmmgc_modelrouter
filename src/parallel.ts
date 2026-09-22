@@ -14,7 +14,7 @@ import { assessBilling, describeBasis } from "./billing.ts";
 import { modelKey, type RouterConfig, TIERS } from "./config.ts";
 import type { JevChoiceAnswer, JevClient, JsonValue } from "./jev.ts";
 import type { Ledger } from "./ledger.ts";
-import { evaluateCandidate } from "./router.ts";
+import { type Candidate, evaluateCandidate } from "./router.ts";
 import { contentToText, truncate } from "./state.ts";
 
 export const PARALLEL_ENTRY_TYPE = "modelrouter-parallel";
@@ -68,40 +68,43 @@ export interface PickParallelArgs {
 }
 
 /**
- * Same gate as automatic routing: a candidate must pass auth *and* billing eligibility before it
- * can be fanned out to, so `/duo`, `/trio` and `/par` cannot reach a route routing itself refuses.
+ * Same gate *and* the same ordering as automatic routing: a candidate must pass auth and billing
+ * eligibility before it can be fanned out to, and the slots then go to the best-ranked candidates,
+ * so a fan-out never bills while a preferred subscription or zero-cost route sits unused.
  */
 export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 	const { ctx, cfg, n, ledger } = args;
 	const registry = ctx.modelRegistry;
-	const chosen: Model<Api>[] = [];
+	const eligible: Candidate[] = [];
 	const rejected: { key: string; reason: string }[] = [];
 	const seen = new Set<string>();
+	const currentKey = ctx.model ? modelKey(ctx.model) : undefined;
 	const chooseArgs = { tier: "standard" as const, confidence: 1, current: ctx.model ?? undefined, registry, cfg, ledger, contextTokens: 0, now: args.now };
-	const add = (key: string | undefined) => {
-		if (!key || chosen.length >= n || seen.has(key)) return;
+	const consider = (key: string | undefined) => {
+		if (!key || seen.has(key)) return;
 		seen.add(key);
-		const candidate = evaluateCandidate(key, chooseArgs, ctx.model ? modelKey(ctx.model) : undefined);
+		const candidate = evaluateCandidate(key, chooseArgs, currentKey);
 		if (candidate.skipped || !candidate.model) {
 			rejected.push({ key, reason: candidate.skipped ?? "unknown model" });
 			return;
 		}
-		chosen.push(candidate.model);
+		eligible.push(candidate);
 	};
 
 	if (cfg.parallel.models.length > 0) {
-		for (const key of cfg.parallel.models) add(key);
-		return { models: chosen, rejected };
+		for (const key of cfg.parallel.models) consider(key);
+	} else {
+		consider(currentKey);
+		// Strongest first, one per tier, then the remaining tier lists: that is the diversity order.
+		for (const tier of [...TIERS].reverse()) consider(cfg.tiers[tier]?.[0]);
+		for (const tier of [...TIERS].reverse()) {
+			for (const key of cfg.tiers[tier] ?? []) consider(key);
+		}
 	}
-	add(ctx.model ? modelKey(ctx.model) : undefined);
-	// Strongest first, one per tier, then fill from the remaining tier lists.
-	for (const tier of [...TIERS].reverse()) {
-		add(cfg.tiers[tier]?.[0]);
-	}
-	for (const tier of [...TIERS].reverse()) {
-		for (const key of cfg.tiers[tier] ?? []) add(key);
-	}
-	return { models: chosen, rejected };
+	const ranked = eligible
+		.map((candidate, order) => ({ candidate, order }))
+		.sort((a, b) => (a.candidate.assessment?.rank ?? 0) - (b.candidate.assessment?.rank ?? 0) || a.order - b.order);
+	return { models: ranked.slice(0, n).map((r) => r.candidate.model!), rejected };
 }
 
 export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryData | undefined> {

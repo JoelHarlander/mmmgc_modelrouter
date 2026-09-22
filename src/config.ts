@@ -66,12 +66,8 @@ export interface RouterConfig {
 		cooldownMinutesOn429: number;
 	};
 	billing: {
-		/** Keep a plan-labelled route usable while its subscription backing is still unverified. */
-		allowUnverifiedSubscription: boolean;
 		/** Model-key globs allowed to spend extra billed usage once their subscription window is exhausted. */
 		allowExtraBilled: string[];
-		/** Require live credit evidence before an extra-billed route is used at all. */
-		requireVerifiedExtraBilled: boolean;
 		/**
 		 * Model-key globs allowed to bill per token (gateways, API keys). Deliberately not `["*"]`:
 		 * a route that bills money is reachable only where it was named. Naming one orders it last,
@@ -148,10 +144,8 @@ export const DEFAULT_CONFIG: RouterConfig = {
 	},
 	plan: { utilizationCeiling: 0.85, cooldownMinutesOn429: 30 },
 	billing: {
-		allowUnverifiedSubscription: true,
-		// Extra credits exist on the ChatGPT plan only, and only once verified live.
+		// Extra credits exist on the ChatGPT plan only, and are only ever spent on verified credits.
 		allowExtraBilled: ["openai-codex/*"],
-		requireVerifiedExtraBilled: true,
 		// The pay-per-token routes the default tiers name, and no others. Paid Anthropic and xAI are
 		// reachable here but rank last, so they are the overflow rather than the first choice.
 		allowPayPerToken: ["openrouter/*", "vercel-ai-gateway/*", "ds4/*", "anthropic/*", "xai/*"],
