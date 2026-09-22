@@ -1964,9 +1964,15 @@ from the run that produced them.
 | largest committed baseline | 15,366 lines | **66 lines** |
 | net change to the branch | — | **−40,592 lines** |
 
+The same problem existed one level up: sweep and probe snapshots were timestamped, so
+each round committed another copy — five separate `sweep-assumptions-*.json` at 359 lines
+each. They now use a **stable name, overwritten**, with the run's timestamp and git sha
+recorded *inside* the file; the round log carries the history. Tracked results end at
+**3,878 lines across 16 files**, from 52,603 across 62.
+
 What remains committed is what a reader actually wants: this log, the eight baselines the
-gate compares against, and the sweep, audit, probe, calibration, bootstrap and coverage
-snapshots that the findings quote.
+gate compares against, and one snapshot each of the sweeps, the config audit, the probe,
+the bootstrap and the coverage run that the findings quote.
 
 Two tests hold it: the baseline must not carry turn records, the per-run file must, and
 the per-run file must be several times larger — so if `turns` ever creeps back into the

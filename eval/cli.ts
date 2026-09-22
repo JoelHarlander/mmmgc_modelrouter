@@ -310,10 +310,12 @@ async function runProbeCommand(args: Args): Promise<number> {
 	if (args.json) process.stdout.write(`${JSON.stringify(report, null, "\t")}\n`);
 	else process.stdout.write(renderProbe(report));
 	if (!args.noWrite) {
-		const name = `probe-${args.liveJudge ? "jev" : "offline"}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}-${shortGit()}.json`;
+		// A stable name, overwritten: the round log carries the history, and one snapshot
+		// per kind is what a reader wants. The run's git sha and timestamp are inside it.
+		const name = `probe-${args.liveJudge ? "jev" : "offline"}.json`;
 		const path = join(resultsDir(ROOT), name);
 		ensureDirFor(path);
-		writeFileSync(path, `${JSON.stringify({ probePack: probePack.id, ...report }, null, "\t")}\n`);
+		writeFileSync(path, `${JSON.stringify({ probePack: probePack.id, at: new Date().toISOString(), git: shortGit(), ...report }, null, "\t")}\n`);
 		process.stderr.write(`wrote ${path.replace(`${ROOT}/`, "")}\n`);
 	}
 	return 0;
@@ -525,9 +527,9 @@ async function main(): Promise<number> {
 		if (args.json) process.stdout.write(`${JSON.stringify({ title, cells }, null, "\t")}\n`);
 		else process.stdout.write(rendered);
 		if (!args.noWrite) {
-			const path = join(resultsDir(ROOT), `sweep-${args.sweep}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}-${shortGit()}.json`);
+			const path = join(resultsDir(ROOT), `sweep-${args.sweep}.json`);
 			ensureDirFor(path);
-			writeFileSync(path, `${JSON.stringify({ title, pack: pack.id, classifier: args.classifier, cells }, null, "\t")}\n`);
+			writeFileSync(path, `${JSON.stringify({ title, at: new Date().toISOString(), git: shortGit(), pack: pack.id, classifier: args.classifier, cells }, null, "\t")}\n`);
 			process.stderr.write(`wrote ${path.replace(`${ROOT}/`, "")}\n`);
 		}
 		return 0;
