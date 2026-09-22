@@ -101,8 +101,10 @@ never the whole credential. Codex names the meter by an opaque limit id on the w
 the model in the usage poll, so the header path keys the window by the `x-codex-<id>-limit-name` it comes with;
 both evidence paths then name the same meter, and a later poll refreshes what a header recorded.
 
-A scoped window speaks only for its own models: a Fable-only or overage rejection never sets the provider-wide
-cooldown a 429 triggers, and never keeps one alive once a later call succeeds. And when a provider reports a spent
+A scoped window speaks only for its own models: a Fable-only or overage rejection excludes the models that window
+governs and nothing else, whether it arrives on a 200 or on a 429 with `retry-after`. A refusal the response
+attributes to no window of its own is the credential's own — that one cools the provider, for
+`plan.cooldownMinutesOn429` or the `retry-after` it came with, until a later call succeeds. And when a provider reports a spent
 meter that names no route your config can reach, the router neither ignores it nor calls the whole credential
 spent — it carries it as uncertainty on every route of that provider and stops calling those verdicts `verified`.
 

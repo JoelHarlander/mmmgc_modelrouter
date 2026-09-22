@@ -22,8 +22,11 @@ must live, since a project file may not state them) and the user's real global c
   verified subscription route is `preferred`. Never let a config label stand in for evidence.
 - Quota window ids are the provider's own wire names (`5h`, `7d`, `7d_oi`, `primary`); a per-model meter is keyed
   `<model>:<role>` from the limit name the provider reports, which is what lets `scopeGlobs` match it with no config.
-  A scoped or overage window governs its own models only: it must never set the provider-wide cooldown or hold one
-  open, and a spent meter that matches no routable model is carried as uncertainty, never as account-wide exhaustion.
+  A scoped or overage window governs its own models only. A 429/402 is attributed to the windows *that response*
+  reported spent; when it names none, the refusal is the credential's own and is stored as one more account-wide
+  window (`REFUSAL_WINDOWS`) rather than a second kind of state — keep it that way, since every earlier attempt to
+  hold a provider-wide cooldown beside the windows traded one wrong answer for another. A spent meter that matches
+  no routable model is carried as uncertainty, never as account-wide exhaustion.
   `docs/research/plan-quotas.md` is the authority for header names, JSON shapes and value scales — note especially
   that Anthropic utilization is 0..1 in headers but 0..100 from `/api/oauth/usage`.
 - `src/entitlement.ts` may only call read-only usage endpoints. Nothing here may send inference or log a credential.

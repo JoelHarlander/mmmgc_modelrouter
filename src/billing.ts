@@ -152,6 +152,9 @@ function withUnattributed(verdict: BillingAssessment, quota: QuotaAssessment, pr
 		...verdict,
 		verification: verdict.verification === "verified" ? "unverified" : verdict.verification,
 		eligibility: verdict.eligibility === "preferred" ? "allowed" : verdict.eligibility,
+		// Ordering has to say the same thing the other two fields now say. A quota meter says
+		// nothing about a catalog list price, so a zero-cost route keeps the rank it earned.
+		rank: verdict.rank === RANK.verifiedSubscription && verdict.basis === "subscription" ? RANK.assumedSubscription : verdict.rank,
 		uncertainty: [...verdict.uncertainty, `${provider} reports a spent meter no configured route answers to (${spent})`],
 	};
 }

@@ -722,6 +722,39 @@ test("a per-family Codex refusal leaves the rest of the credential usable", () =
 	assert.equal(assessBilling({ model: codex, cfg, registry, ledger: l }).eligibility, "excluded", "only the family that filled its meter is out");
 });
 
+test("a scoped window spent days ago does not suppress a later unrelated refusal", () => {
+	// The refusal has to be attributed from the response that carried it: a Fable bucket stored
+	// last week says nothing about a headerless refusal arriving today.
+	const l = ledger();
+	l.observeResponse("claude-bridge", 200, FABLE_ONLY_REJECTED, cfg);
+	l.observeResponse("claude-bridge", 429, {}, cfg, Date.now() + 60_000);
+
+	const cooled = l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, Date.now() + 60_000);
+	assert.ok(cooled.cooldown, "the credential's own refusal still cools it");
+	assert.equal(assess(opus, l, cfg, Date.now() + 60_000).eligibility, "excluded");
+});
+
+test("an account-wide rejection keeps every route on the credential out", () => {
+	const l = ledger();
+	l.observeResponse(
+		"claude-bridge",
+		429,
+		{
+			"anthropic-ratelimit-unified-5h-utilization": "1",
+			"anthropic-ratelimit-unified-5h-status": "rejected",
+			"anthropic-ratelimit-unified-7d-utilization": "0.9",
+			"anthropic-ratelimit-unified-7d-status": "allowed",
+			"retry-after": "600",
+		},
+		cfg,
+	);
+	for (const m of [opus, fable]) {
+		const a = assess(m, l);
+		assert.equal(a.eligibility, "excluded", modelKey(m));
+		assert.match(a.reason, /5h rejected|not in billing\.allowExtraBilled/);
+	}
+});
+
 test("a bare entitlement-gate 429 still cools the credential briefly", () => {
 	// Nothing in the response names a window, so the refusal is the credential's own: cool down,
 	// but only for billing.plan.cooldownMinutesOn429, and let the next success clear it.
@@ -763,4 +796,14 @@ test("a spent meter no configured route answers to is disclosed rather than igno
 		a.uncertainty.some((u) => /spent meter no configured route answers to \(premium:primary/.test(u)),
 		a.uncertainty.join(" | "),
 	);
+	// Ordering has to say what the other two fields say, or routing treats it as verified anyway.
+	const l2 = ledger();
+	l2.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "20", "x-codex-plan-type": "plus" }, cfg);
+	assert.ok(a.rank > assess(codex, l2).rank, "an unplaceable meter costs the route its verified rank");
+
+	const local = model("ds4", "deepseek-v4-flash");
+	const lFree = ledger();
+	lFree.observeResponse("ds4", 200, { "x-codex-primary-used-percent": "20", "x-codex-premium-primary-used-percent": "100" }, cfg);
+	const free = assessBilling({ model: local, cfg, registry: fakeRegistry([local]), ledger: lFree });
+	assert.equal(free.rank, assessBilling({ model: local, cfg, registry: fakeRegistry([local]), ledger: ledger() }).rank, "but a quota meter cannot demote a zero-cost route");
 });

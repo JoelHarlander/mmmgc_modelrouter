@@ -57,9 +57,6 @@ export interface ProviderState {
 	plan?: string;
 	windows: Record<string, WindowState>;
 	credits?: CreditState;
-	/** Epoch ms until which the provider is considered unusable (429/402). */
-	cooldownUntil?: number;
-	cooldownReason?: string;
 	/** Last read-only entitlement poll. */
 	probedAt?: number;
 	probeError?: string;
@@ -74,6 +71,16 @@ interface LedgerFile {
 
 /** Windows that meter extra billed usage rather than included subscription usage. */
 const OVERAGE_WINDOWS = new Set(["overage"]);
+
+/**
+ * A refusal the response attributed to no window of its own is the credential's own refusal, and
+ * is recorded as one more account-wide window rather than as a second kind of state: what governs
+ * which models, and until when, is then answered in exactly one place for every kind of evidence.
+ */
+const REFUSAL_WINDOWS: Record<string, string> = {
+	"rate-limited": "rate limited (429)",
+	"budget-exhausted": "budget exhausted (402)",
+};
 
 /** What the router needs to know about one provider/model pair right now. */
 export interface QuotaAssessment {
@@ -161,24 +168,26 @@ export class Ledger {
 		applyAnthropicHeaders(state, headers, now);
 		applyCodexHeaders(state, headers, now);
 
-		const spent = spentWindows(state, cfg, provider, now);
 		if (status === 429 || status === 402) {
-			// Whose refusal is this? A model-scoped or overage bucket speaks for its own models, and
-			// `assess` already excludes them, so the credential stays usable for everything else.
-			// Only an account-wide refusal - or a bare entitlement-gate 429 with no window evidence
-			// at all (docs/research/plan-quotas.md §1) - cools the provider, and then only briefly.
-			if (spent.accountWide.length > 0 || spent.scoped.length === 0) {
+			// Whose refusal is this? Only the windows *this* response reported spent can answer -
+			// a window stored days ago says nothing about a refusal arriving now. When the response
+			// names one, that window already excludes the models it governs and nothing else. When
+			// it names none, the refusal is the credential's own (the bare entitlement gate,
+			// docs/research/plan-quotas.md §1) and is recorded as an account-wide window.
+			if (!reportedSpentWindow(state, cfg, now)) {
 				const retryAfter = num(h("retry-after"));
-				const fallbackMs = cfg.plan.cooldownMinutesOn429 * 60_000;
-				const rejectedReset = earliestReset(spent.accountWide);
-				const until = retryAfter !== undefined ? now + retryAfter * 1000 : (rejectedReset ?? now + fallbackMs);
-				state.cooldownUntil = until;
-				state.cooldownReason = status === 402 ? "budget exhausted (402)" : "rate limited (429)";
+				const id = status === 402 ? "budget-exhausted" : "rate-limited";
+				state.windows[id] = {
+					status: "rejected",
+					resetAt: now + (retryAfter !== undefined ? retryAfter * 1000 : cfg.plan.cooldownMinutesOn429 * 60_000),
+					source: "header",
+					lastSeen: now,
+				};
 			}
-		} else if (status >= 200 && status < 300 && state.cooldownUntil && spent.accountWide.length === 0) {
-			// A successful call clears a stale cooldown.
-			state.cooldownUntil = undefined;
-			state.cooldownReason = undefined;
+		} else if (status >= 200 && status < 300) {
+			// The credential answered, so its own refusal is over. A window that is genuinely spent
+			// stays spent and keeps excluding what it governs on its own terms.
+			for (const id of Object.keys(REFUSAL_WINDOWS)) delete state.windows[id];
 		}
 		this.scheduleSave();
 	}
@@ -217,13 +226,13 @@ export class Ledger {
 		const sources = new Set<EvidenceSource>();
 		let newest: number | undefined;
 
-		if (state.cooldownUntil && state.cooldownUntil > now) {
-			out.cooldown = { until: state.cooldownUntil, reason: state.cooldownReason ?? "cooldown" };
-		}
-
 		for (const [id, w] of Object.entries(state.windows)) {
 			sources.add(w.source);
 			newest = Math.max(newest ?? 0, w.lastSeen);
+			if (REFUSAL_WINDOWS[id] !== undefined) {
+				if (w.resetAt !== undefined && w.resetAt > now) out.cooldown = { until: w.resetAt, reason: REFUSAL_WINDOWS[id]! };
+				continue;
+			}
 			if (OVERAGE_WINDOWS.has(id)) {
 				out.overage = w;
 				continue;
@@ -275,13 +284,17 @@ export class Ledger {
 			const parts: string[] = [];
 			if (p.plan) parts.push(`plan ${p.plan}`);
 			for (const [id, w] of Object.entries(p.windows)) {
+				const refusal = REFUSAL_WINDOWS[id];
+				if (refusal !== undefined) {
+					if (w.resetAt !== undefined && w.resetAt > Date.now()) parts.push(`COOLDOWN ${refusal}`);
+					continue;
+				}
 				const bits = [id];
 				if (w.utilization !== undefined) bits.push(`${Math.round(w.utilization * 100)}%`);
 				if (w.status) bits.push(w.status);
 				parts.push(bits.join(" "));
 			}
 			if (p.credits) parts.push(describeCredits(p.credits));
-			if (p.cooldownUntil && p.cooldownUntil > Date.now()) parts.push(`COOLDOWN ${p.cooldownReason}`);
 			if (p.probeError) parts.push(`probe: ${p.probeError}`);
 			if (parts.length) lines.push(`quota ${provider}: ${parts.join(", ")}`);
 		}
@@ -363,26 +376,11 @@ export function windowExhausted(w: WindowState, cfg: RouterConfig, now: number):
 	return undefined;
 }
 
-/**
- * The windows this provider currently reports as spent, split by who they speak for. A
- * model-scoped bucket (Fable's weekly, a per-model meter) and the extra-billed overage bucket
- * speak for their own models only, so neither may arm, extend or hold the provider-wide cooldown:
- * the answer to one of those is a different model, not a cold credential.
- */
-function spentWindows(state: ProviderState, cfg: RouterConfig, provider: string, now: number): { accountWide: WindowState[]; scoped: WindowState[] } {
-	const accountWide: WindowState[] = [];
-	const scoped: WindowState[] = [];
-	for (const [id, w] of Object.entries(state.windows)) {
-		if (windowExhausted(w, cfg, now) === undefined) continue;
-		if (OVERAGE_WINDOWS.has(id) || scopeGlobs(cfg, provider, id) !== undefined) scoped.push(w);
-		else accountWide.push(w);
-	}
-	return { accountWide, scoped };
-}
-
-function earliestReset(windows: WindowState[]): number | undefined {
-	const resets = windows.filter((w) => w.resetAt !== undefined).map((w) => w.resetAt!);
-	return resets.length ? Math.min(...resets) : undefined;
+/** Whether the response just folded in named a window of its own as spent. */
+function reportedSpentWindow(state: ProviderState, cfg: RouterConfig, now: number): boolean {
+	return Object.entries(state.windows).some(
+		([id, w]) => w.lastSeen === now && REFUSAL_WINDOWS[id] === undefined && windowExhausted(w, cfg, now) !== undefined,
+	);
 }
 
 export function describeCredits(c: CreditState): string {

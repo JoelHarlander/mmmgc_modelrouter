@@ -252,6 +252,6 @@ test("quota a fan-out response reports reaches the ledger", async () => {
 	});
 
 	const quota = l.assess("openai-codex", "openai-codex/gpt-6-astra", pinned);
-	assert.ok(quota.cooldown, "the 429 the fan-out saw put the provider in cooldown");
-	assert.equal(l.peekProvider("openai-codex")!.windows.primary!.utilization, 1);
+	assert.equal(l.peekProvider("openai-codex")!.windows.primary!.utilization, 1, "the window the fan-out's 429 reported is recorded");
+	assert.match(quota.exhaustedAccount.map((w) => w.id).join(","), /primary/, "so the next turn knows the subscription is spent");
 });
