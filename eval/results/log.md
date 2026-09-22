@@ -1496,3 +1496,60 @@ task decides and implements. Round 23 is the handover, not the hand.
 
 **Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`, which §6 exists to
 make someone run.
+
+---
+
+## Round 24 — 2026-09-23 — audit the instrument against the thing it measures
+
+**Measured.** The harness itself, deliberately this time. Six earlier rounds found bugs
+in the *measurement* rather than the router — rounds 1, 6, 12, 13, 15 and 22 — and every
+one of them was found by accident, while chasing something else. At that base rate, a
+line-by-line comparison of the harness's turn loop against `src/index.ts` is worth
+doing on purpose.
+
+**What the audit cleared.** `before_agent_start`, statement by statement: turn counter,
+the pinned early return (and that it precedes `setThinkingLevel` — round 13's fix), the
+`jev.available()` branch and its fallback, the stakes override, `chooseModel`'s
+arguments including pre-compaction `contextTokens`, the `switched` guard around
+`setModel`, and the thinking level being keyed off `choice.tier` and `choice.model`.
+Also checked: `message_end` → `ledger.record`, `after_provider_response` →
+`ledger.observeResponse`, `model_select` → the pin, and `session_start`'s reset. The
+compaction ordering is right too — pi compacts inside the agent loop, so the router sees
+the pre-compaction context and the compaction lands after the routing decision, which is
+what the harness does.
+
+Three shipped behaviours the harness deliberately does not model, now written down
+rather than merely absent: `enabled: false` (a user toggle, not a routing decision),
+`pi.setModel` returning `false` (unreachable here, because `chooseModel` has already
+checked auth), and the fact that `observeResponse` is always keyed to `ctx.model`'s
+provider whatever actually answered.
+
+**What it found.** One real gap: **`src/index.ts` books every answered classifier call
+through `ledger.recordJev`, and the harness never did.** The router's own overhead was
+tracked in a side channel (`classifierCostUsd`) and left out of both cost totals, so
+`listEquivalentUsd` was the cost of *inference* rather than the cost of *running the
+router*. `recordJev` — shipped code — was also never exercised by anything.
+
+Fixed: the harness now calls `recordJev` exactly where `src/index.ts` does, and the
+overhead is inside `ledgerCostUsd` and `listEquivalentUsd` as well as broken out.
+
+**What the numbers did.** Almost nothing, which is the finding:
+
+```
+classifier cost $0.001235 of list $149.21  =  0.0008% of spend
+```
+
+**The router's own decision-making is 8 parts per million of what it spends.** That is
+worth knowing precisely because it closes a question the whole project could otherwise
+be asked: *is the classifier paying for itself?* It cannot fail to. One Jev call per
+turn costs about a millionth of the turn it routes, so the entire argument is about
+which model answers, never about what it costs to decide. A test now asserts both that
+the overhead is in the totals and that it stays under 1% of them — so if that ever stops
+being true, it fails rather than passing quietly.
+
+**Also fixed in passing.** `planHiddenUsd` was rounded independently of the two columns
+it sits between, so once a sub-cent term entered both, the identity
+`listEquivalentUsd − ledgerCostUsd = planHiddenUsd` stopped holding exactly. It is now
+derived from the rounded pair. A test that had been checking that identity caught it.
+
+**Next.** `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`.

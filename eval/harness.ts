@@ -86,6 +86,8 @@ export interface RunOutcome {
 const DEFAULT_START_MODEL = "faux-plan-anthropic/claude-opus-5";
 /** Middling by default: some of a task's turns lean on earlier ones, some do not. */
 const DEFAULT_CONTEXT_SENSITIVITY = 0.5;
+/** Observed input size of a routing call; see eval/classifier.ts for where the cost comes from. */
+const CLASSIFIER_INPUT_TOKENS = 450;
 
 export async function runEval(options: RunOptions): Promise<RunOutcome> {
 	const { pack, loaded } = options;
@@ -204,6 +206,11 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			});
 			classifierCostUsd = classification.costUsd;
 			classifierSource = classification.source;
+			// src/index.ts books every answered Jev call under a synthetic jev:<transport>
+			// provider, so the router's own overhead shows up in its own ledger. Mirror that.
+			if (classification.source === "jev") {
+				ledger.recordJev(options.classifier === "live" ? "typesafe" : "scripted", cfg.jev.model, CLASSIFIER_INPUT_TOKENS, 0, classification.costUsd);
+			}
 			classifierAnswer = {
 				tier: classification.tier,
 				confidence: round2(classification.confidence),

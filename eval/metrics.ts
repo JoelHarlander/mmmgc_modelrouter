@@ -150,12 +150,23 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		} else over += 1;
 	}
 
+	// The router's own classifier and judge calls are real spend and belong in the totals,
+	// as they do in src/ledger.ts. They are also broken out, because they are tiny and the
+	// interesting question is whether they ever stop being so.
+	const classifierCostUsd = sum(turns, (t) => t.classifierCostUsd) + sum(turns, (t) => t.candidate?.judgeCostUsd ?? 0);
 	const ledgerCostUsd =
-		sum(turns, (t) => t.ledgerCostUsd) + sum(turns, (t) => t.candidate?.fanoutLedgerCostUsd ?? 0) + sum(turns, (t) => t.compaction?.ledgerCostUsd ?? 0);
+		sum(turns, (t) => t.ledgerCostUsd) +
+		sum(turns, (t) => t.candidate?.fanoutLedgerCostUsd ?? 0) +
+		sum(turns, (t) => t.compaction?.ledgerCostUsd ?? 0) +
+		classifierCostUsd;
 	const listEquivalentUsd =
 		sum(turns, (t) => t.listEquivalentUsd) +
 		sum(turns, (t) => t.candidate?.fanoutListEquivalentUsd ?? 0) +
-		sum(turns, (t) => t.compaction?.listEquivalentUsd ?? 0);
+		sum(turns, (t) => t.compaction?.listEquivalentUsd ?? 0) +
+		classifierCostUsd;
+	const ledgerRounded = round(ledgerCostUsd);
+	const listRounded = round(listEquivalentUsd);
+
 	const coldByCause: Record<string, number> = {};
 	for (const t of turns) if (t.coldCause) coldByCause[t.coldCause] = (coldByCause[t.coldCause] ?? 0) + 1;
 
@@ -185,11 +196,13 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		heuristicFallbacks: turns.filter((t) => t.classifierSource === "heuristic").length,
 		tierEscalations: turns.filter((t) => t.chosenTier !== t.requestedTier).length,
 
-		ledgerCostUsd: round(ledgerCostUsd),
-		listEquivalentUsd: round(listEquivalentUsd),
-		planHiddenUsd: round(listEquivalentUsd - ledgerCostUsd),
-		planPointsUsed: round((listEquivalentUsd - ledgerCostUsd) / PLAN_POINT_USD, 3),
-		classifierCostUsd: round(sum(turns, (t) => t.classifierCostUsd) + sum(turns, (t) => t.candidate?.judgeCostUsd ?? 0), 8),
+		ledgerCostUsd: ledgerRounded,
+		listEquivalentUsd: listRounded,
+		// Derived from the rounded pair, so planHiddenUsd is exactly the gap a reader sees
+		// between the two columns rather than a third independently-rounded number.
+		planHiddenUsd: round(listRounded - ledgerRounded),
+		planPointsUsed: round((listRounded - ledgerRounded) / PLAN_POINT_USD, 3),
+		classifierCostUsd: round(classifierCostUsd, 8),
 		listUsdPerResolvedTask: resolved === 0 ? Number.POSITIVE_INFINITY : round(listEquivalentUsd / resolved),
 
 		switches: turns.filter((t) => t.switched).length,

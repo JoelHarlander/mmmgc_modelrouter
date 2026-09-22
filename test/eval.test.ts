@@ -1435,3 +1435,32 @@ test("the findings brief still agrees with what the harness measures", async () 
 	quotes("0 of 5 quality differences do", "the resolution claim changed");
 	quotes("5 of 5 cost differences resolve", "the resolution claim changed");
 });
+
+test("the router's own overhead is inside the totals, and booked the way src/ledger.ts books it", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3 });
+	const m = computeMetrics(outcome.turns, outcome.stateChars);
+
+	// src/index.ts calls ledger.recordJev on every answered classifier call, under a
+	// synthetic jev:<transport> provider, so the router's overhead lands in its own ledger.
+	const src = readFileSync(join(ROOT, "src", "index.ts"), "utf8");
+	assert.match(src, /ledger\.recordJev\(/, "src/index.ts stopped booking Jev calls; the harness mirrors that");
+	const answered = outcome.turns.filter((t) => t.classifierSource === "jev").length;
+	assert.ok(answered > 0);
+	assert.ok(outcome.ledger.summaryLines().some((l) => l.includes("jev:")), "the run's ledger should carry a jev entry");
+
+	// It is real spend, so it is in the totals - and broken out, because the interesting
+	// question is whether it ever stops being negligible.
+	assert.ok(m.classifierCostUsd > 0);
+	assert.ok(m.classifierCostUsd < m.listEquivalentUsd / 100, "routing overhead should be a rounding error next to inference");
+	const turnsOnly = outcome.turns.reduce(
+		(a, t) => a + t.listEquivalentUsd + (t.candidate?.fanoutListEquivalentUsd ?? 0) + (t.compaction?.listEquivalentUsd ?? 0),
+		0,
+	);
+	assert.ok(Math.abs(m.listEquivalentUsd - (turnsOnly + m.classifierCostUsd)) < 1e-3, "the totals must include the overhead");
+
+	// And the two cost columns stay exactly consistent with the gap reported between them.
+	assert.equal(round4(m.listEquivalentUsd - m.ledgerCostUsd), round4(m.planHiddenUsd));
+	function round4(n: number) {
+		return Math.round(n * 1e4) / 1e4;
+	}
+});
