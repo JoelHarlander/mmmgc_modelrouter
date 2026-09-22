@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T13-54-09-swe-router-v1-scripted-c9be398",
-	"at": "2026-09-22T13:54:09.851Z",
+	"runId": "2026-09-22T13-58-03-swe-router-v1-scripted-92cb9b5",
+	"at": "2026-09-22T13:58:03.007Z",
 	"profile": "swe-router-v1-scripted",
 	"pack": "swe-router-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,7 +11,7 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "c9be398",
+	"git": "92cb9b5",
 	"metrics": {
 		"tasks": 15,
 		"turns": 31,
@@ -50,6 +50,7 @@
 		"compactions": 0,
 		"avoidableCompactions": 0,
 		"compactionCostUsd": 0,
+		"turnsLostToCompaction": 0,
 		"modelShare": {
 			"faux-or/glm-5.3-flash": 8,
 			"faux-plan-codex/gpt-6-astra": 13,
@@ -90,6 +91,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 54,
+			"requiredSkill": 44,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -123,6 +126,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 46,
+			"requiredSkill": 47,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -156,6 +161,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 46,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -190,6 +197,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 44,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -223,6 +232,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 60,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -256,6 +267,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 52,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -289,6 +302,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 68,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -323,6 +338,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 45,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -356,6 +373,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 62,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -389,6 +408,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 58,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -422,6 +443,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 60,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -456,6 +479,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 42,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -489,6 +514,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 46,
+			"requiredSkill": 64,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -523,6 +550,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 66,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -556,6 +585,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 58,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -589,6 +620,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 60,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -622,6 +655,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 82,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -656,6 +691,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 60,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -689,6 +726,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 78,
+			"requiredSkill": 88,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -723,6 +762,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 84,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -757,6 +798,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 78,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -790,6 +833,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 88,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -823,6 +868,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -856,6 +903,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 86,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -889,6 +938,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 64,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -923,6 +974,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 62,
+			"requiredSkill": 68,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -956,6 +1009,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -984,6 +1039,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 40,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1011,6 +1068,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 46,
+			"requiredSkill": 78,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1042,6 +1101,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 56,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1076,6 +1137,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 62,
+			"requiredSkill": 58,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		}
 	]

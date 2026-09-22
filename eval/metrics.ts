@@ -83,6 +83,8 @@ export interface RunMetrics {
 	/** Of those, the ones the fleet's roomiest model would not have needed: a routing cost. */
 	avoidableCompactions: number;
 	compactionCostUsd: number;
+	/** Turns that failed only because a compaction had discarded what they needed. */
+	turnsLostToCompaction: number;
 
 	modelShare: Record<string, number>;
 	avgStateChars: number;
@@ -200,6 +202,8 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		compactions: turns.filter((t) => t.compaction).length,
 		avoidableCompactions: turns.filter((t) => t.compaction?.avoidable).length,
 		compactionCostUsd: round(sum(turns, (t) => t.compaction?.listEquivalentUsd ?? 0)),
+		turnsLostToCompaction: turns.filter((t) => !t.solved && t.compactionPenalty > 0 && t.effectiveSkill >= t.requiredSkill - t.compactionPenalty)
+			.length,
 
 		modelShare,
 		avgStateChars: Math.round(stateChars.reduce((a, b) => a + b, 0) / Math.max(1, stateChars.length)),

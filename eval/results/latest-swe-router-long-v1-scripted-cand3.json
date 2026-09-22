@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T13-54-16-swe-router-long-v1-scripted-cand3-c9be398",
-	"at": "2026-09-22T13:54:16.978Z",
+	"runId": "2026-09-22T13-58-10-swe-router-long-v1-scripted-cand3-92cb9b5",
+	"at": "2026-09-22T13:58:10.068Z",
 	"profile": "swe-router-long-v1-scripted-cand3",
 	"pack": "swe-router-long-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,23 +11,23 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "c9be398",
+	"git": "92cb9b5",
 	"metrics": {
 		"tasks": 6,
 		"turns": 60,
 		"routedTurns": 48,
 		"pinnedTurns": 12,
 		"taskResolveRate": 0,
-		"medianTaskTurnSuccess": 0.6636,
-		"worstTaskTurnSuccess": 0.4,
-		"turnSuccessRate": 0.65,
-		"sessionSuccessRate": 0.95,
+		"medianTaskTurnSuccess": 0.5682,
+		"worstTaskTurnSuccess": 0.25,
+		"turnSuccessRate": 0.5667,
+		"sessionSuccessRate": 0.85,
 		"tierAccuracy": 0.7667,
 		"classifierAccuracy": 0.8833,
 		"underRouteRate": 0.2,
 		"overRouteRate": 0.0333,
 		"underRouteFailures": 12,
-		"inTierMisses": 9,
+		"inTierMisses": 10,
 		"ineligibleChoices": 0,
 		"heuristicFallbacks": 0,
 		"tierEscalations": 0,
@@ -52,6 +52,7 @@
 		"compactions": 4,
 		"avoidableCompactions": 4,
 		"compactionCostUsd": 0.1215,
+		"turnsLostToCompaction": 5,
 		"modelShare": {
 			"faux-or/glm-5.3-flash": 26,
 			"faux-plan-anthropic/claude-opus-5": 12,
@@ -61,16 +62,16 @@
 		"avgStateChars": 677,
 		"candidate": {
 			"turns": 60,
-			"baselineSuccessRate": 0.65,
-			"judgeSuccessRate": 0.9333,
-			"adoptedSuccessRate": 0.95,
-			"adoptedLift": 0.3,
+			"baselineSuccessRate": 0.5667,
+			"judgeSuccessRate": 0.85,
+			"adoptedSuccessRate": 0.85,
+			"adoptedLift": 0.2833,
 			"gatedTurns": 4,
 			"gateRescueRate": 0.25,
-			"oracleSuccessRate": 0.9667,
+			"oracleSuccessRate": 0.8833,
 			"judgeLift": 0.2833,
 			"judgeHeadroomCaptured": 0.8947,
-			"judgeRecall": 0.9655,
+			"judgeRecall": 0.9623,
 			"judgeRegressions": 1,
 			"fanoutLedgerCostUsd": 1.4593,
 			"fanoutListEquivalentUsd": 123.2143,
@@ -111,6 +112,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 30,
+			"requiredSkill": 30,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -193,6 +196,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 34,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
@@ -276,6 +281,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -359,6 +366,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 78,
+			"requiredSkill": 76,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -442,6 +451,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 86,
+			"requiredSkill": 88,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
@@ -519,6 +530,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 32,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
@@ -603,6 +616,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 90,
+			"compactionPenalty": 6,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -621,7 +636,7 @@
 						"key": "faux-plan-anthropic/claude-opus-5",
 						"label": "B",
 						"effectiveSkill": 86,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.7448619188026927,
 						"judgeProbability": 0.7448619188026927,
 						"cold": true,
@@ -642,12 +657,12 @@
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
 				"judgeConfidence": 0.617292878204039,
-				"judgeSolved": true,
+				"judgeSolved": false,
 				"gated": false,
 				"adoptedKey": "faux-plan-anthropic/claude-opus-5",
-				"adoptedSolved": true,
+				"adoptedSolved": false,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
-				"oracleSolved": true,
+				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.02835,
@@ -679,6 +694,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 91.48,
+			"compactionPenalty": 5.48,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -697,7 +714,7 @@
 						"key": "faux-plan-anthropic/claude-opus-5",
 						"label": "B",
 						"effectiveSkill": 86,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.9782611938009429,
 						"judgeProbability": 0.9782611938009429,
 						"cold": true,
@@ -718,12 +735,12 @@
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
 				"judgeConfidence": 0.9673917907014142,
-				"judgeSolved": true,
+				"judgeSolved": false,
 				"gated": false,
 				"adoptedKey": "faux-plan-anthropic/claude-opus-5",
-				"adoptedSolved": true,
+				"adoptedSolved": false,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
-				"oracleSolved": true,
+				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.00615,
@@ -760,16 +777,18 @@
 			"listEquivalentUsd": 0.019590000000000003,
 			"warmListEquivalentUsd": 0.0146875,
 			"classifierCostUsd": 0.000018900000000000002,
-			"solved": true,
+			"solved": false,
 			"effectiveSkill": 30,
-			"inTierAlternativeWouldSolve": false,
+			"requiredSkill": 34.96,
+			"compactionPenalty": 4.96,
+			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
 					{
 						"key": "faux-or/glm-5.3-flash",
 						"label": "A",
 						"effectiveSkill": 30,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.00002622833089313363,
 						"judgeProbability": 0.00002622833089313363,
 						"cold": true,
@@ -807,7 +826,7 @@
 				"adoptedSolved": true,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
 				"oracleSolved": true,
-				"baselineSolved": true,
+				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.00825,
 				"fanoutListEquivalentUsd": 0.8707499999999999
@@ -845,6 +864,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 78,
+			"requiredSkill": 86.44,
+			"compactionPenalty": 4.44,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -863,7 +884,7 @@
 						"key": "faux-plan-anthropic/claude-opus-5",
 						"label": "B",
 						"effectiveSkill": 86,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.7952229510165486,
 						"judgeProbability": 0.7952229510165486,
 						"cold": true,
@@ -884,12 +905,12 @@
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
 				"judgeConfidence": 0.692834426524823,
-				"judgeSolved": true,
+				"judgeSolved": false,
 				"gated": false,
 				"adoptedKey": "faux-plan-anthropic/claude-opus-5",
-				"adoptedSolved": true,
+				"adoptedSolved": false,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
-				"oracleSolved": true,
+				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.01035,
@@ -926,16 +947,18 @@
 			"listEquivalentUsd": 0.73175,
 			"warmListEquivalentUsd": 0.2873125,
 			"classifierCostUsd": 0.000018900000000000002,
-			"solved": true,
+			"solved": false,
 			"effectiveSkill": 86,
-			"inTierAlternativeWouldSolve": false,
+			"requiredSkill": 88.93,
+			"compactionPenalty": 3.93,
+			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
 					{
 						"key": "faux-plan-anthropic/claude-opus-5",
 						"label": "A",
 						"effectiveSkill": 86,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.9190393631188327,
 						"judgeProbability": 0.9190393631188327,
 						"cold": true,
@@ -967,13 +990,13 @@
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
 				"judgeConfidence": 0.8785590446782492,
-				"judgeSolved": true,
+				"judgeSolved": false,
 				"gated": false,
 				"adoptedKey": "faux-plan-anthropic/claude-opus-5",
-				"adoptedSolved": true,
+				"adoptedSolved": false,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
-				"oracleSolved": true,
-				"baselineSolved": true,
+				"oracleSolved": false,
+				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.012450000000000001,
 				"fanoutListEquivalentUsd": 1.29495
@@ -1009,16 +1032,18 @@
 			"listEquivalentUsd": 0.03429,
 			"warmListEquivalentUsd": 0.025187499999999998,
 			"classifierCostUsd": 0.000018900000000000002,
-			"solved": true,
+			"solved": false,
 			"effectiveSkill": 30,
-			"inTierAlternativeWouldSolve": false,
+			"requiredSkill": 33.41,
+			"compactionPenalty": 3.41,
+			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
 					{
 						"key": "faux-or/glm-5.3-flash",
 						"label": "A",
 						"effectiveSkill": 30,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.000029622007755639045,
 						"judgeProbability": 0.000029622007755639045,
 						"cold": true,
@@ -1053,10 +1078,10 @@
 				"judgeSolved": true,
 				"gated": true,
 				"adoptedKey": "faux-or/glm-5.3-flash",
-				"adoptedSolved": true,
+				"adoptedSolved": false,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
 				"oracleSolved": true,
-				"baselineSolved": true,
+				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.01455,
 				"fanoutListEquivalentUsd": 1.50705
@@ -1093,6 +1118,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 69,
+			"requiredSkill": 60,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -1176,6 +1203,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 28,
+			"requiredSkill": 30,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
@@ -1259,6 +1288,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 69,
+			"requiredSkill": 66,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -1342,6 +1373,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 89,
+			"requiredSkill": 90,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
@@ -1424,6 +1457,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 82,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -1506,6 +1541,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 88,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -1590,7 +1627,9 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
-			"inTierAlternativeWouldSolve": true,
+			"requiredSkill": 36,
+			"compactionPenalty": 6,
+			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
 					{
@@ -1666,6 +1705,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
+			"requiredSkill": 75.52,
+			"compactionPenalty": 5.52,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -1742,6 +1783,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
+			"requiredSkill": 91.04,
+			"compactionPenalty": 5.04,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -1760,7 +1803,7 @@
 						"key": "faux-plan-anthropic/claude-opus-5",
 						"label": "B",
 						"effectiveSkill": 89,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.9796782327541704,
 						"judgeProbability": 0.9796782327541704,
 						"cold": true,
@@ -1781,12 +1824,12 @@
 				],
 				"judgePick": "faux-plan-anthropic/claude-opus-5",
 				"judgeConfidence": 0.9695173491312556,
-				"judgeSolved": true,
+				"judgeSolved": false,
 				"gated": false,
 				"adoptedKey": "faux-plan-anthropic/claude-opus-5",
-				"adoptedSolved": true,
+				"adoptedSolved": false,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
-				"oracleSolved": true,
+				"oracleSolved": false,
 				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.00855,
@@ -1825,7 +1868,9 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 28,
-			"inTierAlternativeWouldSolve": true,
+			"requiredSkill": 34.56,
+			"compactionPenalty": 4.56,
+			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
 					{
@@ -1907,6 +1952,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 52,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -1990,6 +2037,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 40,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2073,6 +2122,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 70,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2156,6 +2207,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 68,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2239,6 +2292,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 45,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2321,6 +2376,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 46,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2404,6 +2461,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 74,
+			"requiredSkill": 78,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2487,6 +2546,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2570,6 +2631,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 30,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2652,6 +2715,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 50,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2735,6 +2800,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 38,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2818,6 +2885,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 60,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2900,6 +2969,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 66,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -2982,6 +3053,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 62,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3064,6 +3137,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 55,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3146,6 +3221,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 74,
+			"requiredSkill": 76,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3228,6 +3305,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 72,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3310,6 +3389,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 36,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3392,6 +3473,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 46,
+			"requiredSkill": 62,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3469,6 +3552,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 62,
+			"requiredSkill": 30,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3545,6 +3630,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 62,
+			"requiredSkill": 58,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3621,6 +3708,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 62,
+			"requiredSkill": 64,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
@@ -3704,6 +3793,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 70,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3786,6 +3877,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 68,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3869,6 +3962,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -3952,6 +4047,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 74,
+			"requiredSkill": 78,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4042,6 +4139,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 46,
+			"requiredSkill": 38,
+			"compactionPenalty": 6,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4122,8 +4221,10 @@
 			"listEquivalentUsd": 0.010437499999999999,
 			"warmListEquivalentUsd": 0.010437499999999999,
 			"classifierCostUsd": 0.000018900000000000002,
-			"solved": true,
+			"solved": false,
 			"effectiveSkill": 46,
+			"requiredSkill": 49.6,
+			"compactionPenalty": 5.6,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4131,7 +4232,7 @@
 						"key": "faux-or/glm-5.3-flash",
 						"label": "A",
 						"effectiveSkill": 46,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.0009288770353721368,
 						"judgeProbability": 0.0009288770353721368,
 						"cold": true,
@@ -4169,7 +4270,7 @@
 				"adoptedSolved": true,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
 				"oracleSolved": true,
-				"baselineSolved": true,
+				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.0057,
 				"fanoutListEquivalentUsd": 0.6132000000000001
@@ -4206,6 +4307,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 34,
+			"requiredSkill": 34,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4289,6 +4392,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 74,
+			"requiredSkill": 55,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4372,6 +4477,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 86,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4454,6 +4561,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 84,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4536,6 +4645,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 82,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4618,16 +4729,18 @@
 			"listEquivalentUsd": 0.00979,
 			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0,
-			"solved": true,
+			"solved": false,
 			"effectiveSkill": 34,
-			"inTierAlternativeWouldSolve": false,
+			"requiredSkill": 36,
+			"compactionPenalty": 6,
+			"inTierAlternativeWouldSolve": true,
 			"candidate": {
 				"candidates": [
 					{
 						"key": "faux-or/glm-5.3-flash",
 						"label": "A",
 						"effectiveSkill": 34,
-						"solved": true,
+						"solved": false,
 						"judgeScore": 0.00002495614354749314,
 						"judgeProbability": 0.00002495614354749314,
 						"cold": true,
@@ -4665,7 +4778,7 @@
 				"adoptedSolved": true,
 				"oracleBest": "faux-plan-anthropic/claude-opus-5",
 				"oracleSolved": true,
-				"baselineSolved": true,
+				"baselineSolved": false,
 				"judgeCostUsd": 0,
 				"fanoutLedgerCostUsd": 0.03075,
 				"fanoutListEquivalentUsd": 3.14325
@@ -4696,6 +4809,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 34,
+			"requiredSkill": 73.53,
+			"compactionPenalty": 5.53,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4772,6 +4887,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 34,
+			"requiredSkill": 67.06,
+			"compactionPenalty": 5.06,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4855,6 +4972,8 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 74,
+			"requiredSkill": 84.58,
+			"compactionPenalty": 4.58,
 			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
@@ -4938,7 +5057,9 @@
 			"classifierCostUsd": 0.000018900000000000002,
 			"solved": false,
 			"effectiveSkill": 34,
-			"inTierAlternativeWouldSolve": true,
+			"requiredSkill": 50.11,
+			"compactionPenalty": 4.11,
+			"inTierAlternativeWouldSolve": false,
 			"candidate": {
 				"candidates": [
 					{

@@ -27,7 +27,9 @@ import { FakeSession } from "./session.ts";
 import {
 	DEFAULT_TRAFFIC,
 	effectiveSkill,
+	lostContextFraction,
 	planCompaction,
+	requiredSkillAfterCompaction,
 	simulateFanoutUsage,
 	simulateTurnUsage,
 	solves,
@@ -64,6 +66,8 @@ export interface RunOptions {
 	ledgerFile?: string;
 	/** Overrides the measured calls/growth/output profile the cost model rests on. */
 	traffic?: TrafficProfile;
+	/** Skill points a fully-forgotten, fully context-dependent turn gains. See COMPACTION_SKILL_PENALTY. */
+	compactionPenalty?: number;
 	signal?: AbortSignal;
 }
 
@@ -78,6 +82,8 @@ export interface RunOutcome {
 }
 
 const DEFAULT_START_MODEL = "faux-plan-anthropic/claude-opus-5";
+/** Middling by default: some of a task's turns lean on earlier ones, some do not. */
+const DEFAULT_CONTEXT_SENSITIVITY = 0.5;
 
 export async function runEval(options: RunOptions): Promise<RunOutcome> {
 	const { pack, loaded } = options;
@@ -128,6 +134,8 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 	let turnNo = 0;
 	let pinnedUntilTurn = 0;
 	const judgeWins = new Map<string, number>();
+	// What the session has forgotten, and how much of it has been rebuilt since.
+	let lastCompaction: { from: number; to: number } | undefined;
 	const exploreTurns = options.exploreTurns ?? 0;
 	let committedKey: string | undefined;
 	let lastThinking: ThinkingLevel | undefined;
@@ -150,10 +158,12 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		}
 		session.addUser(turn.prompt);
 		const contextTokens = session.contextTokens;
-		const requiredSkill = turn.requiredSkill ?? task.requiredSkill;
+		const declaredSkill = turn.requiredSkill ?? task.requiredSkill;
 		// Derived, not read from the fixture: the cheapest tier that can actually do this
 		// turn is a fact about the fleet. A turn no model can do is scored against heavy.
-		const goldTier = cheapestCapableTier(loaded, task.category, requiredSkill) ?? "heavy";
+		// Uses the *declared* difficulty: a compaction does not make the task harder, it
+		// makes the router's job harder, so it shows up as a failure rather than a moved label.
+		const goldTier = cheapestCapableTier(loaded, task.category, declaredSkill) ?? "heavy";
 		const state = buildRoutingState(turn.prompt, session.asContext(), cfg, turnNo);
 		stateChars.push(JSON.stringify(state).length);
 
@@ -223,6 +233,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		// pi compacts before the agent runs when the context no longer fits the *chosen*
 		// model's window, so this can only be decided after the router has picked.
 		const compaction = spec ? planCompaction(spec, contextTokens) : undefined;
+		if (compaction) lastCompaction = { from: compaction.tokensBefore, to: compaction.tokensAfter };
 		if (compaction) {
 			const { provider, id } = splitModel(chosenKey);
 			ledger.record(provider, id, {
@@ -267,6 +278,18 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		// Where the router landed, not what it asked for: the first tier list holding the
 		// chosen model, light first so the cheapest home wins when a model appears twice.
 		const effectiveTier = TIERS.find((t) => (cfg.tiers[t] ?? []).includes(chosenKey)) ?? decision.tier;
+
+		// A turn that needed detail the summary dropped is harder than the same turn with
+		// the detail still there. The penalty decays as the session rebuilds context.
+		const lostFraction = lastCompaction
+			? lostContextFraction(effectiveContextTokens, lastCompaction.from, lastCompaction.to)
+			: 0;
+		const requiredSkill = requiredSkillAfterCompaction(
+			declaredSkill,
+			task.contextSensitivity ?? DEFAULT_CONTEXT_SENSITIVITY,
+			lostFraction,
+			options.compactionPenalty,
+		);
 
 		const eligibility = checkEligibility(chosen, loaded, ledger, cfg);
 		const solved = spec ? solves(spec, task.category, requiredSkill) : false;
@@ -313,6 +336,8 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			classifierCostUsd,
 			solved,
 			effectiveSkill: spec ? effectiveSkill(spec, task.category) : 0,
+			requiredSkill: Math.round(requiredSkill * 100) / 100,
+			compactionPenalty: Math.round((requiredSkill - declaredSkill) * 100) / 100,
 			inTierAlternativeWouldSolve,
 		};
 

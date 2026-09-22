@@ -34,6 +34,7 @@ Jump to the round that established each claim, and what it rests on.
 | The shipped `manualPinTurns: 3` leaves **7 of 12 pinned turns in the wrong tier**, costing 10pp of session success | **15** | long pack |
 | **A `/model` pin to a small-context model forces pi to compact**, discarding the conversation to serve a one-line request | **16** | pi's own `shouldCompact` |
 | Every compaction in the pack was **avoidable by routing**: a roomier model was authed and available | **16** | fleet windows |
+| Those avoidable compactions cost **5 turns of quality (8.3pp)** on top of their money and cache | **17** | penalty 6–40 pts |
 
 **Still unmeasured, and not closeable offline:** how much presentation bias Jev's own
 judging carries. `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge` — 36 Jev
@@ -1042,3 +1043,68 @@ real would need the oracle to depend on context, which is a larger change than t
 round.
 
 **Next.** Unchanged, twice over: `--classifier live --record` and `--probe --live-judge`.
+
+---
+
+## Round 17 — 2026-09-22 — what forgetting costs
+
+**Measured.** The limitation round 16 wrote down rather than hid: the harness charged a
+compaction's money and modelled its cache effect, but the competence oracle had no
+notion of what a model can still *remember*, so a turn was exactly as easy after the
+conversation had been summarised away as before. Round 16's figures were therefore a
+stated lower bound.
+
+**Changed.** The oracle is now context-aware. A task declares `contextSensitivity`
+(0..1, default 0.5) — how much its turns lean on remembering earlier ones — and a turn's
+required skill rises while the session has not yet rebuilt what a compaction discarded:
+
+```
+requiredSkill += COMPACTION_SKILL_PENALTY × contextSensitivity × lostFraction
+```
+
+`lostFraction` is 1 immediately after the cut and decays to 0 as the context comes back.
+`goldTier` deliberately keeps using the **declared** difficulty: a compaction does not
+make the task harder, it makes the router's job harder, so it shows up as a *failure*
+rather than as a moved label. New metric `turnsLostToCompaction`, and
+`--compaction-penalty` sweeps the new constant.
+
+**What the numbers did.**
+
+| penalty | session ok | turns lost | compactions | list $ |
+| ---: | ---: | ---: | ---: | ---: |
+| 0 (round 16's model) | 65.0% | 0 | 4 (4 avoidable) | $49.77 |
+| 6 | 58.3% | 4 | 4 | $49.77 |
+| **12 (default)** | **56.7%** | **5** | 4 | $49.77 |
+| 24 | 56.7% | 4 | 4 | $49.77 |
+| 40 | 55.0% | 6 | 4 | $49.77 |
+
+**Four avoidable compactions cost five turns, or 8.3pp of session success**, on top of
+their money and their cache flush. And the conclusion does not hinge on the new
+constant: between 6 and 40 points the answer moves by 3.3pp, because a turn either
+needed the discarded detail or it did not. Money and cache are untouched by the penalty,
+as they must be. A test holds both properties.
+
+**An interaction worth naming.** Round 13's exploration strategy now has a *second*
+reason to work: committing to one model stops the router routing into a small-context
+model, so it prevents avoidable compactions as well as switches. That shifts round 13's
+bias story:
+
+| | clean judge | 20-pt biased judge |
+| --- | ---: | ---: |
+| `route` | 56.7% | 56.7% |
+| `explore-3` | **96.3%** | 58.7% |
+| `fanout-always` | 81.3% | 68.3% |
+
+Exploration is worth **+39.6pp** with a clean judge and **+2.0pp** with a biased one —
+bias still destroys **95% of its advantage**, which is the durable claim, but it no
+longer reliably drops *below* the baseline, because compaction-avoidance offsets some of
+the damage. Round 13's test was keyed to the stronger version of that claim and now
+asserts the durable one.
+
+**Still declared, and now swept.** `contextSensitivity` and `COMPACTION_SKILL_PENALTY`
+join `skill` on the list of things this harness asserts rather than measures. Both are
+in fixtures or on the command line, both are swept, and the findings index says what
+each conclusion rests on. That is the whole bargain of an offline eval: declare the
+assumptions, sweep them, and report which answers survive.
+
+**Next.** `--classifier live --record` and `--probe --live-judge`.

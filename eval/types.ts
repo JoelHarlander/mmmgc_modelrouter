@@ -71,6 +71,11 @@ export interface EvalTask {
 	contextGrowthPerTurn: number;
 	/** Provider calls the agent makes per user turn (see docs: median ~5). */
 	callsPerTurn?: number;
+	/**
+	 * How much this task's turns lean on remembering earlier ones, 0..1. Only matters
+	 * after a compaction has discarded that memory. Defaults to 0.5.
+	 */
+	contextSensitivity?: number;
 	turns: TaskTurn[];
 	note?: string;
 }
@@ -133,6 +138,10 @@ export interface TurnRecord {
 	classifierCostUsd: number;
 	solved: boolean;
 	effectiveSkill: number;
+	/** requiredSkill for this turn, after any penalty for context the session has lost. */
+	requiredSkill: number;
+	/** Skill points this turn gained because a compaction discarded what it needed. */
+	compactionPenalty: number;
 	/** A different model in the tier the router chose would have solved this turn. */
 	inTierAlternativeWouldSolve: boolean;
 	candidate?: CandidateTurnRecord;

@@ -79,6 +79,7 @@ than measured, and both live in fixtures so you can argue with them:
 | Declared | Where | What it means |
 | --- | --- | --- |
 | Which model can do which work | `tasks/fleet.json` → `skill`, `skillByCategory` | A turn is solved when the chosen model's category-adjusted skill reaches the turn's `requiredSkill`. |
+| What forgetting costs | `COMPACTION_SKILL_PENALTY`, a task's `contextSensitivity` | After pi compacts, a turn that leaned on the discarded detail needs more skill, decaying as the context is rebuilt. Swept by `--compaction-penalty`; the conclusion is flat between 6 and 40 points. |
 | What the classifier says | `tasks/*.json` → `turns[].jev` | The tier, confidence, `needs_tools` and `stakes` a calibrated classifier is expected to return, written against the criteria in `src/state.ts`. |
 
 So an offline number is a statement about **routing policy under a stated model of
@@ -134,8 +135,16 @@ spend (22%-65% as calls/turn goes 20 -> 2). What does not: the cold premium in d
 and the entire candidate-selection verdict - a fan-out candidate makes one uncached
 call and runs no tools, so its bill is a function of context alone.
 A turn goes **cold** — the whole prefix is re-written instead of read — on the first
-turn of a session, on a model switch, **or on a thinking-level change**, which is the
-invalidation Anthropic documents and the study measured on this machine.
+turn of a session, on a model switch, **on a thinking-level change** (the invalidation
+Anthropic documents and the study measured on this machine), **or on a compaction**.
+
+Compaction uses pi's own trigger: `shouldCompact` and `DEFAULT_COMPACTION_SETTINGS` are
+imported from `@earendil-works/pi-coding-agent`, so the threshold
+(`contextTokens > contextWindow − reserveTokens`) and the post-compaction size are the
+product's. Because the threshold depends on the **chosen model's context window**,
+whether a conversation gets summarised away is a routing consequence —
+`avoidableCompactions` counts the ones the fleet's roomiest authed model would not have
+needed.
 
 Two cost numbers are reported side by side, and the gap between them is the point:
 

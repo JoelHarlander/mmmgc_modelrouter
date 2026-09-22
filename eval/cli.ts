@@ -87,6 +87,7 @@ interface Args {
 	record: boolean;
 	candidatePolicy?: string;
 	judgeMinConfidence?: number;
+	compactionPenalty?: number;
 	callsPerTurn?: number;
 	probe: boolean;
 	probePack: string;
@@ -198,6 +199,9 @@ function parseArgs(argv: string[]): Args {
 			case "--validate":
 				args.validateOnly = true;
 				break;
+			case "--compaction-penalty":
+				args.compactionPenalty = Number(next());
+				break;
 			case "--explore-turns":
 				args.exploreTurns = Number(next());
 				break;
@@ -290,6 +294,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep strategy       fan out every turn, or only to learn a winner then commit?
   --sweep pin            sweep switching.manualPinTurns, how long a /model pin holds
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
+  --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --calibration          is the classifier's confidence worth anything?
   --record               write the classifier's real answers back into the task pack
                          (needs --classifier live; rewrites turns[].jev and nothing else)
@@ -452,6 +457,7 @@ async function main(): Promise<number> {
 		judgeMinConfidence: args.judgeMinConfidence,
 		candidatePolicy: args.candidatePolicy,
 		exploreTurns: args.exploreTurns,
+		compactionPenalty: args.compactionPenalty,
 		seed: args.seed,
 		jev,
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
@@ -613,6 +619,7 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 	row("compactions", "compactions", `${m.compactions}`);
 	row("  avoidable by routing", "avoidableCompactions", String(m.avoidableCompactions));
 	row("  compaction cost", "compactionCostUsd", usd(m.compactionCostUsd));
+	row("  turns lost to it", "turnsLostToCompaction", String(m.turnsLostToCompaction));
 	out.push(`  ${"cold causes".padEnd(26)}${Object.entries(m.coldByCause).map(([k, v]) => `${k}=${v}`).join(" ").padStart(12)}`);
 	out.push("");
 

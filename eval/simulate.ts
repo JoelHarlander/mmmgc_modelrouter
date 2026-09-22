@@ -38,6 +38,42 @@ export const DEFAULT_TRAFFIC: TrafficProfile = {
 	outputTokensPerCall: OUTPUT_TOKENS_PER_CALL,
 };
 
+/**
+ * Skill points a turn effectively gains when the conversation it depended on has been
+ * summarised away. Declared, like the rest of the oracle, and swept by
+ * `--compaction-penalty` so no conclusion has to rest on the exact value.
+ *
+ * Round 16 modelled a compaction's money and its cache effect and said plainly that its
+ * *quality* cost was missing, making those figures a lower bound. This is that cost: a
+ * turn that needs detail the summary dropped is harder than the same turn with the
+ * detail still present.
+ */
+export const COMPACTION_SKILL_PENALTY = 12;
+
+/**
+ * How much of the discarded context has not yet been rebuilt, 0..1. Immediately after a
+ * compaction this is 1; it falls to 0 as the session re-accumulates what it lost.
+ */
+export function lostContextFraction(contextTokens: number, compactedFrom: number, compactedTo: number): number {
+	if (compactedFrom <= compactedTo) return 0;
+	const rebuilt = (contextTokens - compactedTo) / (compactedFrom - compactedTo);
+	return Math.max(0, Math.min(1, 1 - rebuilt));
+}
+
+/**
+ * The skill a turn really demands, given what the session can still remember.
+ * `contextSensitivity` is per task: 0 for self-contained work, 1 for work that leans
+ * entirely on what came before.
+ */
+export function requiredSkillAfterCompaction(
+	requiredSkill: number,
+	contextSensitivity: number,
+	lostFraction: number,
+	penalty = COMPACTION_SKILL_PENALTY,
+): number {
+	return requiredSkill + penalty * contextSensitivity * lostFraction;
+}
+
 export function effectiveSkill(model: FleetModel, category: string): number {
 	return model.skill + (model.skillByCategory?.[category] ?? 0);
 }

@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T13-54-14-swe-router-long-v1-heuristic-c9be398",
-	"at": "2026-09-22T13:54:14.945Z",
+	"runId": "2026-09-22T13-58-08-swe-router-long-v1-heuristic-92cb9b5",
+	"at": "2026-09-22T13:58:08.063Z",
 	"profile": "swe-router-long-v1-heuristic",
 	"pack": "swe-router-long-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,17 +11,17 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "c9be398",
+	"git": "92cb9b5",
 	"metrics": {
 		"tasks": 6,
 		"turns": 60,
 		"routedTurns": 48,
 		"pinnedTurns": 12,
 		"taskResolveRate": 0.3333,
-		"medianTaskTurnSuccess": 0.5727,
-		"worstTaskTurnSuccess": 0.5,
-		"turnSuccessRate": 0.6667,
-		"sessionSuccessRate": 0.6667,
+		"medianTaskTurnSuccess": 0.5227,
+		"worstTaskTurnSuccess": 0.3333,
+		"turnSuccessRate": 0.6167,
+		"sessionSuccessRate": 0.6167,
 		"tierAccuracy": 0.3667,
 		"classifierAccuracy": 0.5167,
 		"underRouteRate": 0.1833,
@@ -52,6 +52,7 @@
 		"compactions": 4,
 		"avoidableCompactions": 4,
 		"compactionCostUsd": 0.2561,
+		"turnsLostToCompaction": 3,
 		"modelShare": {
 			"faux-plan-anthropic/claude-opus-5": 35,
 			"faux-or/glm-5.3-flash": 16,
@@ -89,6 +90,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 30,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -120,6 +123,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 34,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -151,6 +156,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -182,6 +189,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 76,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -214,6 +223,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 86,
+			"requiredSkill": 88,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -242,6 +253,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 32,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -277,6 +290,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 90,
+			"compactionPenalty": 6,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -304,6 +319,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 91.48,
+			"compactionPenalty": 5.48,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -334,9 +351,11 @@
 			"listEquivalentUsd": 0.019590000000000003,
 			"warmListEquivalentUsd": 0.0146875,
 			"classifierCostUsd": 0,
-			"solved": true,
+			"solved": false,
 			"effectiveSkill": 30,
-			"inTierAlternativeWouldSolve": false
+			"requiredSkill": 34.96,
+			"compactionPenalty": 4.96,
+			"inTierAlternativeWouldSolve": true
 		},
 		{
 			"taskId": "django__django-16379-session",
@@ -368,6 +387,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 86.44,
+			"compactionPenalty": 4.44,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -400,6 +421,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 30,
+			"requiredSkill": 88.93,
+			"compactionPenalty": 3.93,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -429,9 +452,11 @@
 			"listEquivalentUsd": 0.025187499999999998,
 			"warmListEquivalentUsd": 0.025187499999999998,
 			"classifierCostUsd": 0,
-			"solved": true,
+			"solved": false,
 			"effectiveSkill": 30,
-			"inTierAlternativeWouldSolve": false
+			"requiredSkill": 33.41,
+			"compactionPenalty": 3.41,
+			"inTierAlternativeWouldSolve": true
 		},
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
@@ -462,6 +487,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 60,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -494,6 +521,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 30,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -526,6 +555,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 66,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -558,6 +589,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 89,
+			"requiredSkill": 90,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -589,6 +622,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 82,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -621,6 +656,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 89,
+			"requiredSkill": 88,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -656,7 +693,9 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
-			"inTierAlternativeWouldSolve": true
+			"requiredSkill": 36,
+			"compactionPenalty": 6,
+			"inTierAlternativeWouldSolve": false
 		},
 		{
 			"taskId": "pytest-dev__pytest-11143-session",
@@ -683,6 +722,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
+			"requiredSkill": 75.52,
+			"compactionPenalty": 5.52,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -710,6 +751,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
+			"requiredSkill": 91.04,
+			"compactionPenalty": 5.04,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -741,7 +784,9 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 28,
-			"inTierAlternativeWouldSolve": true
+			"requiredSkill": 34.56,
+			"compactionPenalty": 4.56,
+			"inTierAlternativeWouldSolve": false
 		},
 		{
 			"taskId": "astropy__astropy-12907-session",
@@ -772,6 +817,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 52,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -803,6 +850,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 40,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -835,6 +884,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 70,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -867,6 +918,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 68,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -898,6 +951,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 45,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -929,6 +984,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 46,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -960,6 +1017,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 78,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -991,6 +1050,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1022,6 +1083,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 30,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1053,6 +1116,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 50,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1085,6 +1150,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 38,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1116,6 +1183,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 60,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1147,6 +1216,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 66,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1178,6 +1249,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 62,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1209,6 +1282,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 55,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1240,6 +1315,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 76,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1271,6 +1348,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 72,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1302,6 +1381,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 36,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1333,6 +1414,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 86,
+			"requiredSkill": 62,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1361,6 +1444,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 62,
+			"requiredSkill": 30,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1388,6 +1473,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 62,
+			"requiredSkill": 58,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1415,6 +1502,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 62,
+			"requiredSkill": 64,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -1446,6 +1535,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 62,
+			"requiredSkill": 70,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -1477,6 +1568,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 62,
+			"requiredSkill": 68,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -1508,6 +1601,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 62,
+			"requiredSkill": 80,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1539,6 +1634,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 62,
+			"requiredSkill": 78,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1578,6 +1675,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 62,
+			"requiredSkill": 38,
+			"compactionPenalty": 6,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1609,6 +1708,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 62,
+			"requiredSkill": 49.6,
+			"compactionPenalty": 5.6,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1640,6 +1741,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 34,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1671,6 +1774,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 55,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1702,6 +1807,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 86,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1733,6 +1840,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 84,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1764,6 +1873,8 @@
 			"classifierCostUsd": 0,
 			"solved": true,
 			"effectiveSkill": 90,
+			"requiredSkill": 82,
+			"compactionPenalty": 0,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1797,9 +1908,11 @@
 			"listEquivalentUsd": 0.00979,
 			"warmListEquivalentUsd": 0.0076875,
 			"classifierCostUsd": 0,
-			"solved": true,
+			"solved": false,
 			"effectiveSkill": 34,
-			"inTierAlternativeWouldSolve": false
+			"requiredSkill": 36,
+			"compactionPenalty": 6,
+			"inTierAlternativeWouldSolve": true
 		},
 		{
 			"taskId": "psf__requests-1142-session",
@@ -1826,6 +1939,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 34,
+			"requiredSkill": 73.53,
+			"compactionPenalty": 5.53,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1853,6 +1968,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 34,
+			"requiredSkill": 67.06,
+			"compactionPenalty": 5.06,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1884,6 +2001,8 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 34,
+			"requiredSkill": 84.58,
+			"compactionPenalty": 4.58,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -1916,7 +2035,9 @@
 			"classifierCostUsd": 0,
 			"solved": false,
 			"effectiveSkill": 34,
-			"inTierAlternativeWouldSolve": true
+			"requiredSkill": 50.11,
+			"compactionPenalty": 4.11,
+			"inTierAlternativeWouldSolve": false
 		}
 	]
 }

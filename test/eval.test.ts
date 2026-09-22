@@ -28,6 +28,7 @@ import { compareMetrics, GATED_METRICS, gateRegressions, latestPath, readRun, ty
 import {
 	CACHE_GROWTH_TOKENS_PER_CALL,
 	CALLS_PER_TURN,
+	COMPACTION_SKILL_PENALTY,
 	COMPACTION_SUMMARY_TOKENS,
 	planCompaction,
 	simulateFanoutUsage,
@@ -969,9 +970,14 @@ test("exploring beats fanning out every turn when the judge is good, and is wors
 	assert.ok(explore.listUsdPerExtraSolve < always.listUsdPerExtraSolve / 3);
 	assert.ok(explore.fanoutTurns < always.fanoutTurns);
 
-	// Commitment amplifies bias: one bad verdict becomes permanent for the whole session.
+	// Commitment amplifies bias: one bad verdict becomes permanent for the whole session,
+	// so most of the advantage disappears. (It does not always go below the baseline,
+	// because committing also stops the router routing into an avoidable compaction.)
 	assert.equal(at("route", 20).turnSuccessRate, route.turnSuccessRate, "the baseline cannot see the judge at all");
-	assert.ok(at("explore-3", 20).turnSuccessRate < route.turnSuccessRate, "a biased judge plus commitment is worse than not fanning out");
+	const gain = explore.turnSuccessRate - route.turnSuccessRate;
+	const biasedGain = at("explore-3", 20).turnSuccessRate - route.turnSuccessRate;
+	assert.ok(gain > 0.2, "a clean judge should be worth a lot here");
+	assert.ok(biasedGain < gain * 0.3, `bias should destroy most of exploration's advantage (${gain} -> ${biasedGain})`);
 });
 
 test("a pinned turn cannot change the thinking level, so it is never charged a cache flush for one", async () => {
@@ -1143,6 +1149,64 @@ test("a compaction is a cache flush, shrinks the context, and is charged", async
 	assert.equal(m.avoidableCompactions, compacted.length);
 	assert.ok(m.compactionCostUsd > 0);
 	assert.ok(m.listEquivalentUsd > m.compactionCostUsd, "compaction cost is part of the total, not the whole of it");
+});
+
+test("an avoidable compaction costs turns, and the conclusion does not hinge on the penalty", async () => {
+	const at = async (compactionPenalty: number) => computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), compactionPenalty })));
+	const none = await at(0);
+	const shipped = await at(COMPACTION_SKILL_PENALTY);
+	const harsh = await at(40);
+
+	assert.equal(none.turnsLostToCompaction, 0, "with no penalty a compaction costs money and cache but no quality");
+	assert.ok(shipped.turnsLostToCompaction >= 4, "...and with one it costs turns");
+	assert.ok(shipped.sessionSuccessRate < none.sessionSuccessRate - 0.05);
+
+	// The size of the penalty barely matters: its effect saturates, because a turn either
+	// needed the discarded detail or it did not.
+	assert.ok(Math.abs(harsh.sessionSuccessRate - shipped.sessionSuccessRate) < 0.05, "the finding must not hinge on the declared penalty");
+	// Money and cache are untouched by it, as they must be.
+	assert.equal(harsh.compactionCostUsd, none.compactionCostUsd);
+	assert.equal(harsh.compactions, none.compactions);
+});
+
+test("losing context only hurts turns that needed it", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const maxPenalty = COMPACTION_SKILL_PENALTY; // contextSensitivity is capped at 1
+	let cutFrom: number | undefined;
+	let previousPenalty = 0;
+	let previousTask = "";
+	for (const turn of outcome.turns) {
+		if (turn.taskId !== previousTask) {
+			cutFrom = undefined;
+			previousPenalty = 0;
+			previousTask = turn.taskId;
+		}
+		assert.ok(turn.compactionPenalty >= 0 && turn.compactionPenalty <= maxPenalty, `penalty ${turn.compactionPenalty} out of range`);
+		assert.ok(turn.requiredSkill >= turn.compactionPenalty);
+
+		// The effective context on a compaction turn is the summary, not what was discarded.
+		const effective = turn.compaction ? turn.compaction.tokensAfter : turn.contextTokens;
+		if (turn.compactionPenalty > 0) {
+			assert.ok(cutFrom !== undefined || turn.compaction, `${turn.taskId} t${turn.turn} penalised with nothing to forget`);
+			assert.ok(effective < (turn.compaction?.tokensBefore ?? cutFrom!), "a penalty implies the context has not been rebuilt yet");
+		} else if (cutFrom !== undefined) {
+			assert.ok(effective >= cutFrom, "the penalty only reaches zero once the lost context is back");
+		}
+		// Between compactions the penalty decays; it never grows on its own.
+		if (!turn.compaction && cutFrom !== undefined) assert.ok(turn.compactionPenalty <= previousPenalty + 1e-9);
+		if (turn.compaction) cutFrom = turn.compaction.tokensBefore;
+		previousPenalty = turn.compactionPenalty;
+	}
+	// A task declared insensitive to context is unaffected however much is discarded.
+	const insensitive = pack(LONG_PACK);
+	for (const task of insensitive.tasks) task.contextSensitivity = 0;
+	const unaffected = await run({ pack: insensitive });
+	assert.deepEqual(
+		unaffected.turns.filter((t) => t.compactionPenalty > 0),
+		[],
+		"context-insensitive work must not be penalised for forgetting",
+	);
+	assert.ok(unaffected.turns.some((t) => t.compaction), "...even though it still compacts");
 });
 
 test("a /model pin to a small-context model can cost the session its memory", async () => {

@@ -1,0 +1,111 @@
+{
+	"title": "confidence sweep — pack swe-router-long-v1, classifier scripted",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"minConfidence": 0,
+			"turns": 60,
+			"tierAccuracy": 0.7667,
+			"classifierAccuracy": 0.8833,
+			"turnSuccessRate": 0.5667,
+			"switches": 30,
+			"coldTurns": 39,
+			"listEquivalentUsd": 49.7677,
+			"coldPremiumUsd": 24.9397,
+			"suppressed": 0,
+			"suppressedCorrect": 0
+		},
+		{
+			"minConfidence": 0.4,
+			"turns": 60,
+			"tierAccuracy": 0.7667,
+			"classifierAccuracy": 0.8833,
+			"turnSuccessRate": 0.5667,
+			"switches": 30,
+			"coldTurns": 39,
+			"listEquivalentUsd": 49.7677,
+			"coldPremiumUsd": 24.9397,
+			"suppressed": 0,
+			"suppressedCorrect": 0
+		},
+		{
+			"minConfidence": 0.5,
+			"turns": 60,
+			"tierAccuracy": 0.7667,
+			"classifierAccuracy": 0.8833,
+			"turnSuccessRate": 0.5667,
+			"switches": 30,
+			"coldTurns": 39,
+			"listEquivalentUsd": 49.7677,
+			"coldPremiumUsd": 24.9397,
+			"suppressed": 1,
+			"suppressedCorrect": 1
+		},
+		{
+			"minConfidence": 0.6,
+			"turns": 60,
+			"tierAccuracy": 0.7833,
+			"classifierAccuracy": 0.8833,
+			"turnSuccessRate": 0.5667,
+			"switches": 25,
+			"coldTurns": 39,
+			"listEquivalentUsd": 44.8871,
+			"coldPremiumUsd": 21.8935,
+			"suppressed": 8,
+			"suppressedCorrect": 2
+		},
+		{
+			"minConfidence": 0.7,
+			"turns": 60,
+			"tierAccuracy": 0.6833,
+			"classifierAccuracy": 0.8833,
+			"turnSuccessRate": 0.4833,
+			"switches": 17,
+			"coldTurns": 40,
+			"listEquivalentUsd": 37.299,
+			"coldPremiumUsd": 17.7847,
+			"suppressed": 16,
+			"suppressedCorrect": 9
+		},
+		{
+			"minConfidence": 0.8,
+			"turns": 60,
+			"tierAccuracy": 0.4833,
+			"classifierAccuracy": 0.8833,
+			"turnSuccessRate": 0.3167,
+			"switches": 9,
+			"coldTurns": 39,
+			"listEquivalentUsd": 11.6189,
+			"coldPremiumUsd": 4.323,
+			"suppressed": 32,
+			"suppressedCorrect": 25
+		},
+		{
+			"minConfidence": 0.9,
+			"turns": 60,
+			"tierAccuracy": 0.3833,
+			"classifierAccuracy": 0.8833,
+			"turnSuccessRate": 0.6167,
+			"switches": 5,
+			"coldTurns": 39,
+			"listEquivalentUsd": 34.4683,
+			"coldPremiumUsd": 16.6563,
+			"suppressed": 44,
+			"suppressedCorrect": 37
+		},
+		{
+			"minConfidence": 1.01,
+			"turns": 60,
+			"tierAccuracy": 0.3667,
+			"classifierAccuracy": 0.8833,
+			"turnSuccessRate": 0.6167,
+			"switches": 4,
+			"coldTurns": 39,
+			"listEquivalentUsd": 35.9448,
+			"coldPremiumUsd": 17.6467,
+			"suppressed": 48,
+			"suppressedCorrect": 41
+		}
+	]
+}
