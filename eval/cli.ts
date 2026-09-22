@@ -17,7 +17,8 @@ import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { JevClient } from "../src/jev.ts";
-import { NoisyJudge } from "./candidates.ts";
+import { JevJudge, NoisyJudge } from "./candidates.ts";
+import { loadProbePack, renderProbe, runProbe } from "./probe.ts";
 import { loadFleet } from "./fleet.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
@@ -47,6 +48,9 @@ interface Args {
 	allowInconsistent: boolean;
 	sweep?: "judge" | "bias" | "profile";
 	callsPerTurn?: number;
+	probe: boolean;
+	probePack: string;
+	liveJudge: boolean;
 	judgeBias: number;
 	help: boolean;
 }
@@ -65,6 +69,9 @@ function parseArgs(argv: string[]): Args {
 		validateOnly: false,
 		allowInconsistent: false,
 		judgeBias: 0,
+		probe: false,
+		probePack: join(ROOT, "eval", "tasks", "judge-probe-v1.json"),
+		liveJudge: false,
 		help: false,
 	};
 	for (let i = 0; i < argv.length; i++) {
@@ -98,6 +105,15 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--calls-per-turn":
 				args.callsPerTurn = Number(next());
+				break;
+			case "--probe":
+				args.probe = true;
+				break;
+			case "--probe-pack":
+				args.probePack = abs(next());
+				break;
+			case "--live-judge":
+				args.liveJudge = true;
 				break;
 			case "--seed":
 				args.seed = next();
@@ -144,6 +160,40 @@ function abs(p: string): string {
 	return isAbsolute(p) ? p : resolve(process.cwd(), p);
 }
 
+/**
+ * `--sweep bias` prices judge bias; the probe measures how much of it a judge has.
+ * Offline it runs the stand-in judge (which is how the probe itself is tested);
+ * `--live-judge` points it at real Jev for a fraction of a cent and no model inference.
+ */
+async function runProbeCommand(args: Args): Promise<number> {
+	const probePack = loadProbePack(args.probePack);
+	let judge: JevJudge | NoisyJudge;
+	if (args.liveJudge) {
+		const cfg = loadFleet(args.fleet).config;
+		const jev = new JevClient(cfg.jev);
+		if (!jev.available()) {
+			process.stderr.write(`--live-judge needs a Jev credential: ${jev.describe()}\n`);
+			return 2;
+		}
+		process.stderr.write(`LIVE: ${probePack.items.length * 2} judge calls via ${jev.describe()}\n`);
+		judge = new JevJudge(jev, cfg.parallel.maxResponseCharsForJudge);
+	} else {
+		judge = new NoisyJudge({ noise: args.judgeNoise, seed: args.seed, bias: args.judgeBias });
+	}
+
+	const report = await runProbe(judge, probePack);
+	if (args.json) process.stdout.write(`${JSON.stringify(report, null, "\t")}\n`);
+	else process.stdout.write(renderProbe(report));
+	if (!args.noWrite) {
+		const name = `probe-${args.liveJudge ? "jev" : "offline"}-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}-${shortGit()}.json`;
+		const path = join(resultsDir(ROOT), name);
+		ensureDirFor(path);
+		writeFileSync(path, `${JSON.stringify({ probePack: probePack.id, ...report }, null, "\t")}\n`);
+		process.stderr.write(`wrote ${path.replace(`${ROOT}/`, "")}\n`);
+	}
+	return 0;
+}
+
 const HELP = `router eval — SWE-bench-style measurement of the model switcher
 
   --pack <file>          task pack (default eval/tasks/swe-router-v1.json)
@@ -156,6 +206,9 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep bias           sweep the judge's preference for the flashy candidate
   --sweep profile        sweep the measured traffic constants the cost model rests on
   --calls-per-turn <n>   provider calls per user turn (default 5, the measured median)
+  --probe                measure a judge's presentation bias on paired responses and exit
+  --probe-pack <file>    probe pack (default eval/tasks/judge-probe-v1.json)
+  --live-judge           run the probe against real Jev instead of the offline judge
   --seed <s>             deterministic seed for the offline judge
   --start-model <key>    model each task session starts on
   --no-auth <key>        mark a fleet model unauthed (repeatable)
@@ -177,11 +230,13 @@ async function main(): Promise<number> {
 		return 0;
 	}
 
-	const live = args.classifier === "live";
+	const live = args.classifier === "live" || args.liveJudge;
 	if (live && process.env.ROUTER_EVAL_LIVE !== "1") {
 		process.stderr.write("refusing to run live: set ROUTER_EVAL_LIVE=1 to allow real, billed Jev calls\n");
 		return 2;
 	}
+
+	if (args.probe) return runProbeCommand(args);
 
 	const pack = JSON.parse(readFileSync(args.pack, "utf8")) as TaskPack;
 	const loaded = loadFleet(args.fleet, { unauthed: args.unauthed });

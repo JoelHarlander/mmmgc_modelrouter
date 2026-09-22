@@ -290,3 +290,68 @@ invariances below, so a future change to the cost model that breaks them fails l
 **Next.** Everything measured so far is offline. The one number that would settle
 round 3's open question — how much systematic bias Jev's own judging carries — needs a
 live call, and live mode currently reaches the classifier but not the judge.
+
+---
+
+## Round 6 — 2026-09-22 — measure the judge instead of assuming it
+
+**Measured.** The question rounds 3 and 5 both closed on: `--sweep bias` says what N
+points of judge bias *cost*, but nothing said how many points a real judge *has*. That
+gap is load-bearing — round 3 found 20 points is enough to make fan-out worse than not
+running it, so "is candidate selection worth it?" cannot be answered without it.
+
+**Changed.** Added `--probe` and `eval/tasks/judge-probe-v1.json`: 18 requests with two
+written answers each, true quality declared and presentation deliberately opposed. On a
+**trap** item the worse answer is the confident, well-formatted, thoroughly-hedged one;
+on an **aligned** item it is the better one — a control for a judge that has merely
+learned to distrust formatting. Every item is shown in both label orders, so position
+bias cannot masquerade as presentation bias. `estimatedBiasPoints` converts the observed
+trap rate into the units `--sweep bias` is denominated in, so a probe reading can be
+priced directly against the sweep.
+
+`--probe --live-judge` runs the same probe against **real Jev**. It is 36 Jev calls and
+**no model inference at all** — under a cent — which makes the one outstanding
+measurement cheap enough that nobody has an excuse not to take it.
+
+**What the numbers did.** The probe was built, failed, and was fixed inside the round.
+The first version had only obvious traps (45–55 point quality gaps) and was blind
+exactly where it mattered:
+
+| injected bias | v1 estimate | v2 estimate |
+| ---: | ---: | ---: |
+| 0 | 0 | 0 |
+| 5 | — | 2 |
+| 10 | — | 6 |
+| 15 | — | 16 |
+| **20** | **0** ❌ | **24** |
+| 30 | — | 32 |
+| 40 | 42 | 42 |
+| 60 | 60 | 60 |
+
+A 20-point bias — the one round 3 identified as the break-even — registered as **zero**,
+because no trap in the pack had a gap narrow enough for 20 points to flip. Six
+narrow-gap traps (8–34 points, subtly-worse answers rather than obviously-wrong ones)
+fixed it: the probe now recovers injected bias across the whole range with a mean error
+of about 3 points, and a test holds it to within 8.
+
+The `alignedAccuracy` control stays at **100% at every bias level**, which is what makes
+the trap rate readable: the probe is measuring a preference for presentation, not a
+penalty on formatting. `positionBias` is 0% for the offline judge, as it must be.
+
+**The state of the candidate question, stated honestly.** Everything needed to answer it
+is now in place and one measurement is missing, by design rather than by oversight:
+
+- If Jev probes at **≤10 points**: candidate selection is worth **+14.8pp** of turn
+  success at **$4.94/extra solve** on short sessions, **$14.28** on long ones.
+- If Jev probes at **~20 points**: the lift is roughly **zero** and the fan-out bill is
+  pure loss.
+- If Jev probes at **≥40 points**: fan-out plus judging is **−9.7pp**, actively worse
+  than routing one model.
+
+Which of those three is true is a `ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`
+away, and this task is not authorised to spend on it.
+
+**Next.** The harness now measures the router, the cache, the traffic model and the
+judge. The remaining softness is the competence oracle itself — `skill` and
+`skillByCategory` are declared, and no round has asked how much the conclusions move
+when they are wrong.

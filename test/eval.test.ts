@@ -26,12 +26,14 @@ import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simu
 import { buildFleet } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
 import { runJudgeSweep, runTrafficSweep, type SweepCell, type TrafficCell } from "../eval/sweep.ts";
+import { loadProbePack, runProbe } from "../eval/probe.ts";
 import type { Fleet, TaskPack } from "../eval/types.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FLEET = join(ROOT, "eval", "tasks", "fleet.json");
 const PACK = join(ROOT, "eval", "tasks", "swe-router-v1.json");
 const LONG_PACK = join(ROOT, "eval", "tasks", "swe-router-long-v1.json");
+const PROBE_PACK = join(ROOT, "eval", "tasks", "judge-probe-v1.json");
 
 function pack(path = PACK): TaskPack {
 	return JSON.parse(readFileSync(path, "utf8")) as TaskPack;
@@ -381,6 +383,57 @@ test("a judge that systematically prefers the flashy answer makes the fan-out wo
 	assert.ok(unbiased.judgeLift > 0, "the unbiased judge should still help");
 	assert.ok(biased.judgeLift < 0, "a strong flagship bias should cost more turns than it wins");
 	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
+});
+
+test("the judge probe recovers a bias it was not told about", async () => {
+	const probe = loadProbePack(PROBE_PACK);
+	const recovered: [number, number][] = [];
+	for (const injected of [0, 15, 30, 60]) {
+		const report = await runProbe(new NoisyJudge({ noise: 10, seed: "probe-test", bias: injected }), probe);
+		recovered.push([injected, report.estimatedBiasPoints]);
+	}
+	for (const [injected, estimated] of recovered) {
+		assert.ok(
+			Math.abs(estimated - injected) <= 8,
+			`probe estimated ${estimated} points for an injected ${injected}; the probe has lost its calibration`,
+		);
+	}
+	// ...and it has to be monotone, or the estimate means nothing.
+	for (let i = 1; i < recovered.length; i++) assert.ok(recovered[i]![1] >= recovered[i - 1]![1]);
+});
+
+test("the probe measures presentation, not a distrust of formatting", async () => {
+	const probe = loadProbePack(PROBE_PACK);
+	const clean = await runProbe(new NoisyJudge({ noise: 10, seed: "p", bias: 0 }), probe);
+	const biased = await runProbe(new NoisyJudge({ noise: 10, seed: "p", bias: 40 }), probe);
+
+	assert.ok(biased.styleTrapRate > clean.styleTrapRate, "bias must show up in the traps");
+	// The control: on aligned items the flashy answer is also the better one, so a judge
+	// that merely prefers flash still scores full marks there.
+	assert.equal(clean.alignedAccuracy, 1);
+	assert.equal(biased.alignedAccuracy, 1);
+	assert.ok(biased.accuracy < clean.accuracy);
+	// Every item is shown both ways round, so position cannot masquerade as presentation.
+	assert.ok(clean.positionBias <= 0.2, `position bias ${clean.positionBias} is too high to read the trap rate cleanly`);
+	assert.equal(clean.calls, probe.items.length * 2);
+});
+
+test("the probe pack has resolution across the band of bias that actually matters", () => {
+	const probe = loadProbePack(PROBE_PACK);
+	const gaps = probe.items
+		.filter((i) => i.kind === "trap")
+		.map((i) => Math.abs(i.responses[0].trueSkill - i.responses[1].trueSkill))
+		.sort((a, b) => a - b);
+	assert.ok(gaps.length >= 10, "too few trap items to read a rate from");
+	assert.ok(gaps[0]! <= 12, `the narrowest trap gap is ${gaps[0]}; the probe cannot see small biases`);
+	assert.ok(gaps[gaps.length - 1]! >= 40, "the probe needs obvious traps too, as an upper anchor");
+	for (const item of probe.items) {
+		const [a, b] = item.responses;
+		const flashier = a.flashiness > b.flashiness ? a : b;
+		const better = a.trueSkill > b.trueSkill ? a : b;
+		if (item.kind === "trap") assert.notEqual(flashier.key, better.key, `${item.id}: a trap's flashier answer must be the worse one`);
+		if (item.kind === "aligned") assert.equal(flashier.key, better.key, `${item.id}: an aligned item's flashier answer must be the better one`);
+	}
 });
 
 test("the cold-start bill does not depend on the traffic constants; only its share of spend does", async () => {
