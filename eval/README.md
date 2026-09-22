@@ -21,6 +21,7 @@ npm run eval -- --sweep assumptions           # rank every declared constant by 
 npm run eval -- --sweep paired                # 95% intervals on the comparisons the findings rest on
 npm run eval -- --sweep coverage              # visit ~400 configurations and check the invariants in each
 npm run eval -- --sweep axis                  # does a candidate set's bias-immunity survive another bias axis?
+npm run eval -- --sweep override              # can the stakes override reach the classifier's blind spot?
 npm run eval -- --bootstrap 2000              # what a single number from this pack is worth
 npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
@@ -377,6 +378,10 @@ Run live against Jev it found one: the instruction is rated heavier in **6 of 12
 and lighter in 0**, a mean gap of **+0.83 tiers**, with `needs_tools` at 0.14 for
 questions against 0.61 for instructions. Heavy work asked as a question is called *light*
 four times in six, at mean confidence **0.87**. See §0b of the findings brief.
+
+`--phrasing-questions tier-only` drops `needs_tools` and `stakes` from the request, which
+is how round 37 ruled out the mechanism round 36 proposed: the gap is unchanged without
+them. The cause is the `light` criterion's own wording in `src/state.ts`.
 
 Offline it takes any `Classify` function, which is how the probe itself is tested: a
 phrasing-blind classifier must report no gap, and a tools-keyed one must report the full

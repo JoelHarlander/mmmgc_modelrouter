@@ -40,6 +40,9 @@ Jump to the round that established each claim, and what it rests on.
 | **Jev is systematically under-confident by 13.1pp**, so a bar set on its raw confidence sits ~13 points too high — `minConfidence` should be **lowered**, not raised | **35** | live, 160 routed turns |
 | **Jev under-routes "why / who else / walk me through" questions** that sit on hard work — it reads *needs no tools* as *is easy* | **35** | live, long pack |
 | **Confirmed by controlled experiment: the same work worded as a question is rated ~0.83 tiers lighter**, 6–0 with no counter-example. Heavy work asked as a question is called *light* 4 times in 6, at mean confidence **0.87** | **36** | live, 12 paired prompts |
+| ~~The cause is `needs_tools`~~ | 35, 36 | **REFUTED in r37.** Removing it from the request changes nothing. The cause is the `light` criterion's own words: *"answer a factual question, explain a snippet"*. |
+| **The router cannot fix it**: the stakes override reaches **0 of 15** under-routed light turns, because Jev rates their stakes low too | **37** | live, 5 override variants |
+| **Jev's judging noise is ≤5** (42/42 on non-tie probe items), so the candidate-set floor is insurance against a risk that is not present → **use `tier-top`** | **37** | live probe + 4 policies × 4 noise levels |
 | Raising that bar is **stickiness, not safety**: at 0.80 the session freezes on one model for 51 of 60 turns | **12** | both packs |
 | A perfect classifier still lands in the wrong tier, because a `/model` pin outlives the turn it was for | **12** | — |
 | *(cost: resolved; quality: under-powered)* **Fan-out as *exploration* is ~20× more cost-effective than fanning out every turn**: +21.3pp for $0.81/solve vs $16.03 | **13** | 5 seeds |
@@ -2231,3 +2234,100 @@ decision is framed. Both are reported, neither is fixed — `src/` belongs to an
 the two live probes now exist to be re-run for free whenever the model changes. The
 open work is the same as round 22's: quality differences need real task execution, not a
 bigger fixture.
+
+---
+
+## Round 37 — 2026-09-23 — turn two findings into two decisions
+
+**Asked for.** Firstmate, on the last two rounds: state plainly what the candidate set
+should be now that the bias question is settled, and say what a router should *do* about
+round 36 rather than only that it happens. Both are requests to convert a history into a
+decision, and both turned out to be measurable rather than arguable.
+
+---
+
+### Round 36's mechanism was mine, and it was wrong
+
+I wrote that Jev "appears to read *needs no tools* as *is easy*", and recommended
+dropping `needs_tools` from the tier decision. Two checks, both against me:
+
+1. **The router never uses `needs_tools`.** It is recorded on `lastDecision` and printed
+   by `/router explain`. It has never been in the tier decision, so there was nothing to
+   drop.
+2. **Removing the question entirely changes nothing.** Re-running the probe with
+   `--phrasing-questions tier-only` — just the tier question, no `needs_tools`, no
+   `stakes` — leaves the gap **unchanged**: mean tier gap **1.00** against 0.83,
+   instruction-heavier **7 of 12** against 6, and *identical* 33.3%/66.7% tier accuracy.
+
+**The real cause is in the criteria text, and Jev is obeying it.** `src/state.ts`
+describes the light band as:
+
+> *"A small, well-specified step: **answer a factual question, explain a snippet**, …"*
+
+*"Why does `has_key` raise `FileNotFoundError` under concurrency?"* matches "answer a
+factual question" word for word, while the work it names is what the **heavy** criterion
+describes. The light criterion conflates **output format** with **difficulty**. The
+classifier is not malfunctioning; it is following a prompt that says answering a question
+is light work.
+
+### And the router cannot fix it from where it sits
+
+The stakes override is the one place `src/index.ts` overrules the classifier, and the
+only lever available without editing `src/state.ts`. It **cannot reach these turns**:
+
+| | |
+| --- | ---: |
+| under-routed `light` turns on the long pack | **15** |
+| their stakes: mean / max | **1.03 / 1.43** |
+| caught at the shipped threshold (1.5) | **0 of 15** |
+| caught at 1.2 | 3 of 15 — and 3 correct turns lifted needlessly |
+
+When Jev calls hard work light it rates the stakes low **as well**. It is coherently
+wrong on both axes, not conflicted, so there is no threshold that separates the two
+populations. `--sweep override` confirms it across five variants: between switching the
+override **off entirely** and widening it to two steps at a lower threshold, tier
+accuracy and session success move **under 2pp**.
+
+**So §0b now says what to change and where:** take output format out of the `light`
+criterion, say in the `heavy` criterion that explaining can be as hard as doing, and
+re-run `--probe-phrasing` — 24 calls, $0.00 — with the mean tier gap as the acceptance
+number. And explicitly: do *not* raise `minConfidence` hoping to catch it, because the
+errors arrive at 0.87–0.99 confidence.
+
+---
+
+### The candidate set, decided
+
+Round 29 said prefer a high floor *until the bias axis is known*. It is now known — no
+detectable bias — so the floor can be **priced** rather than argued. A floor is insurance
+against the judge picking wrongly for **any** reason, bias or noise, so the question
+became: how much noise is there, and what does the insurance cost at that level?
+
+**Jev's noise is low.** It scored **42 of 42** on probe items where quality genuinely
+differs, in both label orders, including traps as narrow as 8 skill points. A simulated
+judge matches that only at **noise ≤ 5**; at noise 25 it is down to 94.8%.
+
+| candidate set | floor | noise 0 | noise 10 | noise 25 | noise 40 | fan-out $ | added wall |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| **`tier-top`** | 46 | **31.4pp** | **31.4pp** | 27.1pp | 20.1pp | **$141** | **20 min** |
+| `spread` | 46 | 35.4pp | 35.0pp | 32.7pp | 27.1pp | $290 | 56 min |
+| `strongest` | **74** | 35.4pp | 34.9pp | 31.9pp | **30.7pp** | $589 | 58 min |
+| `shipped` | 46 | 31.4pp | 30.2pp | 26.2pp | 22.7pp | $361 | 58 min |
+
+The floor earns its keep from **noise 25 upward**. Jev is at ≤5, where `strongest` is
+worth **+3.5pp for +$448 and +38 minutes** — and 3.5pp is inside what this pack can
+resolve, while the cost and time differences are not.
+
+**Decision: `tier-top`.** §5 now states it as a decision with two named triggers for
+revisiting — probe bias above ~10 points, or probe accuracy on non-tie items below ~95% —
+rather than as a history of how the question moved.
+
+**Three tests** pin the negative results, which are the easiest kind to lose: the stakes
+override reaches none of the under-routed turns, widening it moves nothing, and the
+harness still applies `src/index.ts`'s override by default.
+
+**Spend.** 24 calls for the tier-only probe. **$0.00**; gateway credits unchanged at
+$5.00 across every live run in this session.
+
+**Next.** Both open findings are now decisions with acceptance tests attached. Back to
+my own judgement.

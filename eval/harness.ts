@@ -20,7 +20,7 @@ import { modelKey, type RouterConfig, type ThinkingLevel, TIERS } from "../src/c
 import { Ledger } from "../src/ledger.ts";
 import { chooseModel, type Decision } from "../src/router.ts";
 import { buildRoutingState } from "../src/state.ts";
-import { applyStakesOverride, classify } from "./classifier.ts";
+import { applyStakesOverride, classify, type StakesOverride } from "./classifier.ts";
 import {
 	CANDIDATE_POLICIES,
 	type CandidatePolicy,
@@ -78,6 +78,8 @@ export interface RunOptions {
 	compactionPenalty?: number;
 	/** Overrides every task's declared contextSensitivity. */
 	contextSensitivity?: number;
+	/** Which stakes-override variant to apply. Defaults to the shipped one. */
+	stakesOverride?: StakesOverride;
 	signal?: AbortSignal;
 }
 
@@ -225,7 +227,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 				needsTools: classification.needsTools === undefined ? undefined : round2(classification.needsTools),
 				stakes: classification.stakes === undefined ? undefined : round2(classification.stakes),
 			};
-			requestedTier = applyStakesOverride(classification.tier, classification.stakes);
+			requestedTier = applyStakesOverride(classification.tier, classification.stakes, options.stakesOverride);
 			confidence = classification.confidence;
 			decision = chooseModel({
 				tier: requestedTier,

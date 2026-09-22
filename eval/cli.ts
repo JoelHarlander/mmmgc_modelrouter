@@ -49,6 +49,7 @@ import {
 	renderConfidenceSweep,
 	renderPinSweep,
 	renderAxisSweep,
+	renderOverrideSweep,
 	renderPairedComparisons,
 	renderStartSweep,
 	renderStrategySweep,
@@ -60,6 +61,7 @@ import {
 	runConfidenceSweep,
 	runPinSweep,
 	runAxisSweep,
+	runOverrideSweep,
 	runPairedComparisons,
 	runStartSweep,
 	runStrategySweep,
@@ -89,6 +91,7 @@ const KNOWN_SWEEPS = [
 	"paired",
 	"coverage",
 	"axis",
+	"override",
 ] as const;
 
 interface Args {
@@ -127,6 +130,7 @@ interface Args {
 	probe: boolean;
 	probePhrasing: boolean;
 	phrasingPack: string;
+	phrasingQuestions: "shipped" | "tier-only";
 	probePack: string;
 	liveJudge: boolean;
 	judgeBias: number;
@@ -158,6 +162,7 @@ function parseArgs(argv: string[]): Args {
 		probe: false,
 		probePhrasing: false,
 		phrasingPack: join(ROOT, "eval", "tasks", "phrasing-probe-v1.json"),
+		phrasingQuestions: "shipped",
 		probePack: join(ROOT, "eval", "tasks", "judge-probe-v1.json"),
 		liveJudge: false,
 		help: false,
@@ -206,6 +211,9 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--probe-phrasing":
 				args.probePhrasing = true;
+				break;
+			case "--phrasing-questions":
+				args.phrasingQuestions = next() as Args["phrasingQuestions"];
 				break;
 			case "--phrasing-pack":
 				args.phrasingPack = abs(next());
@@ -392,6 +400,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep paired         95% intervals on the comparisons the findings rest on
   --sweep coverage       visit many configurations and check the invariants in each
   --sweep axis           does a candidate set's bias-immunity survive a different bias axis?
+  --sweep override       widen the stakes override: what the router can do about round 36
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --context-sensitivity <x>  override every task's declared contextSensitivity (0..1)
@@ -409,6 +418,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --probe-phrasing       does wording the same work as a question change its tier?
                          (needs --classifier live; 2 calls per pair, no model inference)
   --phrasing-pack <file> phrasing pack (default eval/tasks/phrasing-probe-v1.json)
+  --phrasing-questions <s>  shipped | tier-only; tier-only drops needs_tools and stakes
+                         from the request, to test whether asking them moves the tier
   --seed <s>             deterministic seed for the offline judge
   --start-model <key>    model each task session starts on
   --no-auth <key>        mark a fleet model unauthed (repeatable)
@@ -508,6 +519,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "override") {
+			title = `stakes-override sweep — pack ${pack.id}, classifier ${args.classifier}`;
+			const c = await runOverrideSweep(base);
+			cells = c;
+			rendered = renderOverrideSweep(c, title);
 		} else if (args.sweep === "axis") {
 			title = `bias-axis sweep — pack ${pack.id}, n=${args.candidatesExplicit ? args.candidates : 3}, mean of 5 seeds per cell`;
 			const c = await runAxisSweep({ ...base, candidateN: args.candidatesExplicit ? args.candidates : 3 });
@@ -620,11 +636,11 @@ async function main(): Promise<number> {
 			return 2;
 		}
 		const phrasingPack = loadPhrasingPack(args.phrasingPack);
-		const report = await runPhrasingProbe(jevClassifier(jev!), phrasingPack);
+		const report = await runPhrasingProbe(jevClassifier(jev!, args.phrasingQuestions), phrasingPack);
 		if (args.json) process.stdout.write(`${JSON.stringify(report, null, "\t")}\n`);
-		else process.stdout.write(renderPhrasing(report, `${phrasingPack.id}, live Jev`));
+		else process.stdout.write(renderPhrasing(report, `${phrasingPack.id}, live Jev, ${args.phrasingQuestions} questions`));
 		if (!args.noWrite) {
-			const path = join(resultsDir(ROOT), "probe-phrasing.json");
+			const path = join(resultsDir(ROOT), `probe-phrasing${args.phrasingQuestions === "shipped" ? "" : `-${args.phrasingQuestions}`}.json`);
 			ensureDirFor(path);
 			writeFileSync(path, `${JSON.stringify({ pack: phrasingPack.id, at: new Date().toISOString(), git: shortGit(), ...report }, null, "\t")}\n`);
 			process.stderr.write(`wrote ${path.replace(`${ROOT}/`, "")}\n`);

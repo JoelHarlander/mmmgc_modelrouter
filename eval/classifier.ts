@@ -97,7 +97,33 @@ async function classifyLive(args: ClassifyArgs): Promise<Classification> {
 /** src/index.ts applies exactly this override after the Jev answer; the harness must too. */
 export const STAKES_OVERRIDE_THRESHOLD = 1.5;
 
-export function applyStakesOverride(tier: Tier, stakes: number | undefined): Tier {
-	if (stakes !== undefined && stakes >= STAKES_OVERRIDE_THRESHOLD && tier === "light") return "standard";
+/**
+ * Variants of the one place the router overrules the classifier.
+ *
+ * `shipped` is `src/index.ts` exactly: a `light` answer with stakes at or above 1.5
+ * becomes `standard`. The others exist to measure what a router could do about round 36 -
+ * the shipped tier criteria describe the *light* band as "answer a factual question,
+ * explain a snippet", so Jev calls hard questions light while correctly following its
+ * prompt. Stakes is the only signal left in the answer that still tracks difficulty.
+ */
+export interface StakesOverride {
+	/** Stakes at or above this lift `light` one tier. */
+	toStandard: number;
+	/** Stakes at or above this lift `light` two tiers. Infinity disables it. */
+	toHeavy: number;
+}
+
+export const STAKES_OVERRIDES: Record<string, StakesOverride> = {
+	off: { toStandard: Number.POSITIVE_INFINITY, toHeavy: Number.POSITIVE_INFINITY },
+	shipped: { toStandard: STAKES_OVERRIDE_THRESHOLD, toHeavy: Number.POSITIVE_INFINITY },
+	lower: { toStandard: 1.2, toHeavy: Number.POSITIVE_INFINITY },
+	"two-step": { toStandard: STAKES_OVERRIDE_THRESHOLD, toHeavy: 1.8 },
+	"lower-two-step": { toStandard: 1.2, toHeavy: 1.8 },
+};
+
+export function applyStakesOverride(tier: Tier, stakes: number | undefined, override: StakesOverride = STAKES_OVERRIDES.shipped!): Tier {
+	if (tier !== "light" || stakes === undefined) return tier;
+	if (stakes >= override.toHeavy) return "heavy";
+	if (stakes >= override.toStandard) return "standard";
 	return tier;
 }

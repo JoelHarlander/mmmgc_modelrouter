@@ -26,7 +26,7 @@ import { recordAnswers } from "../eval/record.ts";
 import { pickParallelModels } from "../src/parallel.ts";
 import { heuristicTier } from "../src/router.ts";
 import { CANDIDATE_POLICIES, JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
-import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifier.ts";
+import { applyStakesOverride, STAKES_OVERRIDE_THRESHOLD, STAKES_OVERRIDES } from "../eval/classifier.ts";
 import { loadFleet } from "../eval/fleet.ts";
 import { runEval } from "../eval/harness.ts";
 import { computeMetrics, PLAN_POINT_USD } from "../eval/metrics.ts";
@@ -52,6 +52,7 @@ import {
 	runJudgeSweep,
 	runConfidenceSweep,
 	runOracleSweep,
+	runOverrideSweep,
 	runPairedComparisons,
 	runAxisSweep,
 	runPinSweep,
@@ -1935,4 +1936,52 @@ test("each phrasing pair really is two wordings of one job", () => {
 	}
 	// Every tier represented, so the result cannot be an artefact of one difficulty band.
 	for (const tier of TIERS) assert.ok(pack.pairs.some((p) => p.difficulty === tier), `no ${tier} pair`);
+});
+
+test("the stakes override cannot reach the turns round 36 is about", async () => {
+	// Round 37's negative result, pinned. The router's only lever over the classifier is
+	// the stakes override; it fails here because when Jev calls hard work light it rates
+	// the stakes low too - it is coherently wrong on both axes, not conflicted.
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const rank = { light: 0, standard: 1, heavy: 2 } as const;
+	const routed = outcome.turns.filter((t) => !t.pinned && t.classifierAnswer);
+	const underLight = routed.filter((t) => rank[t.requestedTier] < rank[t.goldTier] && t.classifierAnswer!.tier === "light");
+	assert.ok(underLight.length >= 10, `only ${underLight.length} under-routed light turns; the pack no longer exercises this`);
+
+	// At the shipped threshold the override reaches none of them.
+	const caught = underLight.filter((t) => (t.classifierAnswer!.stakes ?? 0) >= STAKES_OVERRIDE_THRESHOLD);
+	assert.equal(caught.length, 0, "the shipped stakes threshold should reach none of the under-routed light turns");
+
+	// And lowering it does not separate them either: the two populations overlap.
+	const mean = (ts: typeof underLight) => ts.reduce((a, t) => a + (t.classifierAnswer!.stakes ?? 0), 0) / Math.max(1, ts.length);
+	const correctLight = routed.filter((t) => t.requestedTier === t.goldTier && t.classifierAnswer!.tier === "light");
+	assert.ok(mean(underLight) - mean(correctLight) < 0.5, "if stakes separated these cleanly, the override would be worth widening");
+});
+
+test("widening the stakes override buys nothing measurable", async () => {
+	const cells = await runOverrideSweep({ pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted" });
+	const at = (variant: string) => cells.find((c) => c.variant === variant)!;
+	assert.ok(cells.length >= 5);
+
+	// The shipped setting is src/index.ts's, and must stay pinned to it.
+	assert.equal(at("shipped").toStandard, STAKES_OVERRIDE_THRESHOLD);
+	assert.equal(at("shipped").toHeavy, Number.POSITIVE_INFINITY);
+
+	// Every variant lands within a point or so of every other on both axes: there is no
+	// setting of this knob that addresses round 36.
+	const spread = (get: (c: (typeof cells)[number]) => number) => Math.max(...cells.map(get)) - Math.min(...cells.map(get));
+	assert.ok(spread((c) => c.tierAccuracy) < 0.02, `tier accuracy moved ${spread((c) => c.tierAccuracy)} across the variants`);
+	assert.ok(spread((c) => c.sessionSuccessRate) < 0.02);
+	assert.ok(Math.abs(at("off").sessionSuccessRate - at("shipped").sessionSuccessRate) < 0.02);
+});
+
+test("the harness applies src/index.ts's stakes override unless told otherwise", () => {
+	assert.equal(applyStakesOverride("light", 1.6), "standard", "the default must be the shipped behaviour");
+	assert.equal(applyStakesOverride("light", 1.4), "light");
+	assert.equal(applyStakesOverride("heavy", 2), "heavy", "the override only ever lifts light");
+	assert.equal(applyStakesOverride("light", undefined), "light");
+	// A two-step variant lifts two tiers, which the shipped one never does.
+	assert.equal(applyStakesOverride("light", 1.9, STAKES_OVERRIDES["two-step"]), "heavy");
+	assert.equal(applyStakesOverride("light", 1.6, STAKES_OVERRIDES["two-step"]), "standard");
+	assert.equal(applyStakesOverride("light", 2, STAKES_OVERRIDES.off), "light");
 });

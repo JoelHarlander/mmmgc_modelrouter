@@ -73,56 +73,63 @@ rate-limited.*
 
 ---
 
-## 0b. Jev classifies the *wording*, not the work — and it is confidently wrong
+## 0b. The tier criteria call hard questions "light", and the router cannot fix it
 
-`ROUTER_EVAL_LIVE=1 npm run eval -- --classifier live --probe-phrasing`, 24 calls, $0.00.
-
-Twelve pairs, each describing the **same work twice** — once as a question answerable in
-text, once as an instruction that edits files. The understanding required is identical;
-only the output differs.
+**What happens.** `--probe-phrasing`: twelve pairs describing the **same work twice**,
+once as a question answerable in text, once as an instruction that edits files.
 
 | | result |
 | --- | ---: |
 | instruction rated **heavier** than its question | **6 of 12** |
 | question rated heavier than its instruction | **0 of 12** |
-| mean tier gap (instruction minus question) | **+0.83 tiers** |
-| mean `needs_tools`, question | **0.14** |
-| mean `needs_tools`, instruction | **0.61** |
-| reached the correct tier: **question** | **33.3%** |
-| reached the correct tier: **instruction** | **66.7%** |
+| mean tier gap | **+0.83 tiers** |
+| reached the correct tier: question / instruction | **33.3% / 66.7%** |
 
-**On heavy work asked as a question, Jev says *light* 4 times out of 6 — at a mean
-confidence of 0.87.**
+On heavy work asked as a question, Jev says *light* **4 times in 6, at mean confidence
+0.87** - two tiers wrong at up to 98% confidence.
 
-```
-rewrite-hook     question: light @ 0.77 (needs_tools 0.07)   instruction: heavy @ 0.59
-column-rename    question: light @ 0.75 (needs_tools 0.04)   instruction: heavy @ 0.94
-swap-dims-alias  question: light @ 0.99 (needs_tools 0.04)   instruction: standard @ 0.66
-token-storage    question: light @ 0.98 (needs_tools 0.02)   instruction: heavy @ 0.96
-```
+**Why.** Not a defect in the model. The shipped `light` criterion in `src/state.ts` reads:
 
-`src/state.ts` asks Jev `needs_tools` - *"will fulfilling `request` require the agent to
-edit files or run commands, rather than only answering in text?"* - and the tier criteria
-never tell it that a question can still be hard. **The classifier appears to be reading
-*needs no tools* as *is easy*.** For a terminal coding agent that is an expensive place
-to be wrong: *"why is this deadlocking?"* is among the most common and most demanding
-things a user asks, and it is routed to the cheapest model in the fleet with 98%
-confidence.
+> *"A small, well-specified step: **answer a factual question, explain a snippet**, rename
+> or move something, write a one-line command, read or list files, simple lookups..."*
 
-**Why no confidence bar can fix this.** The errors come with *high* confidence, so §4's
-bar cannot see them - the same shape as round 8's biased judge. This needs the question
-set changed, not the threshold.
+*"Why does `has_key` raise `FileNotFoundError` under concurrency?"* matches **"answer a
+factual question"** textually, while the work it names - concurrency reasoning - is what
+the *heavy* criterion describes. **The light criterion conflates output format with
+difficulty, and Jev is following it correctly.**
 
-**Honest caveat.** Part of the gap is legitimate: producing a change *is* more work than
-explaining one. What is not legitimate is the **direction and the confidence** - a
-question about a race condition needs the same understanding as fixing it, and
-33.3%-versus-66.7% tier accuracy for the same underlying difficulty is not explained by
-output format. Twelve pairs is a small sample, but 6-0 with no counter-example is a clear
-direction. Re-run it; it costs nothing.
+**Two things this is not.** I proposed both and measured both away:
 
-**Recommendation.** Either drop `needs_tools` from the tier decision, or add a criterion
-telling Jev explicitly that explaining something can be as hard as doing it.
-`src/state.ts` is owned by another task; this section is the evidence for it.
+- *Not `needs_tools`.* The router never uses it - it is recorded and displayed and
+  nothing else. And re-running the probe with **only** the tier question, dropping
+  `needs_tools` and `stakes` from the request entirely, leaves the gap **unchanged**
+  (mean gap 1.00 against 0.83, identical 33.3%/66.7% accuracy). Asking it is not the
+  cause.
+- *Not fixable by the stakes override.* That is the one place the router already
+  overrules the classifier, and the only lever available without touching
+  `src/state.ts`. It **cannot reach these turns**: of the 15 under-routed `light` turns
+  on the long pack, the shipped 1.5 threshold catches **0**, because when Jev calls hard
+  work light it rates the stakes low too (mean 1.03, max 1.43). It is coherently wrong on
+  both axes, not conflicted. `--sweep override` confirms it across five variants - tier
+  accuracy and session success move **under 2pp** between turning the override off
+  entirely and widening it to two steps at a lower threshold.
+
+### What to do
+
+**Change the criteria text, because nothing downstream of it works.** Specifically:
+
+1. **Take output format out of the `light` criterion.** "Answer a factual question,
+   explain a snippet" should be qualified to mean questions whose answer is already known
+   or trivially looked up - not any request answerable in prose.
+2. **Say in the `heavy` criterion that explaining can be as hard as doing.** It already
+   names "debugging with unclear cause, security or concurrency reasoning"; it needs to
+   say those stay heavy when the user asks *about* them rather than asking for a fix.
+3. **Re-run `--probe-phrasing` after the edit.** 24 Jev calls, $0.00. The mean tier gap
+   is the number to watch: near zero means the criteria describe difficulty rather than
+   output shape.
+
+**Do not** raise `switching.minConfidence` hoping to catch these. The errors arrive at
+0.87-0.99 confidence, so a bar cannot see them, and §4 shows raising it is harmful anyway.
 
 ---
 
@@ -281,10 +288,46 @@ model, so it does not matter much which one a biased judge picks. Aligning the f
 candidate with the strongest only works against a bias you have already measured; raising
 the floor works against a bias you have not.
 
-**Recommendation.** Until `--probe --live-judge` says which axis Jev runs on, prefer a
-candidate set with a **high floor** over one that merely happens to be aligned.
-`strongest` costs the most to fan out ($588.71 against `tier-top`'s $140.58), so this is
-a real trade — and it is one the probe would resolve for under a cent.
+### The decision: use `tier-top`
+
+The bias question is settled (§6: **no detectable bias on either axis**), so the floor
+argument can be priced rather than argued. A high floor is insurance against the judge
+picking wrongly *for any reason* - bias or plain noise - so the question is how much
+noise there actually is, and what the insurance costs at that level.
+
+**Jev's judging noise is low.** On the probe it scored **42 of 42** on every item where
+quality genuinely differs, in both label orders, including traps with gaps as narrow as
+8 skill points. A simulated judge matches that only at **noise <= 5**; by noise 25 it is
+down to 94.8%.
+
+**At that operating point the floor buys nothing, and costs a great deal** (bias 0, mean
+of 5 seeds, long pack):
+
+| candidate set | floor | noise 0 | noise 10 | noise 25 | noise 40 | fan-out $ | added wall |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| **`tier-top`** | 46 | **31.4pp** | **31.4pp** | 27.1pp | 20.1pp | **$141** | **20 min** |
+| `spread` | 46 | 35.4pp | 35.0pp | 32.7pp | 27.1pp | $290 | 56 min |
+| `strongest` | **74** | 35.4pp | 34.9pp | 31.9pp | **30.7pp** | $589 | 58 min |
+| `shipped` | 46 | 31.4pp | 30.2pp | 26.2pp | 22.7pp | $361 | 58 min |
+
+The floor only earns its keep from **noise 25 upward**, where `strongest` pulls 10.6pp
+ahead of `tier-top`. Jev is at <= 5. There, `strongest` is worth **+3.5pp for +$448 and
++38 minutes per 175 turns** - and 3.5pp is well inside what this pack can resolve (see
+"Read this first": 0 of 5 quality comparisons resolve at 95%, while cost and wall-clock
+differences all do).
+
+> **Use `tier-top`** - the model the router itself prefers in each tier. It is the
+> cheapest and fastest of the sets that work, and its quality deficit against the best is
+> smaller than the pack can measure.
+
+**What would change this.** Re-run `--probe --live-judge` (48 calls, $0.00) when the
+judge model changes. If it comes back with **bias above ~10 points**, or if its accuracy
+on non-tie items drops below ~95% (implying noise above ~25), switch to `strongest` and
+pay for the floor. Those are the two triggers; nothing else in this section should move
+the decision.
+
+**Also do not ship the shipped set.** `shipped` is dominated outright - `tier-top` beats
+it on quality at every noise level, for 39% of the money and 35% of the wall-clock.
 
 **On whether `/duo` should ever be a default:** fanning out with the shipped set makes a
 session **70% longer**; with `tier-top`, **25% longer**. Money scales with the number of

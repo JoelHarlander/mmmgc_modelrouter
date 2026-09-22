@@ -12,6 +12,7 @@
  */
 import { bootstrapDifference, renderPaired, tasksNeededFor } from "./bootstrap.ts";
 import { type BiasAxis, CANDIDATE_POLICIES, NoisyJudge } from "./candidates.ts";
+import { STAKES_OVERRIDES } from "./classifier.ts";
 import { modelKey } from "../src/config.ts";
 import { buildFleet, type LoadedFleet } from "./fleet.ts";
 import { mergeConfig } from "../src/config.ts";
@@ -218,6 +219,69 @@ export function renderTrafficSweep(cells: TrafficCell[], title: string): string 
 			`  ${String(c.callsPerTurn).padStart(5)}  ${String(c.cacheGrowthTokensPerCall).padStart(6)}  ${String(c.outputTokensPerCall).padStart(6)}   ` +
 				`${usd(c.listEquivalentUsd).padStart(10)}  ${usd(c.coldPremiumUsd).padStart(10)}   ${pct(c.coldPremiumShare).padStart(6)}   ` +
 				`${c.planPointsUsed.toFixed(2).padStart(8)}   ${usd(c.fanoutListEquivalentUsd).padStart(10)} ${usd(c.listUsdPerExtraSolve).padStart(10)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
+export interface OverrideCell {
+	variant: string;
+	toStandard: number;
+	toHeavy: number;
+	tierAccuracy: number;
+	sessionSuccessRate: number;
+	underRouteRate: number;
+	overRouteRate: number;
+	inTierMisses: number;
+	listEquivalentUsd: number;
+}
+
+/**
+ * What the router can do about round 36 without touching the classifier.
+ *
+ * The tier criteria in `src/state.ts` describe the light band as "answer a factual
+ * question, explain a snippet", so Jev rates hard questions light while following its
+ * prompt correctly. The router cannot change that from where it sits - but `stakes` is
+ * asked in the same call and still tracks difficulty, and the stakes override is the one
+ * place the router already overrules the classifier. This measures widening it.
+ */
+export async function runOverrideSweep(options: SweepOptions & { variants?: string[] }): Promise<OverrideCell[]> {
+	const variants = options.variants ?? Object.keys(STAKES_OVERRIDES);
+	const cells: OverrideCell[] = [];
+	for (const variant of variants) {
+		const stakesOverride = STAKES_OVERRIDES[variant]!;
+		const outcome = await runEval({
+			pack: options.pack,
+			loaded: options.loaded,
+			classifier: options.classifier,
+			startModel: options.startModel,
+			stakesOverride,
+		});
+		const m = computeMetrics(outcome.turns, outcome.stateChars);
+		cells.push({
+			variant,
+			toStandard: stakesOverride.toStandard,
+			toHeavy: stakesOverride.toHeavy,
+			tierAccuracy: m.tierAccuracy,
+			sessionSuccessRate: m.sessionSuccessRate,
+			underRouteRate: m.underRouteRate,
+			overRouteRate: m.overRouteRate,
+			inTierMisses: m.inTierMisses,
+			listEquivalentUsd: m.listEquivalentUsd,
+		});
+	}
+	return cells;
+}
+
+export function renderOverrideSweep(cells: OverrideCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  variant           light->std  light->heavy   tier acc   session ok   under   over   in-tier      list $");
+	for (const c of cells) {
+		const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "  -");
+		out.push(
+			`  ${c.variant.padEnd(16)}  ${fmt(c.toStandard).padStart(10)}  ${fmt(c.toHeavy).padStart(12)}   ${pct(c.tierAccuracy).padStart(8)}   ` +
+				`${pct(c.sessionSuccessRate).padStart(10)}   ${pct(c.underRouteRate).padStart(5)}  ${pct(c.overRouteRate).padStart(5)}   ${String(c.inTierMisses).padStart(7)}   ${usd(c.listEquivalentUsd).padStart(9)}`,
 		);
 	}
 	out.push("");

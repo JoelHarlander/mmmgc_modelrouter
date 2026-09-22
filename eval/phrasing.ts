@@ -84,11 +84,24 @@ export function loadPhrasingPack(path: string): PhrasingPack {
 /** Classify one prompt through the shipped routing questions. */
 export type Classify = (prompt: string) => Promise<Classified>;
 
+/**
+ * Which questions to send.
+ *
+ * `shipped` is what `src/state.ts` asks: tier, `needs_tools` and `stakes`, in one
+ * request. `tier-only` drops the other two. The router never uses `needs_tools` in its
+ * decision - it is recorded and displayed and nothing else - so if the phrasing gap
+ * narrows when the question is removed, the gap is caused by *asking* it alongside the
+ * tier question rather than by anything the router does with the answer.
+ */
+export type QuestionSet = "shipped" | "tier-only";
+
 /** The live classifier: the real questions, against a state shaped like the router's. */
-export function jevClassifier(jev: JevLike): Classify {
+export function jevClassifier(jev: JevLike, questionSet: QuestionSet = "shipped"): Classify {
 	return async (prompt: string) => {
 		const state = { request: prompt, recent: [], session: { turn: 1, context_tokens: 0, current_model: "none", recent_tools: [] } };
-		const res = await jev.ask(state, routingQuestions());
+		const all = routingQuestions();
+		const questions = questionSet === "tier-only" ? { [TIER_QUESTION_KEY]: all[TIER_QUESTION_KEY]! } : all;
+		const res = await jev.ask(state, questions);
 		const tier = res.answers[TIER_QUESTION_KEY] as JevChoiceAnswer | undefined;
 		if (!tier || !TIERS.includes(tier.choice as Tier)) throw new Error("no tier answer");
 		return {
