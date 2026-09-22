@@ -1,16 +1,25 @@
 /**
  * Decision layer: turn a Jev tier + confidence into a concrete pi model.
- * Cost-aware (plan vs on-demand vs free), quota-aware, and cache-switch-aware.
+ *
+ * Billing eligibility (see billing.ts) is an input here, not an afterthought: a candidate is
+ * only selectable when its billing basis is permitted, and verified subscription-backed routes
+ * outrank anything that bills extra. The basis and its remaining uncertainty travel with the
+ * decision so `/router explain` can state the footing instead of asserting a conclusion.
  */
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
+import { assessBilling, type BillingAssessment, billingFor, describeBasis } from "./billing.ts";
 import { type Billing, modelKey, overrideFor, type RouterConfig, type Tier, TIERS } from "./config.ts";
 import type { Ledger } from "./ledger.ts";
+
+export { billingFor };
 
 export interface Candidate {
 	key: string;
 	model?: Model<Api>;
 	billing?: Billing;
+	/** Full billing verdict: basis, verification, eligibility, evidence, uncertainty. */
+	assessment?: BillingAssessment;
 	/** Estimated USD for this turn if this model is used. */
 	costUsd: number;
 	switchPenaltyUsd: number;
@@ -25,20 +34,16 @@ export interface Decision {
 	model?: Model<Api>;
 	switched: boolean;
 	reason: string;
+	/** Billing verdict for the chosen model, when one was chosen. */
+	billing?: BillingAssessment;
+	/** Set when the model the session is left on is itself not billing-eligible. */
+	ineligibleCurrent?: string;
 	candidates: Candidate[];
 	jevMs?: number;
 	jevModel?: string;
 	needsTools?: number;
 	stakes?: number;
 	at: number;
-}
-
-export function billingFor(model: Model<Api>, cfg: RouterConfig, registry: ModelRegistry): Billing {
-	const override = overrideFor(cfg, modelKey(model)).billing;
-	if (override) return override;
-	const c = model.cost;
-	if (c.input === 0 && c.output === 0) return "free";
-	return registry.isUsingOAuth(model) ? "plan" : "on-demand";
 }
 
 /** USD for one turn: context re-read (cache miss) or cache read (warm) + expected output. */
@@ -58,6 +63,7 @@ export interface ChooseArgs {
 	cfg: RouterConfig;
 	ledger: Ledger;
 	contextTokens: number;
+	now?: number;
 }
 
 export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "jevModel" | "needsTools" | "stakes"> {
@@ -78,34 +84,53 @@ export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "
 
 	// Try the requested tier, then escalate, then de-escalate.
 	const order = escalationOrder(tier);
+	// Every tier tried is kept, so an explanation shows the routes that were ruled out on the way
+	// to the one that was taken, not just the winning tier's shortlist.
+	const evaluated: Candidate[] = [];
+	const seen = new Set<string>();
+	const collect = (candidates: Candidate[]) => {
+		for (const c of candidates) {
+			if (seen.has(c.key)) continue;
+			seen.add(c.key);
+			evaluated.push(c);
+		}
+	};
 	for (const t of order) {
 		const candidates = evaluateTier(t, args, currentKey);
+		collect(candidates);
 		const viable = candidates.filter((c) => !c.skipped);
 		if (viable.length === 0) continue;
-		viable.sort(compareCandidates);
+		viable.sort((a, b) => compareCandidates(a, b, cfg));
 		const best = viable[0]!;
 		const switched = best.key !== currentKey;
+		const basis = best.assessment ? describeBasis(best.assessment) : (best.billing ?? "unknown");
+		const caveat = best.assessment?.uncertainty.length ? `; caveat: ${best.assessment.uncertainty[0]}` : "";
 		return {
 			requestedTier: tier,
 			tier: t,
 			confidence,
 			model: best.model,
 			switched,
+			billing: best.assessment,
 			reason:
-				t === tier
-					? `${tier} tier -> ${best.key} (${best.billing}, ~$${best.costUsd.toFixed(4)})`
-					: `${tier} tier had no usable model; using ${t} -> ${best.key}`,
-			candidates,
+				(t === tier
+					? `${tier} tier -> ${best.key} (${basis}, ~$${best.costUsd.toFixed(4)})`
+					: `${tier} tier had no billing-eligible model; using ${t} -> ${best.key} (${basis})`) + caveat,
+			candidates: evaluated,
 		};
 	}
+	// Nothing is eligible. Keeping the current model is a fallback, not an endorsement: say so,
+	// and name why the current model itself was not selectable when it was a candidate.
+	const blocked = current ? evaluateCandidate(currentKey!, args, currentKey).skipped : undefined;
 	return {
 		requestedTier: tier,
 		tier,
 		confidence,
 		model: current,
 		switched: false,
-		reason: "no configured model is available; keeping current",
-		candidates: [],
+		ineligibleCurrent: blocked,
+		reason: `no configured model is billing-eligible; keeping ${currentKey ?? "current model"}${blocked ? ` (itself ${blocked})` : ""}`,
+		candidates: evaluated,
 	};
 }
 
@@ -115,44 +140,50 @@ function escalationOrder(tier: Tier): Tier[] {
 }
 
 function evaluateTier(tier: Tier, args: ChooseArgs, currentKey: string | undefined): Candidate[] {
-	const { registry, cfg, ledger, contextTokens } = args;
+	const { cfg } = args;
 	const seen = new Set<string>();
 	const out: Candidate[] = [];
 	for (const key of cfg.tiers[tier] ?? []) {
 		if (seen.has(key)) continue;
 		seen.add(key);
-		const slash = key.indexOf("/");
-		const provider = key.slice(0, slash);
-		const id = key.slice(slash + 1);
-		const model = registry.find(provider, id);
-		const capability = overrideFor(cfg, key).capability ?? 50;
-		if (!model) {
-			out.push({ key, costUsd: 0, switchPenaltyUsd: 0, capability, skipped: "unknown model" });
-			continue;
-		}
-		if (!registry.hasConfiguredAuth(model)) {
-			out.push({ key, model, costUsd: 0, switchPenaltyUsd: 0, capability, skipped: "no auth" });
-			continue;
-		}
-		const billing = billingFor(model, cfg, registry);
-		const block = ledger.isBlocked(provider, cfg);
-		if (block.blocked) {
-			out.push({ key, model, billing, costUsd: 0, switchPenaltyUsd: 0, capability, skipped: block.reason });
-			continue;
-		}
-		const warm = key === currentKey;
-		const costUsd = estimateTurnCost(model, billing, contextTokens, cfg, warm);
-		const switchPenaltyUsd =
-			!warm && cfg.switching.cacheSwitchPenalty && billing === "on-demand"
-				? (contextTokens * Math.max(0, model.cost.input - model.cost.cacheRead)) / 1_000_000
-				: 0;
-		out.push({ key, model, billing, costUsd, switchPenaltyUsd, capability });
+		out.push(evaluateCandidate(key, args, currentKey));
 	}
 	return out;
 }
 
-/** Cheapest first; among equal cost prefer higher capability, then config order (stable sort). */
-function compareCandidates(a: Candidate, b: Candidate): number {
+/** Auth, then billing eligibility, then cost. Shared with the parallel commands. */
+export function evaluateCandidate(key: string, args: ChooseArgs, currentKey?: string): Candidate {
+	const { registry, cfg, ledger, contextTokens } = args;
+	const slash = key.indexOf("/");
+	const model = slash < 0 ? undefined : registry.find(key.slice(0, slash), key.slice(slash + 1));
+	const capability = overrideFor(cfg, key).capability ?? 50;
+	if (!model) return { key, costUsd: 0, switchPenaltyUsd: 0, capability, skipped: "unknown model" };
+	if (!registry.hasConfiguredAuth(model)) return { key, model, costUsd: 0, switchPenaltyUsd: 0, capability, skipped: "no auth" };
+
+	const assessment = assessBilling({ model, cfg, registry, ledger, now: args.now });
+	const billing = assessment.billing;
+	if (assessment.eligibility === "excluded") {
+		return { key, model, billing, assessment, costUsd: 0, switchPenaltyUsd: 0, capability, skipped: assessment.reason };
+	}
+	const warm = key === currentKey;
+	const costUsd = estimateTurnCost(model, billing, contextTokens, cfg, warm);
+	const switchPenaltyUsd =
+		!warm && cfg.switching.cacheSwitchPenalty && billing === "on-demand"
+			? (contextTokens * Math.max(0, model.cost.input - model.cost.cacheRead)) / 1_000_000
+			: 0;
+	return { key, model, billing, assessment, costUsd, switchPenaltyUsd, capability };
+}
+
+/**
+ * Billing rank first, so verified subscription-backed usage wins over anything billed even when
+ * the billed route estimates cheaper. Then cheapest, then higher capability, then config order.
+ */
+function compareCandidates(a: Candidate, b: Candidate, cfg: RouterConfig): number {
+	if (cfg.billing.preferVerifiedSubscription) {
+		const ra = a.assessment?.rank ?? 2;
+		const rb = b.assessment?.rank ?? 2;
+		if (ra !== rb) return ra - rb;
+	}
 	const ca = a.costUsd + a.switchPenaltyUsd;
 	const cb = b.costUsd + b.switchPenaltyUsd;
 	if (Math.abs(ca - cb) > 1e-6) return ca - cb;

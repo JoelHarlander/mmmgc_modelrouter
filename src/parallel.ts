@@ -10,10 +10,11 @@ import { uuidv7 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import { convertToLlm } from "@earendil-works/pi-coding-agent";
 import { Container, matchesKey, Text } from "@earendil-works/pi-tui";
+import { assessBilling, billingFor, describeBasis } from "./billing.ts";
 import { modelKey, type RouterConfig, TIERS } from "./config.ts";
 import type { JevChoiceAnswer, JevClient, JsonValue } from "./jev.ts";
-import { billingFor } from "./router.ts";
 import type { Ledger } from "./ledger.ts";
+import { evaluateCandidate } from "./router.ts";
 import { contentToText, truncate } from "./state.ts";
 
 export const PARALLEL_ENTRY_TYPE = "modelrouter-parallel";
@@ -28,6 +29,8 @@ export interface ParallelResult {
 	error?: string;
 	usage?: AssistantMessage["usage"];
 	judgeProbability?: number;
+	/** Billing basis this response was produced on, e.g. `subscription (verified)`. */
+	basis?: string;
 }
 
 export interface ParallelEntryData {
@@ -46,44 +49,71 @@ export interface RunParallelArgs {
 	cfg: RouterConfig;
 	ledger: Ledger;
 	jev: JevClient;
+	/** Whether automatic routing is on. Off means the fan-out is refused, not merely unrouted. */
+	routerEnabled: boolean;
 }
 
-export function pickParallelModels(ctx: ExtensionCommandContext, cfg: RouterConfig, n: number): Model<Api>[] {
+export interface ParallelSelection {
+	models: Model<Api>[];
+	/** Candidates the billing gate or auth turned down, with the verdict's reason. */
+	rejected: { key: string; reason: string }[];
+}
+
+export interface PickParallelArgs {
+	ctx: ExtensionCommandContext;
+	cfg: RouterConfig;
+	n: number;
+	ledger: Ledger;
+	now?: number;
+}
+
+/**
+ * Same gate as automatic routing: a candidate must pass auth *and* billing eligibility before it
+ * can be fanned out to, so `/duo`, `/trio` and `/par` cannot reach a route routing itself refuses.
+ */
+export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
+	const { ctx, cfg, n, ledger } = args;
 	const registry = ctx.modelRegistry;
 	const chosen: Model<Api>[] = [];
+	const rejected: { key: string; reason: string }[] = [];
 	const seen = new Set<string>();
-	const add = (m: Model<Api> | undefined) => {
-		if (!m || chosen.length >= n) return;
-		const key = modelKey(m);
-		if (seen.has(key) || !registry.hasConfiguredAuth(m)) return;
+	const chooseArgs = { tier: "standard" as const, confidence: 1, current: ctx.model ?? undefined, registry, cfg, ledger, contextTokens: 0, now: args.now };
+	const add = (key: string | undefined) => {
+		if (!key || chosen.length >= n || seen.has(key)) return;
 		seen.add(key);
-		chosen.push(m);
-	};
-	const findKey = (key: string) => {
-		const slash = key.indexOf("/");
-		return registry.find(key.slice(0, slash), key.slice(slash + 1));
+		const candidate = evaluateCandidate(key, chooseArgs, ctx.model ? modelKey(ctx.model) : undefined);
+		if (candidate.skipped || !candidate.model) {
+			rejected.push({ key, reason: candidate.skipped ?? "unknown model" });
+			return;
+		}
+		chosen.push(candidate.model);
 	};
 
 	if (cfg.parallel.models.length > 0) {
-		for (const key of cfg.parallel.models) add(findKey(key));
-		return chosen;
+		for (const key of cfg.parallel.models) add(key);
+		return { models: chosen, rejected };
 	}
-	add(ctx.model ?? undefined);
+	add(ctx.model ? modelKey(ctx.model) : undefined);
 	// Strongest first, one per tier, then fill from the remaining tier lists.
 	for (const tier of [...TIERS].reverse()) {
-		add(findKey(cfg.tiers[tier]?.[0] ?? ""));
+		add(cfg.tiers[tier]?.[0]);
 	}
 	for (const tier of [...TIERS].reverse()) {
-		for (const key of cfg.tiers[tier] ?? []) add(findKey(key));
+		for (const key of cfg.tiers[tier] ?? []) add(key);
 	}
-	return chosen;
+	return { models: chosen, rejected };
 }
 
 export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryData | undefined> {
 	const { pi, ctx, prompt, n, cfg, ledger, jev } = args;
-	const models = pickParallelModels(ctx, cfg, n);
+	if (cfg.parallel.requireRoutingEnabled && !args.routerEnabled) {
+		ctx.ui.notify("Parallel mode is off while the router is disabled (/router on, or parallel.requireRoutingEnabled: false).", "error");
+		return undefined;
+	}
+	const { models, rejected } = pickParallelModels({ ctx, cfg, n, ledger });
 	if (models.length < 2) {
-		ctx.ui.notify(`Need at least 2 authed models for parallel mode (found ${models.length}). Check parallel.models / tiers.`, "error");
+		const why = rejected.length ? ` Rejected: ${rejected.map((r) => `${r.key} (${r.reason})`).join("; ")}` : "";
+		ctx.ui.notify(`Need at least 2 billing-eligible models for parallel mode (found ${models.length}).${why}`, "error");
 		return undefined;
 	}
 
@@ -96,7 +126,14 @@ export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryD
 	const context = { systemPrompt: ctx.getSystemPrompt(), messages: [...llmMessages, userMessage] };
 
 	const labels = models.map((_, i) => String.fromCharCode(65 + i));
-	const results: ParallelResult[] = models.map((m, i) => ({ label: labels[i]!, key: modelKey(m), text: "", ms: 0, ok: false }));
+	const results: ParallelResult[] = models.map((m, i) => ({
+		label: labels[i]!,
+		key: modelKey(m),
+		text: "",
+		ms: 0,
+		ok: false,
+		basis: describeBasis(assessBilling({ model: m, cfg, registry: ctx.modelRegistry, ledger })),
+	}));
 
 	const outcome = await ctx.ui.custom<ParallelResult[] | null>((tui, theme, _kb, done) => {
 		const controller = new AbortController();
@@ -104,7 +141,7 @@ export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryD
 		const container = new Container() as Container & { handleInput?: (data: string) => void };
 		const header = new Text(theme.fg("accent", `Parallel x${models.length}: `) + theme.fg("dim", truncate(prompt.replace(/\s+/g, " "), 80)), 1, 0);
 		container.addChild(header);
-		const lines = results.map((r) => new Text(`${theme.fg("muted", r.label)} ${r.key} ${theme.fg("dim", "running…")}`, 1, 0));
+		const lines = results.map((r) => new Text(`${theme.fg("muted", r.label)} ${r.key} ${theme.fg("dim", `[${r.basis}] running…`)}`, 1, 0));
 		for (const l of lines) container.addChild(l);
 		container.addChild(new Text(theme.fg("dim", "Esc to cancel"), 1, 0));
 		container.handleInput = (data: string) => {
@@ -137,7 +174,7 @@ export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryD
 			const status = r.ok
 				? theme.fg("success", `ok ${(r.ms / 1000).toFixed(1)}s, ${r.usage?.output ?? 0} tok, $${(r.usage?.cost.total ?? 0).toFixed(4)}`)
 				: theme.fg("error", `failed: ${r.error}`);
-			lines[i]!.setText(`${theme.fg("muted", r.label)} ${r.key} ${status}`);
+			lines[i]!.setText(`${theme.fg("muted", r.label)} ${r.key} ${theme.fg("dim", `[${r.basis}]`)} ${status}`);
 			tui.requestRender();
 		};
 
@@ -238,10 +275,12 @@ export function renderParallelEntry(data: ParallelEntryData | undefined, expande
 	const adopted = data.adopted ? ` adopted: ${data.adopted}` : "";
 	c.addChild(new Text(`${theme.fg("accent", `[parallel x${data.results.length}]`)} ${ok} ok${judge}${adopted}`, 1, 0));
 	for (const r of data.results) {
-		const meta = r.ok
-			? `${(r.ms / 1000).toFixed(1)}s, ${r.usage?.output ?? 0} tok, $${(r.usage?.cost.total ?? 0).toFixed(4)}` +
-				(r.judgeProbability !== undefined ? `, p=${r.judgeProbability.toFixed(2)}` : "")
-			: `failed: ${r.error}`;
+		const meta =
+			(r.basis ? `${r.basis}, ` : "") +
+			(r.ok
+				? `${(r.ms / 1000).toFixed(1)}s, ${r.usage?.output ?? 0} tok, $${(r.usage?.cost.total ?? 0).toFixed(4)}` +
+					(r.judgeProbability !== undefined ? `, p=${r.judgeProbability.toFixed(2)}` : "")
+				: `failed: ${r.error}`);
 		c.addChild(new Text(`${theme.fg("muted", r.label)} ${r.key} ${theme.fg("dim", meta)}`, 1, 0));
 		if (r.ok) {
 			const body = expanded ? r.text : truncate(r.text.replace(/\s+/g, " "), 240);
@@ -252,6 +291,7 @@ export function renderParallelEntry(data: ParallelEntryData | undefined, expande
 	return c;
 }
 
-export function describeBilling(model: Model<Api>, cfg: RouterConfig, ctx: ExtensionCommandContext): string {
-	return billingFor(model, cfg, ctx.modelRegistry);
+export function describeBilling(model: Model<Api>, cfg: RouterConfig, ctx: ExtensionCommandContext, ledger?: Ledger): string {
+	if (!ledger) return billingFor(model, cfg, ctx.modelRegistry);
+	return describeBasis(assessBilling({ model, cfg, registry: ctx.modelRegistry, ledger }));
 }

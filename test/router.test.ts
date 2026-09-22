@@ -40,6 +40,8 @@ const cfg: RouterConfig = mergeConfig(DEFAULT_CONFIG, {
 		heavy: ["plan/top", "cheap/top"],
 	},
 	models: { "plan/*": { billing: "plan" }, "cheap/*": { billing: "on-demand" }, "local/*": { billing: "free" } },
+	// Pay-per-token routes are reachable only where they are named, so this fixture names its own.
+	billing: { ...DEFAULT_CONFIG.billing, allowPayPerToken: ["cheap/*"], probe: { ...DEFAULT_CONFIG.billing.probe, enabled: false } },
 });
 
 const models = [
@@ -69,10 +71,10 @@ test("plan model beats on-demand in the same tier at zero marginal cost", () => 
 
 test("exhausted plan provider is skipped and the tier falls back to on-demand", () => {
 	const l = ledger();
-	l.observeResponse("plan", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.97", "anthropic-ratelimit-unified-status": "allowed_warning" }, cfg);
+	l.observeResponse("plan", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.97", "anthropic-ratelimit-unified-5h-status": "allowed_warning" }, cfg);
 	const d = chooseModel({ tier: "standard", confidence: 0.9, current: undefined, registry: fakeRegistry(models), cfg, ledger: l, contextTokens: 10_000 });
 	assert.equal(d.model?.id, "big");
-	assert.match(d.candidates.find((c) => c.key === "plan/mid")?.skipped ?? "", /plan 97% used/);
+	assert.match(d.candidates.find((c) => c.key === "plan/mid")?.skipped ?? "", /5h 97% used/);
 });
 
 test("429 puts the provider in cooldown using retry-after", () => {
@@ -82,11 +84,14 @@ test("429 puts the provider in cooldown using retry-after", () => {
 	assert.equal(l.isBlocked("plan", cfg, Date.now() + 121_000).blocked, false);
 });
 
-test("codex used-percent headers map to 0..1 utilization", () => {
+test("codex used-percent headers map to 0..1 utilization per window", () => {
 	const l = ledger();
 	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "42", "x-codex-secondary-used-percent": "88", "x-codex-primary-reset-after-seconds": "600" }, cfg);
-	assert.equal(l.planState("openai-codex")?.utilization, 0.88);
+	const state = l.peekProvider("openai-codex")!;
+	assert.equal(state.windows.primary?.utilization, 0.42);
+	assert.equal(state.windows.secondary?.utilization, 0.88);
 	assert.equal(l.isBlocked("openai-codex", cfg).blocked, true);
+	assert.equal(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).accountUtilization, 0.88);
 });
 
 test("low confidence keeps the current model", () => {

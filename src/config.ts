@@ -14,6 +14,19 @@ export const TIERS: readonly Tier[] = ["light", "standard", "heavy"] as const;
 export type Billing = "plan" | "on-demand" | "free";
 export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
+/** How a provider's live entitlement/usage endpoint is shaped. See docs/research/plan-quotas.md. */
+export type EntitlementKind = "anthropic-oauth-usage" | "codex-wham-usage" | "openrouter-key" | "vercel-credits";
+
+export interface EntitlementSource {
+	kind: EntitlementKind;
+	/** Read-only usage/entitlement endpoint. Never an inference endpoint. */
+	url: string;
+	/** pi provider whose credential authenticates the probe, when it differs from the routed provider. */
+	authProvider?: string;
+	/** Extra request headers the endpoint requires (e.g. Anthropic's OAuth beta flag). */
+	headers?: Record<string, string>;
+}
+
 export interface ModelOverride {
 	billing?: Billing;
 	/** 0..100 relative capability. Only used to break ties inside a tier. */
@@ -47,6 +60,38 @@ export interface RouterConfig {
 		utilizationCeiling: number;
 		cooldownMinutesOn429: number;
 	};
+	billing: {
+		/** Rank verified subscription-backed routes above every billed route. */
+		preferVerifiedSubscription: boolean;
+		/** Keep a plan-labelled route usable while its subscription backing is still unverified. */
+		allowUnverifiedSubscription: boolean;
+		/** Model-key globs allowed to spend extra billed usage once their subscription window is exhausted. */
+		allowExtraBilled: string[];
+		/** Require live credit evidence before an extra-billed route is used at all. */
+		requireVerifiedExtraBilled: boolean;
+		/**
+		 * Model-key globs allowed to bill per token (gateways, API keys). Deliberately not `["*"]`:
+		 * a route that bills money is reachable only where it was named.
+		 */
+		allowPayPerToken: string[];
+		/** Model-key globs that must never receive paid inference, whatever else allows them. */
+		denyPaid: string[];
+		/** Entitlement evidence older than this counts as stale, not verified. */
+		evidenceMaxAgeMinutes: number;
+		probe: {
+			enabled: boolean;
+			timeoutMs: number;
+			/** Never re-probe a provider more often than this. */
+			minIntervalMinutes: number;
+		};
+	};
+	/** Read-only entitlement endpoints keyed by pi provider id. */
+	entitlement: Record<string, EntitlementSource>;
+	/**
+	 * Model-scoped limit windows: `"<providerGlob>:<windowId>"` -> model-key globs the window governs.
+	 * A window listed here excludes only its own models; the provider stays usable for other models.
+	 */
+	scopes: Record<string, string[]>;
 	switching: {
 		/** Below this Jev confidence the router keeps the current model. */
 		minConfidence: number;
@@ -60,6 +105,8 @@ export interface RouterConfig {
 		defaultN: number;
 		/** Fixed list; empty = pick current model + best authed model of each tier. */
 		models: string[];
+		/** Refuse /duo, /trio and /par while automatic routing is disabled. */
+		requireRoutingEnabled: boolean;
 		judge: "jev" | "none";
 		autoAdopt: boolean;
 		switchToWinner: boolean;
@@ -100,10 +147,45 @@ export const DEFAULT_CONFIG: RouterConfig = {
 		"ds4/*": { billing: "free" },
 	},
 	plan: { utilizationCeiling: 0.85, cooldownMinutesOn429: 30 },
+	billing: {
+		preferVerifiedSubscription: true,
+		allowUnverifiedSubscription: true,
+		// Extra credits exist on the ChatGPT plan only, and only once verified live.
+		allowExtraBilled: ["openai-codex/*"],
+		requireVerifiedExtraBilled: true,
+		// The pay-per-token providers the default tiers name, and no others.
+		allowPayPerToken: ["openrouter/*", "vercel-ai-gateway/*", "ds4/*"],
+		// No paid xAI or paid Anthropic API inference: neither is proven subscription-backed here.
+		denyPaid: ["xai/*", "anthropic/*"],
+		evidenceMaxAgeMinutes: 30,
+		probe: { enabled: true, timeoutMs: 4000, minIntervalMinutes: 30 },
+	},
+	entitlement: {
+		anthropic: { kind: "anthropic-oauth-usage", url: "https://api.anthropic.com/api/oauth/usage", headers: { "anthropic-beta": "oauth-2025-04-20" } },
+		"claude-bridge": {
+			kind: "anthropic-oauth-usage",
+			url: "https://api.anthropic.com/api/oauth/usage",
+			authProvider: "anthropic",
+			headers: { "anthropic-beta": "oauth-2025-04-20" },
+		},
+		"openai-codex": { kind: "codex-wham-usage", url: "https://chatgpt.com/backend-api/wham/usage" },
+		openrouter: { kind: "openrouter-key", url: "https://openrouter.ai/api/v1/key" },
+		"vercel-ai-gateway": { kind: "vercel-credits", url: "https://ai-gateway.vercel.sh/v1/credits" },
+	},
+	scopes: {
+		// Anthropic's model-scoped weekly buckets (docs/research/plan-quotas.md §1).
+		"anthropic:7d_oi": ["*/claude-fable-*"],
+		"claude-bridge:7d_oi": ["*/claude-fable-*"],
+		"anthropic:7d_opus": ["*/claude-opus-*"],
+		"claude-bridge:7d_opus": ["*/claude-opus-*"],
+		"anthropic:7d_sonnet": ["*/claude-sonnet-*"],
+		"claude-bridge:7d_sonnet": ["*/claude-sonnet-*"],
+	},
 	switching: { minConfidence: 0.5, cacheSwitchPenalty: true, manualPinTurns: 3, expectedOutputTokens: 1500 },
 	parallel: {
 		defaultN: 2,
 		models: [],
+		requireRoutingEnabled: true,
 		judge: "jev",
 		autoAdopt: false,
 		switchToWinner: false,
@@ -165,9 +247,17 @@ export function mergeConfig(base: RouterConfig, patch: Partial<RouterConfig>): R
 		thinking: { ...base.thinking, ...(patch.thinking ?? {}) },
 		models: { ...base.models, ...(patch.models ?? {}) },
 		plan: { ...base.plan, ...(patch.plan ?? {}) },
+		billing: { ...base.billing, ...(patch.billing ?? {}), probe: { ...base.billing.probe, ...(patch.billing?.probe ?? {}) } },
+		entitlement: { ...base.entitlement, ...(patch.entitlement ?? {}) },
+		scopes: { ...base.scopes, ...(patch.scopes ?? {}) },
 		switching: { ...base.switching, ...(patch.switching ?? {}) },
 		parallel: { ...base.parallel, ...(patch.parallel ?? {}) },
 	};
+}
+
+/** True when any glob in `patterns` matches `modelKey`. */
+export function anyGlobMatch(patterns: readonly string[], modelKey: string): boolean {
+	return patterns.some((p) => globMatch(p, modelKey));
 }
 
 export function modelKey(m: { provider: string; id: string }): string {
