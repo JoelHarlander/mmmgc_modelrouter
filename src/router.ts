@@ -73,10 +73,23 @@ export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "
 	const { tier, confidence, current, cfg } = args;
 	const currentKey = current ? modelKey(current) : undefined;
 
+	// Every route evaluated is kept, so an explanation shows what was ruled out on the way to the
+	// one that was taken - including the model the session was left on.
+	const evaluated: Candidate[] = [];
+	const seen = new Set<string>();
+	const collect = (candidates: Candidate[]) => {
+		for (const c of candidates) {
+			if (seen.has(c.key)) continue;
+			seen.add(c.key);
+			evaluated.push(c);
+		}
+	};
+
 	// Below the confidence floor the router keeps what the session is on - but only once the
 	// billing gate has said it may. An ineligible route is never kept for want of confidence.
 	if (confidence < cfg.switching.minConfidence && current) {
 		const held = evaluateCandidate(currentKey!, args, currentKey);
+		collect([held]);
 		if (!held.skipped) {
 			const basis = held.assessment ? describeBasis(held.assessment) : (held.billing ?? "unknown");
 			return {
@@ -87,24 +100,13 @@ export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "
 				switched: false,
 				billing: held.assessment,
 				reason: `confidence ${confidence.toFixed(2)} < ${cfg.switching.minConfidence}; keeping ${currentKey} (${basis})`,
-				candidates: [held],
+				candidates: evaluated,
 			};
 		}
 	}
 
 	// Try the requested tier, then escalate, then de-escalate.
 	const order = escalationOrder(tier);
-	// Every tier tried is kept, so an explanation shows the routes that were ruled out on the way
-	// to the one that was taken, not just the winning tier's shortlist.
-	const evaluated: Candidate[] = [];
-	const seen = new Set<string>();
-	const collect = (candidates: Candidate[]) => {
-		for (const c of candidates) {
-			if (seen.has(c.key)) continue;
-			seen.add(c.key);
-			evaluated.push(c);
-		}
-	};
 	for (const t of order) {
 		const candidates = evaluateTier(t, args, currentKey);
 		collect(candidates);
@@ -131,7 +133,12 @@ export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "
 	}
 	// Nothing is eligible. Keeping the current model is a fallback, not an endorsement: say so,
 	// and name why the current model itself was not selectable when it was a candidate.
-	const blocked = current ? evaluateCandidate(currentKey!, args, currentKey).skipped : undefined;
+	let blocked: string | undefined;
+	if (current) {
+		const held = evaluateCandidate(currentKey!, args, currentKey);
+		collect([held]);
+		blocked = held.skipped;
+	}
 
 	return {
 		requestedTier: tier,

@@ -84,6 +84,8 @@ export interface QuotaAssessment {
 	exhaustedScoped: ExhaustedWindow[];
 	/** Account-wide windows this provider actually reported. Empty means nothing was observed. */
 	accountWindows: string[];
+	/** When the newest of those windows was last seen. What a subscription verdict rests on. */
+	accountWindowsAt?: number;
 	/** Highest account-wide utilization observed, 0..1. */
 	accountUtilization?: number;
 	credits?: CreditState;
@@ -219,6 +221,7 @@ export class Ledger {
 			const spent = windowExhausted(w, cfg, now);
 			if (!scoped) {
 				out.accountWindows.push(id);
+				out.accountWindowsAt = Math.max(out.accountWindowsAt ?? 0, w.lastSeen);
 				if (w.utilization !== undefined) out.accountUtilization = Math.max(out.accountUtilization ?? 0, w.utilization);
 			}
 			if (!spent) continue;

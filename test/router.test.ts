@@ -171,3 +171,21 @@ test("a low-confidence turn with nothing eligible names the current model as ine
 	assert.equal(d.model?.id, "mid", "there is nowhere else to go, so the session stays put");
 	assert.match(d.ineligibleCurrent ?? "", /denied/, "but it is never kept silently");
 });
+
+test("the model the router refused to keep is still named in the explanation", () => {
+	// A manual /model pick can leave the session on a model no tier lists; leaving it must be explained.
+	const legacy = model("plan", "legacy", { input: 10, output: 50 });
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, denyPaid: ["plan/legacy"] } });
+	const d = chooseModel({
+		tier: "light",
+		confidence: 0.2,
+		current: legacy,
+		registry: fakeRegistry([...models, legacy]),
+		cfg: denied,
+		ledger: ledger(),
+		contextTokens: 0,
+	});
+	assert.equal(d.switched, true);
+	const held = d.candidates.find((c) => c.key === "plan/legacy");
+	assert.match(held?.skipped ?? "", /denied for plan\/legacy by billing\.denyPaid/);
+});

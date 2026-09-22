@@ -223,7 +223,7 @@ test("xAI is denied while its subscription backing is unproven", () => {
 	// `xai/*` is labelled plan by the defaults, but nothing verifies that label.
 	const a = assess(grok, ledger());
 	assert.equal(a.eligibility, "excluded");
-	assert.match(a.reason, /paid fallback denied/);
+	assert.match(a.reason, /denied for xai\/grok-4.7 by billing\.denyPaid/);
 	assert.ok(a.uncertainty.some((u) => /entitlement check|does not prove/.test(u)), a.uncertainty.join(" | "));
 });
 
@@ -471,8 +471,10 @@ test("a free label the catalog price contradicts is still costed as money", () =
 		contextTokens: 50_000,
 	});
 	const c = d.candidates.find((x) => x.key === "openrouter/z-ai/glm-5.3")!;
-	assert.equal(c.assessment?.basis, "unknown");
-	assert.ok(c.costUsd > 0, "an unresolved basis at a non-zero list price is not free");
+	assert.equal(c.assessment?.basis, "pay-per-token", "the label is contradicted, so the pay-per-token rule decides");
+	assert.ok(c.costUsd > 0, "a route at a non-zero list price is not free");
+	assert.ok(c.assessment?.uncertainty.some((u) => /list-price estimate/.test(u)), c.assessment?.uncertainty.join(" | "));
+	assert.ok(c.assessment?.uncertainty.some((u) => /catalog price is not zero/.test(u)));
 });
 
 test("a configured billed label decides, whatever the catalog price says", () => {
@@ -503,4 +505,25 @@ test("a free route in billing.denyPaid is excluded, not quietly preferred", () =
 	assert.equal(a.basis, "free");
 	assert.equal(a.eligibility, "excluded");
 	assert.match(a.reason, /denied for ds4\/deepseek-v4-flash by billing\.denyPaid/);
+});
+
+test("a verified subscription route is still refused when the deny list names it", () => {
+	const l = ledger();
+	l.observeResponse("anthropic", 200, HEALTHY_ANTHROPIC, cfg);
+	const a = assess(claudeApi, l);
+	assert.equal(a.basis, "subscription");
+	assert.equal(a.eligibility, "excluded", "denyPaid is not a fallback rule: it is never routed to");
+	assert.match(a.reason, /denied for anthropic\/claude-opus-5 by billing\.denyPaid/);
+});
+
+test("a fresh credit fact does not verify a quota window that is hours old", () => {
+	const l = ledger();
+	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "50", "x-codex-plan-type": "plus" }, cfg);
+	const later = Date.now() + 10 * 60 * 60_000;
+	l.applyEntitlement("openai-codex", { credits: { hasCredits: true } }, later);
+
+	const a = assess(codex, l, cfg, later);
+	assert.equal(a.verification, "stale", "the verdict rests on the windows, not on whatever evidence is newest");
+	assert.notEqual(a.eligibility, "preferred");
+	assert.ok(a.uncertainty.some((u) => /older than 30m/.test(u)), a.uncertainty.join(" | "));
 });

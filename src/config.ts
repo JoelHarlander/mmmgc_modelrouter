@@ -77,7 +77,7 @@ export interface RouterConfig {
 		 * a route that bills money is reachable only where it was named.
 		 */
 		allowPayPerToken: string[];
-		/** Model-key globs that must never receive paid inference, whatever else allows them. */
+		/** Model-key globs that must never be routed to, on any basis and whatever else allows them. */
 		denyPaid: string[];
 		/** Entitlement evidence older than this counts as stale, not verified. */
 		evidenceMaxAgeMinutes: number;

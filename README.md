@@ -87,7 +87,7 @@ live quota headers and the read-only usage endpoints in `src/entitlement.ts` dec
 | `allowExtraBilled` | Model globs that may spend credits **after** their subscription window is exhausted |
 | `requireVerifiedExtraBilled` | Refuse extra billed usage unless live credit evidence says credits exist |
 | `allowPayPerToken` | Model globs that may bill per token. Not `["*"]`: a route that costs money is reachable only where it is named |
-| `denyPaid` | Model globs that must never receive paid inference, whatever else allows them |
+| `denyPaid` | Model globs that are never routed to, on any basis — verified subscription, credits, per-token or free |
 | `evidenceMaxAgeMinutes` | Evidence older than this is `stale`, not `verified` |
 | `probe` | Read-only entitlement polling. Never touches an inference endpoint |
 

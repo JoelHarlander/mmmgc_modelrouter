@@ -70,7 +70,7 @@ test("a billing-ineligible model is not fanned out to, and the reason is reporte
 	const { models, rejected } = pickParallelModels({ ctx: fakeCtx(opus), cfg, n: 4, ledger: ledger() });
 	const keys = models.map((m) => `${m.provider}/${m.id}`);
 	assert.ok(!keys.includes("xai/grok-4.7"), `xai must not be reachable: ${keys.join(", ")}`);
-	assert.match(rejected.find((r) => r.key === "xai/grok-4.7")?.reason ?? "", /paid fallback denied/);
+	assert.match(rejected.find((r) => r.key === "xai/grok-4.7")?.reason ?? "", /denied for xai\/grok-4.7/);
 });
 
 test("a model excluded by a model-scoped quota drops out of the fan-out", () => {
@@ -135,5 +135,5 @@ test("parallel.requireRoutingEnabled false keeps the old behaviour available", a
 	});
 	assert.equal(entry, undefined);
 	assert.match(notices[0]!.text, /Need at least 2 billing-eligible models/);
-	assert.match(notices[0]!.text, /paid fallback denied/);
+	assert.match(notices[0]!.text, /denied for xai\/grok-4.7/);
 });

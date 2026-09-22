@@ -21,7 +21,7 @@ import { anyGlobMatch, type Billing, modelKey, overrideFor, type RouterConfig } 
 import { type CreditState, describeCredits, type Ledger, type QuotaAssessment, windowExhausted } from "./ledger.ts";
 
 /** What pays for this turn. */
-export type BillingBasis = "free" | "subscription" | "extra-credits" | "pay-per-token" | "unknown";
+export type BillingBasis = "free" | "subscription" | "extra-credits" | "pay-per-token";
 
 /** How well the basis is established. Only `verified` rests on live provider evidence. */
 export type Verification = "verified" | "stale" | "assumed" | "unverified";
@@ -70,13 +70,9 @@ export function billingLabel(model: Model<Api>, cfg: RouterConfig, registry: Mod
 	return { billing: registry.isUsingOAuth(model) ? "plan" : "on-demand", fromConfig: false };
 }
 
-/**
- * Bases that spend money per token, so the catalog price is a real estimate rather than $0.
- * `unknown` counts: it is only reached when a catalog price contradicts a free label, and an
- * unresolved basis with a non-zero price is money until something proves otherwise.
- */
+/** Bases that spend money per token, so the catalog price is a real estimate rather than $0. */
 export function billsPerToken(basis: BillingBasis): boolean {
-	return basis === "pay-per-token" || basis === "extra-credits" || basis === "unknown";
+	return basis === "pay-per-token" || basis === "extra-credits";
 }
 
 export function assessBilling(args: AssessArgs): BillingAssessment {
@@ -88,7 +84,7 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 	const evidence: string[] = [];
 	const uncertainty: string[] = [];
 
-	const freshness = evidenceFreshness(quota, cfg, now);
+	const freshness = freshnessOf(quota.lastEvidenceAt, cfg, now);
 	if (quota.lastEvidenceAt !== undefined) {
 		evidence.push(`${quota.sources.join("+")} evidence ${ageLabel(now - quota.lastEvidenceAt)} old for ${model.provider}`);
 	}
@@ -104,7 +100,9 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 		return excluded(labelBasis(billing), billing, freshness, `model-scoped quota exhausted (${w.reason}); ${model.provider} stays usable for other models`, evidence, uncertainty);
 	}
 
-	if (billing === "plan") return assessSubscription(key, cfg, quota, freshness, fromConfig, evidence, uncertainty, now);
+	if (billing === "plan") {
+		return assessSubscription(key, cfg, quota, freshnessOf(quota.accountWindowsAt, cfg, now), fromConfig, evidence, uncertainty, now);
+	}
 
 	// Account-wide exhaustion and a spent credit balance are facts about the credential, not about
 	// the basis: they disqualify a free or pay-per-token route as surely as a subscription one.
@@ -135,20 +133,9 @@ function assessFree(
 	const free = zeroCost(model);
 	if (free) evidence.push("catalog list price is zero");
 	else uncertainty.push(`configuration labels ${key} free, but its catalog price is not zero`);
+	if (fromConfig && !free) return assessPayPerToken(key, cfg, evidence, uncertainty);
 	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
-		return excluded(free ? "free" : "unknown", "free", "verified", `inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
-	}
-	if (fromConfig && !free) {
-		return {
-			basis: "unknown",
-			verification: "assumed",
-			eligibility: cfg.billing.allowPayPerToken.length && anyGlobMatch(cfg.billing.allowPayPerToken, key) ? "allowed" : "excluded",
-			reason: `free label is a configuration assertion contradicted by the catalog price`,
-			evidence,
-			uncertainty,
-			billing: "free",
-			rank: RANK.payPerToken,
-		};
+		return excluded("free", "free", "verified", `inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
 	}
 	return {
 		basis: "free",
@@ -172,7 +159,10 @@ function assessSubscription(
 	uncertainty: string[],
 	now: number,
 ): BillingAssessment {
-	const denied = anyGlobMatch(cfg.billing.denyPaid, key);
+	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
+		uncertainty.push(planLabelProvenance(key, fromConfig));
+		return excluded("subscription", "plan", freshness, `inference denied for ${key} by billing.denyPaid`, evidence, uncertainty);
+	}
 
 	if (quota.exhaustedAccount.length > 0) {
 		// Subscription is spent. Anything further is extra billed usage, which needs its own permission.
@@ -184,7 +174,7 @@ function assessSubscription(
 	// Subscription-metered quota windows are only served to subscription-billed traffic, so a
 	// fresh account window is what turns the configured label into an established fact.
 	if (freshness === "verified" && quota.accountWindows.length > 0) {
-		evidence.push(`live subscription windows ${quota.accountWindows.join(", ")}`);
+		evidence.push(`live subscription windows ${quota.accountWindows.join(", ")} seen ${ageLabel(now - quota.accountWindowsAt!)} ago`);
 		if (quota.accountUtilization !== undefined) evidence.push(`subscription ${Math.round(quota.accountUtilization * 100)}% used`);
 		return {
 			basis: "subscription",
@@ -198,18 +188,11 @@ function assessSubscription(
 		};
 	}
 
-	if (fromConfig) {
-		uncertainty.push(`"plan" label for ${key} comes from configuration, not from an entitlement check`);
-	} else {
-		uncertainty.push(`"plan" inferred from the provider using OAuth, which does not prove subscription billing`);
-	}
+	uncertainty.push(planLabelProvenance(key, fromConfig));
 	if (freshness === "stale") uncertainty.push(`last quota evidence is older than ${cfg.billing.evidenceMaxAgeMinutes}m`);
 	else if (quota.accountWindows.length === 0) uncertainty.push("provider reported no subscription quota window");
 	else uncertainty.push("no quota or entitlement evidence seen for this provider yet");
 
-	if (denied) {
-		return excluded("subscription", "plan", freshness, `paid fallback denied for ${key} and its subscription backing is not verified`, evidence, uncertainty);
-	}
 	if (!cfg.billing.allowUnverifiedSubscription) {
 		return excluded("subscription", "plan", freshness, "subscription backing is not verified and billing.allowUnverifiedSubscription is false", evidence, uncertainty);
 	}
@@ -243,9 +226,6 @@ function assessExtraCredits(
 		if (described) evidence.push(`overage window ${described}`);
 	}
 
-	if (anyGlobMatch(cfg.billing.denyPaid, key)) {
-		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}) and paid fallback is denied for ${key}`, evidence, uncertainty);
-	}
 	if (!anyGlobMatch(cfg.billing.allowExtraBilled, key)) {
 		return excluded("extra-credits", "plan", freshness, `subscription exhausted (${spent}); ${key} is not in billing.allowExtraBilled`, evidence, uncertainty);
 	}
@@ -332,10 +312,17 @@ function labelBasis(billing: Billing): BillingBasis {
 	return billing === "plan" ? "subscription" : billing === "free" ? "free" : "pay-per-token";
 }
 
-/** How fresh the provider's quota evidence is, in verification terms. */
-function evidenceFreshness(quota: QuotaAssessment, cfg: RouterConfig, now: number): Verification {
-	if (quota.lastEvidenceAt === undefined) return "unverified";
-	return now - quota.lastEvidenceAt <= cfg.billing.evidenceMaxAgeMinutes * 60_000 ? "verified" : "stale";
+/** Where a "plan" label came from, which is never itself evidence of subscription billing. */
+function planLabelProvenance(key: string, fromConfig: boolean): string {
+	return fromConfig
+		? `"plan" label for ${key} comes from configuration, not from an entitlement check`
+		: `"plan" inferred from the provider using OAuth, which does not prove subscription billing`;
+}
+
+/** How fresh one piece of evidence is, in verification terms. Absent evidence verifies nothing. */
+function freshnessOf(at: number | undefined, cfg: RouterConfig, now: number): Verification {
+	if (at === undefined) return "unverified";
+	return now - at <= cfg.billing.evidenceMaxAgeMinutes * 60_000 ? "verified" : "stale";
 }
 
 /** One-line billing summary for status cards and routing reasons. */

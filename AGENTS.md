@@ -9,8 +9,9 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 `npm run check` (tsc), `npm test` (node --test over `test/*.test.ts`), then both smokes. `npm run smoke` and
 `npm run smoke:billing` drive real pi against the zero-cost faux provider and must answer from `faux/b` and
 `faux/a` respectively; that difference is the billing gate working end to end, so a change that makes them agree
-is a regression, not a wash. Smoke runs read the user's real global `~/.pi/agent/modelrouter.json` on top of the
-project config, so unrelated warnings about globally configured models are expected.
+is a regression, not a wash. Both smokes are hermetic: each sets `PI_CODING_AGENT_DIR` to its own `agent/` fixture, so the global layer is
+`test/smoke*/agent/modelrouter.json` (where the `models` label and `allowPayPerToken` entry the billed route needs
+must live, since a project file may not state them) and the user's real global config is never read.
 
 ## Where the rules live
 
