@@ -1536,10 +1536,12 @@ overhead is inside `ledgerCostUsd` and `listEquivalentUsd` as well as broken out
 **What the numbers did.** Almost nothing, which is the finding:
 
 ```
-classifier cost $0.001235 of list $149.21  =  0.0008% of spend
+routing only    classifier $0.003024 of list $149.21  =  0.0020% of spend
+with fan-out    classifier $0.003024 of list $506.17  =  0.0006% of spend
 ```
 
-**The router's own decision-making is 8 parts per million of what it spends.** That is
+**The router's own decision-making is 20 parts per million of what it spends** — six,
+once a fan-out is running. That is
 worth knowing precisely because it closes a question the whole project could otherwise
 be asked: *is the classifier paying for itself?* It cannot fail to. One Jev call per
 turn costs about a millionth of the turn it routes, so the entire argument is about
