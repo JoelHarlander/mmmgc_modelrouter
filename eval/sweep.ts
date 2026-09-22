@@ -11,11 +11,11 @@
  * be read as a result rather than a coincidence.
  */
 import { NoisyJudge } from "./candidates.ts";
-import type { LoadedFleet } from "./fleet.ts";
+import { buildFleet, type LoadedFleet } from "./fleet.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics } from "./metrics.ts";
-import { DEFAULT_TRAFFIC, type TrafficProfile } from "./simulate.ts";
-import type { ClassifierMode, TaskPack } from "./types.ts";
+import { DEFAULT_TRAFFIC, hashUnit, type TrafficProfile } from "./simulate.ts";
+import type { ClassifierMode, Fleet, TaskPack } from "./types.ts";
 
 export interface SweepCell {
 	candidateN: number;
@@ -184,6 +184,100 @@ export function renderTrafficSweep(cells: TrafficCell[], title: string): string 
 	}
 	out.push("");
 	return `${out.join("\n")}\n`;
+}
+
+export interface OracleCell {
+	jitter: number;
+	seeds: number;
+	/** turnSuccessRate per classifier, meaned over seeds. */
+	scripted: number;
+	heuristic: number;
+	oracle: number;
+	scriptedSpread: number;
+	oracleSpread: number;
+	/** Share of seeds where the never-switching profile still beat perfect routing. */
+	heuristicBeatsOracle: number;
+	/** Share of seeds where perfect routing still spent more than never switching. */
+	oracleCostsMore: number;
+}
+
+/**
+ * How much the conclusions depend on the declared competence oracle.
+ *
+ * `skill` and `skillByCategory` are the harness's largest assumption: everything it
+ * says about quality rests on them, and they are written by hand. This sweep jitters
+ * every model's skill by up to ±`jitter` points — which also moves the derived
+ * `goldTier` labels, exactly as it should — and asks whether round 4's qualitative
+ * findings survive being wrong about the fleet.
+ */
+export async function runOracleSweep(options: SweepOptions & { jitters?: number[] }): Promise<OracleCell[]> {
+	const jitters = options.jitters ?? [0, 5, 10, 20];
+	const seeds = options.seeds ?? DEFAULT_SEEDS;
+	const cells: OracleCell[] = [];
+
+	for (const jitter of jitters) {
+		const scripted: number[] = [];
+		const heuristic: number[] = [];
+		const oracle: number[] = [];
+		let heuristicWins = 0;
+		let oracleDearer = 0;
+
+		for (const seed of seeds) {
+			const loaded = jitter === 0 ? options.loaded : buildFleet(perturbFleet(options.loaded.fleet, jitter, seed));
+			const run = async (classifier: ClassifierMode) => {
+				const outcome = await runEval({ pack: options.pack, loaded, classifier, startModel: options.startModel });
+				return computeMetrics(outcome.turns, outcome.stateChars);
+			};
+			const [s, h, o] = [await run("scripted"), await run("heuristic"), await run("oracle")];
+			scripted.push(s.turnSuccessRate);
+			heuristic.push(h.turnSuccessRate);
+			oracle.push(o.turnSuccessRate);
+			if (h.turnSuccessRate > o.turnSuccessRate) heuristicWins += 1;
+			if (o.listEquivalentUsd > h.listEquivalentUsd) oracleDearer += 1;
+		}
+
+		cells.push({
+			jitter,
+			seeds: seeds.length,
+			scripted: mean(scripted),
+			heuristic: mean(heuristic),
+			oracle: mean(oracle),
+			scriptedSpread: spread(scripted),
+			oracleSpread: spread(oracle),
+			heuristicBeatsOracle: round(heuristicWins / seeds.length, 4),
+			oracleCostsMore: round(oracleDearer / seeds.length, 4),
+		});
+	}
+	return cells;
+}
+
+/** Deterministic ±`jitter` on every model's skill, keeping it inside 1..100. */
+export function perturbFleet(fleet: Fleet, jitter: number, seed: string): Fleet {
+	return {
+		...fleet,
+		models: fleet.models.map((m) => ({
+			...m,
+			skill: Math.max(1, Math.min(100, Math.round(m.skill + (hashUnit(seed, "skill", m.key) * 2 - 1) * jitter))),
+		})),
+	};
+}
+
+export function renderOracleSweep(cells: OracleCell[], title: string): string {
+	const out: string[] = ["", title, ""];
+	out.push("  jitter        scripted       heuristic          oracle   heuristic>oracle   oracle costs more");
+	for (const c of cells) {
+		out.push(
+			`  ${`±${c.jitter}`.padStart(6)}   ${`${pct(c.scripted)} ±${pct(c.scriptedSpread)}`.padStart(13)}   ${pct(c.heuristic).padStart(13)}   ` +
+				`${`${pct(c.oracle)} ±${pct(c.oracleSpread)}`.padStart(13)}   ${`${Math.round(c.heuristicBeatsOracle * c.seeds)}/${c.seeds}`.padStart(16)}   ` +
+				`${`${Math.round(c.oracleCostsMore * c.seeds)}/${c.seeds}`.padStart(17)}`,
+		);
+	}
+	out.push("");
+	return `${out.join("\n")}\n`;
+}
+
+function spread(values: number[]): number {
+	return round((Math.max(...values) - Math.min(...values)) / 2, 4);
 }
 
 function mean(values: number[]): number {

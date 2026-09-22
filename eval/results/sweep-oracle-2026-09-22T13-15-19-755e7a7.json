@@ -1,0 +1,51 @@
+{
+	"title": "oracle sweep — pack swe-router-long-v1, turn success per classifier, mean of 5 jittered fleets per row",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"jitter": 0,
+			"seeds": 5,
+			"scripted": 0.75,
+			"heuristic": 0.9667,
+			"oracle": 0.8667,
+			"scriptedSpread": 0,
+			"oracleSpread": 0,
+			"heuristicBeatsOracle": 1,
+			"oracleCostsMore": 1
+		},
+		{
+			"jitter": 5,
+			"seeds": 5,
+			"scripted": 0.7767,
+			"heuristic": 0.9467,
+			"oracle": 0.8833,
+			"scriptedSpread": 0.1333,
+			"oracleSpread": 0.125,
+			"heuristicBeatsOracle": 0.6,
+			"oracleCostsMore": 1
+		},
+		{
+			"jitter": 10,
+			"seeds": 5,
+			"scripted": 0.7567,
+			"heuristic": 0.9133,
+			"oracle": 0.89,
+			"scriptedSpread": 0.1584,
+			"oracleSpread": 0.1,
+			"heuristicBeatsOracle": 0.6,
+			"oracleCostsMore": 1
+		},
+		{
+			"jitter": 20,
+			"seeds": 5,
+			"scripted": 0.7467,
+			"heuristic": 0.86,
+			"oracle": 0.89,
+			"scriptedSpread": 0.2583,
+			"oracleSpread": 0.1583,
+			"heuristicBeatsOracle": 0.4,
+			"oracleCostsMore": 1
+		}
+	]
+}

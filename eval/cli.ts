@@ -24,7 +24,7 @@ import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
 import { DEFAULT_TRAFFIC } from "./simulate.ts";
 import { appendLog, compareMetrics, ensureDirFor, latestPath, readRun, resultsDir, type RunRecord, writeRun } from "./results.ts";
-import { renderSweep, renderTrafficSweep, runJudgeSweep, runTrafficSweep } from "./sweep.ts";
+import { renderOracleSweep, renderSweep, renderTrafficSweep, runJudgeSweep, runOracleSweep, runTrafficSweep } from "./sweep.ts";
 import { formatProblems, validatePack } from "./validate.ts";
 import type { ClassifierMode, TaskPack } from "./types.ts";
 
@@ -46,7 +46,7 @@ interface Args {
 	noWrite: boolean;
 	validateOnly: boolean;
 	allowInconsistent: boolean;
-	sweep?: "judge" | "bias" | "profile";
+	sweep?: "judge" | "bias" | "profile" | "oracle";
 	callsPerTurn?: number;
 	probe: boolean;
 	probePack: string;
@@ -205,6 +205,7 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --sweep judge          sweep candidate count x judge noise x seed and print the lift curve
   --sweep bias           sweep the judge's preference for the flashy candidate
   --sweep profile        sweep the measured traffic constants the cost model rests on
+  --sweep oracle         jitter the declared model skills and see which findings survive
   --calls-per-turn <n>   provider calls per user turn (default 5, the measured median)
   --probe                measure a judge's presentation bias on paired responses and exit
   --probe-pack <file>    probe pack (default eval/tasks/judge-probe-v1.json)
@@ -278,6 +279,11 @@ async function main(): Promise<number> {
 			const c = await runTrafficSweep({ ...base, candidateN: args.candidates || 3 });
 			cells = c;
 			rendered = renderTrafficSweep(c, title);
+		} else if (args.sweep === "oracle") {
+			title = `oracle sweep — pack ${pack.id}, turn success per classifier, mean of 5 jittered fleets per row`;
+			const c = await runOracleSweep(base);
+			cells = c;
+			rendered = renderOracleSweep(c, title);
 		} else {
 			const shape = args.sweep === "bias" ? { noises: [10, 30], biases: [0, 10, 20, 40], candidateNs: [2, 3] } : { biases: [0] };
 			title = `${args.sweep} sweep — pack ${pack.id}, classifier ${args.classifier}, mean of 5 seeds per cell`;

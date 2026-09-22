@@ -10,6 +10,7 @@ npm run eval -- --candidates 3                # candidate-selection mode: 3 resp
 npm run eval -- --sweep judge                 # over what range of judge quality does the lift survive?
 npm run eval -- --sweep bias                  # what a judge that prefers the flagship's style costs
 npm run eval -- --sweep profile               # how far the cost numbers move with the traffic constants
+npm run eval -- --sweep oracle                # which findings survive being wrong about the fleet
 npm run eval -- --probe                       # how much presentation bias a judge carries
 npm run eval -- --validate                    # check the pack's ground truth against the fleet
 npm run eval -- --pack eval/tasks/swe-router-long-v1.json   # long sessions at realistic context
@@ -58,7 +59,11 @@ than measured, and both live in fixtures so you can argue with them:
 
 So an offline number is a statement about **routing policy under a stated model of
 competence**, not about Claude or GPT. `--classifier live` replaces the second
-declaration with a real Jev call; nothing yet replaces the first.
+declaration with a real Jev call; nothing replaces the first — so `--sweep oracle`
+jitters every model's skill by up to ±N points (which also moves the derived `goldTier`
+labels) and reports which findings survive. Use it before quoting any quality number:
+the switching-*cost* findings hold at ±20 points, the switching-*quality* findings do
+not.
 
 ## Modes
 
@@ -193,7 +198,7 @@ defaults have exactly this shape, so it is a warning, not an error.
 | `simulate.ts` | the competence oracle and the token/cost model |
 | `metrics.ts` | the metric set and how to read each direction |
 | `results.ts` | results IO, the round log, run comparison |
-| `sweep.ts` | judge, bias and traffic-profile sweeps |
+| `sweep.ts` | judge, bias, traffic-profile and oracle sweeps |
 | `probe.ts` | the judge bias probe and its calibration |
 | `validate.ts` | ground-truth invariants and the tier price check |
 | `session.ts` | the fake `ExtensionContext` `buildRoutingState` needs |

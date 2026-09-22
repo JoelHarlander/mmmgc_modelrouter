@@ -355,3 +355,51 @@ away, and this task is not authorised to spend on it.
 judge. The remaining softness is the competence oracle itself — `skill` and
 `skillByCategory` are declared, and no round has asked how much the conclusions move
 when they are wrong.
+
+---
+
+## Round 7 — 2026-09-22 — find out which findings survive being wrong about the fleet
+
+**Measured.** The harness's largest remaining assumption. `skill` and
+`skillByCategory` in `fleet.json` are hand-declared, every quality number rests on
+them, and six rounds had quoted those numbers without once asking what happens if they
+are wrong.
+
+**Changed.** `--sweep oracle` jitters every model's skill by up to ±N points — which
+also moves the derived `goldTier` labels, exactly as it should, since the gold label is
+a function of the fleet — and re-runs all three classifiers across five jittered
+fleets. Two tests: one pins the jitter itself (deterministic, bounded, and it moves
+competence without touching prices), one pins the conclusion below.
+
+**What the numbers did** (`swe-router-long-v1`, turn success, mean of 5 fleets):
+
+| jitter | scripted | heuristic | oracle | heuristic beats oracle | oracle costs more |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| ±0 | 75.0% ±0.0 | 96.7% | 86.7% ±0.0 | **5/5** | **5/5** |
+| ±5 | 77.7% ±13.3 | 94.7% | 88.3% ±12.5 | 3/5 | **5/5** |
+| ±10 | 75.7% ±15.8 | 91.3% | 89.0% ±10.0 | 3/5 | **5/5** |
+| ±20 | 74.7% ±25.8 | 86.0% | 89.0% ±15.8 | 2/5 | **5/5** |
+
+**Round 4's headline splits cleanly in two, and only half of it survives.**
+
+- **The cost half is robust.** *Routing perfectly spends more than never routing at
+  all* holds **5/5 at every jitter level**, including ±20 points — a 40-point band on a
+  100-point scale. It has to: that finding is cache economics, and the cache does not
+  care how good the models are. Round 4's $34.26 of cold-start premium and its 34
+  switches in 60 turns stand however wrong the oracle is.
+- **The quality half does not.** *Never switching also wins on outcome* goes from
+  **5/5** at ±0 to **2/5** at ±20. That finding is a property of this declared fleet,
+  not of routing, and from now on it should be stated that way.
+
+**And a caveat that applies to every quality number in this log.** The spread on
+`scripted` turn success reaches **±25.8 points** at ±20 of jitter. Absolute quality
+figures from this harness are worth roughly ±10–25 points depending on how much you
+trust `fleet.json`; the *comparisons between profiles on one fleet* are much tighter,
+which is what the results files are actually for.
+
+**State of the harness after seven rounds.** It now measures the router's decisions,
+the cache consequence, the traffic model, the judge's error, the judge's bias, and its
+own competence assumption — and it reports which of its conclusions rest on which.
+The single outstanding measurement is still one live command away:
+`ROUTER_EVAL_LIVE=1 npm run eval -- --probe --live-judge`, 36 Jev calls, no model
+inference, under a cent.

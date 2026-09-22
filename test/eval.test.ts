@@ -25,7 +25,7 @@ import { compareMetrics, readRun, type RunRecord, writeRun } from "../eval/resul
 import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
 import { buildFleet } from "../eval/fleet.ts";
 import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
-import { runJudgeSweep, runTrafficSweep, type SweepCell, type TrafficCell } from "../eval/sweep.ts";
+import { type OracleCell, perturbFleet, runJudgeSweep, runOracleSweep, runTrafficSweep, type SweepCell, type TrafficCell } from "../eval/sweep.ts";
 import { loadProbePack, runProbe } from "../eval/probe.ts";
 import type { Fleet, TaskPack } from "../eval/types.ts";
 
@@ -383,6 +383,43 @@ test("a judge that systematically prefers the flashy answer makes the fan-out wo
 	assert.ok(unbiased.judgeLift > 0, "the unbiased judge should still help");
 	assert.ok(biased.judgeLift < 0, "a strong flagship bias should cost more turns than it wins");
 	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
+});
+
+test("jittering the declared fleet skills is deterministic and bounded", () => {
+	const raw = JSON.parse(readFileSync(FLEET, "utf8")) as Fleet;
+	const a = perturbFleet(raw, 20, "s1");
+	assert.deepEqual(a, perturbFleet(raw, 20, "s1"));
+	assert.notDeepEqual(a, perturbFleet(raw, 20, "s2"));
+	assert.deepEqual(perturbFleet(raw, 0, "s1").models.map((m) => m.skill), raw.models.map((m) => m.skill));
+	for (const [i, model] of a.models.entries()) {
+		assert.ok(Math.abs(model.skill - raw.models[i]!.skill) <= 20);
+		assert.ok(model.skill >= 1 && model.skill <= 100);
+		assert.equal(model.cost.input, raw.models[i]!.cost.input, "jitter must move competence, not prices");
+	}
+});
+
+test("the switching-cost finding survives being wrong about the fleet; the quality finding does not", async () => {
+	const cells = await runOracleSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		jitters: [0, 20],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const [exact, jittered] = cells as [OracleCell, OracleCell];
+
+	assert.equal(exact.scriptedSpread, 0, "an unjittered fleet must be identical across seeds");
+	assert.ok(jittered.scriptedSpread > exact.scriptedSpread, "jitter must move the quality numbers");
+
+	// Cost: routing perfectly still spends more than never routing, at every jitter. This
+	// is cache economics, not competence, so being wrong about the fleet cannot change it.
+	assert.equal(exact.oracleCostsMore, 1);
+	assert.equal(jittered.oracleCostsMore, 1, "the switching-cost finding must not depend on the declared skills");
+
+	// Quality: "never switching also wins on outcome" is a fact about this fleet, and the
+	// sweep is what stops it being quoted as more than that.
+	assert.equal(exact.heuristicBeatsOracle, 1);
+	assert.ok(jittered.heuristicBeatsOracle < 1, "the quality half of the finding should not be robust; say so rather than hide it");
 });
 
 test("the judge probe recovers a bias it was not told about", async () => {
