@@ -146,10 +146,44 @@ test("an explicitly configured parallel.models list keeps its order and membersh
 		billing: { ...cfg.billing, allowPayPerToken: ["openrouter/*"] },
 		parallel: { ...cfg.parallel, models: ["openrouter/z-ai/glm-5.3", "claude-bridge/claude-opus-5", "claude-bridge/claude-fable-5-1"] },
 	});
-	const { models } = pickParallelModels({ ctx: fakeCtx(opus), cfg: pinned, n: 2, ledger: ledger() });
+	const { models, notes } = pickParallelModels({ ctx: fakeCtx(opus), cfg: pinned, n: 2, ledger: ledger() });
 	assert.deepEqual(
 		models.map((m) => `${m.provider}/${m.id}`),
 		["openrouter/z-ai/glm-5.3", "claude-bridge/claude-opus-5"],
 		"the billed route the caller asked to compare is not dropped for a better-ranked one",
 	);
+	// Honoured, but not quietly: the run says what it is spending that it need not have.
+	assert.equal(notes.length, 1, notes.join(" | "));
+	assert.match(notes[0]!, /openrouter\/z-ai\/glm-5.3 bills pay-per-token/);
+	assert.match(notes[0]!, /claude-bridge\/claude-fable-5-1 .* was eligible and went unused/);
+});
+
+test("the fan-out discloses the unused preferred route to the user, not just to the caller", async () => {
+	const pinned = mergeConfig(cfg, {
+		models: { ...cfg.models, "xai/*": { billing: "on-demand" } },
+		billing: { ...cfg.billing, allowPayPerToken: ["openrouter/*"] },
+		parallel: { ...cfg.parallel, models: ["openrouter/z-ai/glm-5.3", "claude-bridge/claude-opus-5", "claude-bridge/claude-fable-5-1"] },
+	});
+	const notices: Notice[] = [];
+	await runParallel({
+		pi: {} as unknown as ExtensionAPI,
+		ctx: fakeCtx(opus, notices),
+		prompt: "hello",
+		n: 2,
+		cfg: pinned,
+		ledger: ledger(),
+		jev: {} as unknown as JevClient,
+		routerEnabled: true,
+	}).catch(() => undefined);
+	const disclosure = notices.find((notice) => /went unused/.test(notice.text));
+	assert.ok(disclosure, notices.map((notice) => notice.text).join(" | "));
+	assert.equal(disclosure.level, "warning");
+});
+
+test("a fan-out with nothing better passed over says nothing", () => {
+	const pinned = mergeConfig(cfg, {
+		parallel: { ...cfg.parallel, models: ["claude-bridge/claude-opus-5", "claude-bridge/claude-fable-5-1"] },
+	});
+	const { notes } = pickParallelModels({ ctx: fakeCtx(opus), cfg: pinned, n: 2, ledger: ledger() });
+	assert.deepEqual(notes, []);
 });

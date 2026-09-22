@@ -10,7 +10,7 @@ import { uuidv7 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import { convertToLlm } from "@earendil-works/pi-coding-agent";
 import { Container, matchesKey, Text } from "@earendil-works/pi-tui";
-import { assessBilling, describeBasis } from "./billing.ts";
+import { assessBilling, billsPerToken, describeBasis } from "./billing.ts";
 import { modelKey, type RouterConfig, TIERS } from "./config.ts";
 import type { JevChoiceAnswer, JevClient, JsonValue } from "./jev.ts";
 import type { Ledger } from "./ledger.ts";
@@ -57,6 +57,8 @@ export interface ParallelSelection {
 	models: Model<Api>[];
 	/** Candidates the billing gate or auth turned down, with the verdict's reason. */
 	rejected: { key: string; reason: string }[];
+	/** What the selection costs that a better-ranked eligible route would not have. */
+	notes: string[];
 }
 
 export interface PickParallelArgs {
@@ -70,9 +72,10 @@ export interface PickParallelArgs {
 /**
  * Same gate *and* the same ordering as automatic routing: a candidate must pass auth and billing
  * eligibility before it can be fanned out to, and the slots the caller did not name go to the
- * best-ranked candidates, so a fan-out never bills while a preferred route sits unused. An
- * explicit `parallel.models` list is the caller's own choice of what to compare: it keeps its
- * configured order and membership.
+ * best-ranked candidates. An explicit `parallel.models` list is the caller's own choice of what
+ * to compare, so it is honoured in configured order and never reordered or dropped for a
+ * better-ranked route - but when that choice bills while an eligible included-usage route waits,
+ * the selection says so rather than quietly spending.
  */
 export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 	const { ctx, cfg, n, ledger } = args;
@@ -95,7 +98,8 @@ export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 
 	if (cfg.parallel.models.length > 0) {
 		for (const key of cfg.parallel.models) consider(key);
-		return { models: eligible.slice(0, n).map((c) => c.model!), rejected };
+		const taken = eligible.slice(0, n);
+		return { models: taken.map((c) => c.model!), rejected, notes: unusedPreferredNotes(taken, eligible.slice(n)) };
 	}
 	consider(currentKey);
 	// Strongest first, one per tier, then the remaining tier lists: that is the diversity order.
@@ -106,7 +110,20 @@ export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 	const ranked = eligible
 		.map((candidate, order) => ({ candidate, order }))
 		.sort((a, b) => (a.candidate.assessment?.rank ?? 0) - (b.candidate.assessment?.rank ?? 0) || a.order - b.order);
-	return { models: ranked.slice(0, n).map((r) => r.candidate.model!), rejected };
+	return { models: ranked.slice(0, n).map((r) => r.candidate.model!), rejected, notes: [] };
+}
+
+/** Names each billed slot that a better-ranked eligible candidate was passed over for. */
+function unusedPreferredNotes(taken: Candidate[], passedOver: Candidate[]): string[] {
+	const best = passedOver.reduce<Candidate | undefined>((a, c) => ((a?.assessment?.rank ?? 99) <= (c.assessment?.rank ?? 99) ? a : c), undefined);
+	const bestRank = best?.assessment?.rank;
+	if (best === undefined || bestRank === undefined) return [];
+	return taken
+		.filter((c) => c.assessment && billsPerToken(c.assessment.basis) && c.assessment.rank > bestRank)
+		.map(
+			(c) =>
+				`${c.key} bills ${c.assessment!.basis} for this run while ${best.key} (${describeBasis(best.assessment!)}) was eligible and went unused: parallel.models names what to compare, so it is honoured as written.`,
+		);
 }
 
 export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryData | undefined> {
@@ -115,7 +132,8 @@ export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryD
 		ctx.ui.notify("Parallel mode is off while the router is disabled (/router on to re-enable).", "error");
 		return undefined;
 	}
-	const { models, rejected } = pickParallelModels({ ctx, cfg, n, ledger });
+	const { models, rejected, notes } = pickParallelModels({ ctx, cfg, n, ledger });
+	for (const note of notes) ctx.ui.notify(`router: ${note}`, "warning");
 	if (models.length < 2) {
 		const why = rejected.length ? ` Rejected: ${rejected.map((r) => `${r.key} (${r.reason})`).join("; ")}` : "";
 		ctx.ui.notify(`Need at least 2 billing-eligible models for parallel mode (found ${models.length}).${why}`, "error");

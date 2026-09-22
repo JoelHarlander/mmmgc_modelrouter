@@ -619,3 +619,23 @@ test("the poll path and the header path name a family window the same way", () =
 	);
 	assert.notEqual(assess(codex, headed).eligibility, "excluded", "a poll that says the family has room clears the header's meter");
 });
+
+test("a scoped exclusion does not claim the provider is usable when the account is spent too", () => {
+	const l = ledger();
+	l.observeResponse(
+		"claude-bridge",
+		200,
+		{
+			"anthropic-ratelimit-unified-5h-utilization": "1",
+			"anthropic-ratelimit-unified-5h-status": "rejected",
+			"anthropic-ratelimit-unified-7d_opus-utilization": "1",
+			"anthropic-ratelimit-unified-7d_opus-status": "rejected",
+		},
+		cfg,
+	);
+	const a = assess(opus, l);
+	assert.equal(a.eligibility, "excluded");
+	assert.match(a.reason, /model-scoped quota exhausted \(7d_opus rejected\)/);
+	assert.match(a.reason, /spent account-wide too \(5h rejected\)/);
+	assert.ok(!/stays usable/.test(a.reason), a.reason);
+});

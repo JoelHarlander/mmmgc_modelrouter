@@ -182,11 +182,14 @@ function addCodexRateLimit(windows: Record<string, RawWindow>, prefix: string, r
 		}
 		const reset = epochMs(w.reset_at) ?? (numOf(w.reset_after_seconds) !== undefined ? Date.now() + numOf(w.reset_after_seconds)! * 1000 : undefined);
 		if (reset !== undefined) out.resetAt = reset;
-		windows[id] = out;
+		// A window the payload states nothing about is no news, not proof of headroom: recording it
+		// empty would replace whatever the response headers already established.
+		if (Object.keys(out).length > 0) windows[id] = out;
 	}
 	// `limit_reached` names the credential as spent without naming the window; attribute it to
-	// the fullest window so a model-scoped family stays distinguishable from the account limit.
-	if (reached && worst) windows[worst.id]!.status = "rejected";
+	// the fullest window so a model-scoped family stays distinguishable from the account limit,
+	// and to the group's primary window when no window carried a utilization at all.
+	if (reached) (windows[worst?.id ?? `${prefix}primary`] ??= {}).status = "rejected";
 }
 
 /**

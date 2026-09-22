@@ -206,3 +206,21 @@ test("a project-local config cannot redirect a credentialed probe to its own end
 	assert.ok(probed.includes(withoutProject.entitlement.anthropic!.url), probed.join(", "));
 	for (const url of probed) assert.ok(trusted.has(url), url);
 });
+
+test("a poll that states nothing about a window leaves what the headers recorded alone", () => {
+	// docs/research/plan-quotas.md: /wham/usage can answer with the window present but its fields
+	// null. That is no news about the window, not proof that the plan has room again.
+	const l = ledger();
+	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "100", "x-codex-plan-type": "plus" }, cfg);
+	l.applyEntitlement(
+		"openai-codex",
+		parseEntitlement("codex-wham-usage", { rate_limit: { primary_window: { limit_window_seconds: 18000, used_percent: null, reset_at: null } } }),
+	);
+	assert.equal(l.peekProvider("openai-codex")!.windows.primary!.utilization, 1, "the exhausted window survives the empty poll");
+	assert.equal(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).exhaustedAccount.length, 1);
+});
+
+test("a stated limit_reached is recorded even when no window carries a utilization", () => {
+	const facts = parseEntitlement("codex-wham-usage", { rate_limit: { limit_reached: true, primary_window: { reset_after_seconds: 600 } } });
+	assert.equal(facts.windows!.primary!.status, "rejected");
+});

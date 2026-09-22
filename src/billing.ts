@@ -104,7 +104,9 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 	if (quota.exhaustedScoped.length > 0) {
 		const w = quota.exhaustedScoped[0]!;
 		evidence.push(`model-scoped window ${w.reason}`);
-		return excluded(labelBasis(billing), billing, freshness, `model-scoped quota exhausted (${w.reason}); ${model.provider} stays usable for other models`, evidence, uncertainty);
+		const alsoAccount = quota.exhaustedAccount.map((a) => a.reason).join(", ");
+		const rest = alsoAccount ? `${model.provider} is spent account-wide too (${alsoAccount})` : `${model.provider} stays usable for other models`;
+		return excluded(labelBasis(billing), billing, freshness, `model-scoped quota exhausted (${w.reason}); ${rest}`, evidence, uncertainty);
 	}
 
 	if (billing === "plan") {
