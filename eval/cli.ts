@@ -22,6 +22,7 @@ import { loadFleet } from "./fleet.ts";
 import { runEval } from "./harness.ts";
 import { computeMetrics, type RunMetrics } from "./metrics.ts";
 import { appendLog, compareMetrics, latestPath, readRun, type RunRecord, writeRun } from "./results.ts";
+import { formatProblems, validatePack } from "./validate.ts";
 import type { ClassifierMode, TaskPack } from "./types.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -40,6 +41,8 @@ interface Args {
 	json: boolean;
 	note?: string;
 	noWrite: boolean;
+	validateOnly: boolean;
+	allowInconsistent: boolean;
 	help: boolean;
 }
 
@@ -54,6 +57,8 @@ function parseArgs(argv: string[]): Args {
 		unauthed: [],
 		json: false,
 		noWrite: false,
+		validateOnly: false,
+		allowInconsistent: false,
 		help: false,
 	};
 	for (let i = 0; i < argv.length; i++) {
@@ -103,6 +108,12 @@ function parseArgs(argv: string[]): Args {
 			case "--no-write":
 				args.noWrite = true;
 				break;
+			case "--validate":
+				args.validateOnly = true;
+				break;
+			case "--allow-inconsistent":
+				args.allowInconsistent = true;
+				break;
 			case "-h":
 			case "--help":
 				args.help = true;
@@ -133,6 +144,8 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --note <text>          one-line round note appended to eval/results/log.md
   --json                 print the run record as JSON instead of a table
   --no-write             do not write a results file
+  --validate             check the pack's ground truth against the fleet and exit
+  --allow-inconsistent   run even when the pack fails that check
 
 live mode sends real requests and costs money: it needs --classifier live AND
 ROUTER_EVAL_LIVE=1 in the environment.`;
@@ -153,6 +166,22 @@ async function main(): Promise<number> {
 	const pack = JSON.parse(readFileSync(args.pack, "utf8")) as TaskPack;
 	const loaded = loadFleet(args.fleet, { unauthed: args.unauthed });
 	const profile = args.profile ?? defaultProfile(args);
+
+	// A pack whose goldTier disagrees with its own requiredSkill punishes a correct
+	// classification, so it cannot judge a router. Round 1 shipped one; never again.
+	const problems = validatePack(pack, loaded);
+	const errors = problems.filter((p) => p.level === "error");
+	if (problems.length > 0 && (args.validateOnly || errors.length > 0 || !args.json)) {
+		process.stderr.write(`${args.pack.replace(`${ROOT}/`, "")} vs ${args.fleet.replace(`${ROOT}/`, "")}:\n${formatProblems(problems)}\n`);
+	}
+	if (args.validateOnly) {
+		if (problems.length === 0) process.stdout.write(`${pack.id}: ground truth is consistent with the fleet\n`);
+		return errors.length > 0 ? 2 : 0;
+	}
+	if (errors.length > 0 && !args.allowInconsistent) {
+		process.stderr.write(`\n${errors.length} ground-truth error(s); fix the pack or pass --allow-inconsistent\n`);
+		return 2;
+	}
 
 	let jev: JevClient | undefined;
 	if (live) {
@@ -263,6 +292,7 @@ function renderTable(record: RunRecord, m: RunMetrics, baselineId: string | unde
 	row("ledger cost", "ledgerCostUsd", usd(m.ledgerCostUsd));
 	row("list-equivalent cost", "listEquivalentUsd", usd(m.listEquivalentUsd));
 	row("hidden on plan", "planHiddenUsd", usd(m.planHiddenUsd));
+	row("  = weekly plan points", "planPointsUsed", m.planPointsUsed.toFixed(3));
 	row("classifier cost", "classifierCostUsd", usd(m.classifierCostUsd, 6));
 	row("list $ / resolved task", "listUsdPerResolvedTask", usd(m.listUsdPerResolvedTask));
 	out.push("");

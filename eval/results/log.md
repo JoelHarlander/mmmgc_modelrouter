@@ -52,3 +52,65 @@ the cheapest tier that contains a model able to do the turn, and that invariant 
 be enforced by a test, not by my care in writing JSON.
 
 <!-- notes appended by `npm run eval -- --note "..."` land below -->
+
+---
+
+## Round 2 — 2026-09-22 — fix the ground truth, then trust the numbers
+
+**Measured.** Whether round 1's quality numbers meant anything. They did not: a pack
+whose `goldTier` labels disagree with its own `requiredSkill` punishes a correct
+classification, and round 1 shipped one.
+
+**Changed.**
+
+1. **`goldTier` is now derived, not declared.** The harness computes it as the cheapest
+   tier holding a model that reaches the turn's `requiredSkill` — which tier can do a
+   piece of work is a fact about the fleet, not about the task. The fixture still
+   writes it down for readability and `npm run eval -- --validate` fails when the two
+   disagree.
+2. **A documented skill ladder** (`fleet.json` → `skillLadder`), whose three bands
+   restate the tier criteria in `src/state.ts`, so `requiredSkill` and the tier Jev is
+   asked to pick mean the same thing. Fleet skills and all 31 `requiredSkill` values
+   were recalibrated onto it. Five `jev.stakes` values above 2 were also wrong — the
+   `score` question in `src/state.ts` has three criteria, so it returns 0..2.
+3. **`--validate`**, run automatically before every eval: 12 real defects on the round-1
+   pack, 0 now, and four tests keep it that way.
+4. **A tier price-inversion check** and **`planPointsUsed`** (see below).
+
+**What the numbers did.**
+
+| profile | resolve | turn | tier acc | under | over | under-fail | in-tier miss | list $ | plan pts | cold | cold prem |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `scripted` | 66.7% | 80.7% | 83.9% | 9.7% | 6.5% | 3 | 3 | $11.48 | 0.28 | 26/31 | $4.98 |
+| `heuristic` | 86.7% | 93.5% | 58.1% | 29.0% | 12.9% | 0 | 2 | $9.78 | 0.25 | 27/31 | $4.55 |
+| `oracle` | 73.3% | 87.1% | 100% | 0% | 0% | 0 | 4 | $9.72 | 0.24 | 21/31 | $3.46 |
+| `scripted --candidates 3` | 66.7% | 80.7% | 83.9% | 9.7% | 6.5% | 3 | 3 | $31.23 | 0.78 | 26/31 | $4.98 |
+
+`scripted` 64.5% → **80.7%** turn success and `oracle` 67.7% → **87.1%**; the ordering
+scripted < oracle is now the right way round, and `underRouteFailures` falls to 0 for
+both `oracle` and `heuristic`. Candidate selection at n=3 reads honestly for the first
+time: baseline 80.7% → judge **93.5%** against a **96.8%** ceiling, lift **+12.9pp**,
+recall 97%, **1 regression**, $19.74 of fan-out at **$4.94 per extra turn solved**. In
+round 1 the judge looked perfect (100% recall, 0 regressions) only because the
+mis-calibrated skill gaps were too wide to get wrong.
+
+**`heuristic` still beats `oracle` on outcome — and that one is real.** Two findings
+behind it, both about the router rather than the harness:
+
+1. **The switcher picks the cheapest model in a tier, not a capable one.** `oracle`
+   routes perfectly and still loses 4 turns to `inTierMisses`: right tier, wrong model
+   inside it. `faux-gw/claude-fable-5-1`, the strongest model in the fleet, is chosen
+   **zero** times in every profile.
+2. **The default tiers are not a cost ladder.** `--validate` now names it: the router
+   prefers `claude-opus-5` in *heavy* at $0.34 per warm turn over `gpt-6-astra` in
+   *standard* at $0.68, because plan routes price at $0 and Astra's list price is
+   twice Opus's. Escalating a tier makes the turn cheaper, so over-routing is not
+   penalised — which is exactly how a crude classifier outscores a perfect one.
+
+`planPointsUsed` makes the hidden half legible: the `scripted` run spends **0.28 of a
+weekly Claude-plan point** while its ledger records $0.21. At `--candidates 3` that
+rises to **0.78 points** for +12.9pp of turn success.
+
+**Next.** The offline judge is the least trustworthy part of the candidate story — one
+noise setting, one seed. Sweep it, and check whether the judge's lift survives a judge
+that is worse than skill-minus-10.

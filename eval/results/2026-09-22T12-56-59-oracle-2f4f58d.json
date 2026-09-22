@@ -1,7 +1,7 @@
 {
 	"version": 1,
-	"runId": "2026-09-22T12-50-50-oracle-58911e4",
-	"at": "2026-09-22T12:50:50.937Z",
+	"runId": "2026-09-22T12-56-59-oracle-2f4f58d",
+	"at": "2026-09-22T12:56:59.147Z",
 	"profile": "oracle",
 	"pack": "swe-router-v1",
 	"fleet": "eval/tasks/fleet.json",
@@ -11,27 +11,28 @@
 	"seed": "swe-router-v1",
 	"startModel": "faux-plan-anthropic/claude-opus-5",
 	"live": false,
-	"git": "58911e4",
+	"git": "2f4f58d",
 	"metrics": {
 		"tasks": 15,
 		"turns": 31,
 		"routedTurns": 29,
 		"pinnedTurns": 2,
-		"taskResolveRate": 0.5333,
-		"turnSuccessRate": 0.6774,
+		"taskResolveRate": 0.7333,
+		"turnSuccessRate": 0.871,
 		"tierAccuracy": 1,
 		"underRouteRate": 0,
 		"overRouteRate": 0,
 		"underRouteFailures": 0,
-		"inTierMisses": 5,
+		"inTierMisses": 4,
 		"ineligibleChoices": 0,
 		"heuristicFallbacks": 0,
 		"tierEscalations": 0,
 		"ledgerCostUsd": 0.2187,
 		"listEquivalentUsd": 9.7208,
 		"planHiddenUsd": 9.5021,
+		"planPointsUsed": 0.24,
 		"classifierCostUsd": 0,
-		"listUsdPerResolvedTask": 1.2151,
+		"listUsdPerResolvedTask": 0.8837,
 		"switches": 5,
 		"switchesPerTurn": 0.1613,
 		"coldTurns": 21,
@@ -74,7 +75,7 @@
 			"warmListEquivalentUsd": 0.0016775000000000002,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 48,
+			"effectiveSkill": 54,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -100,8 +101,8 @@
 			"warmListEquivalentUsd": 0.0028650000000000004,
 			"classifierCostUsd": 0,
 			"solved": false,
-			"effectiveSkill": 34,
-			"inTierAlternativeWouldSolve": false
+			"effectiveSkill": 46,
+			"inTierAlternativeWouldSolve": true
 		},
 		{
 			"taskId": "psf__requests-2317",
@@ -125,8 +126,8 @@
 			"listEquivalentUsd": 0.004367500000000001,
 			"warmListEquivalentUsd": 0.0031650000000000003,
 			"classifierCostUsd": 0,
-			"solved": false,
-			"effectiveSkill": 34,
+			"solved": true,
+			"effectiveSkill": 46,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -151,8 +152,8 @@
 			"listEquivalentUsd": 0.003915,
 			"warmListEquivalentUsd": 0.003915,
 			"classifierCostUsd": 0,
-			"solved": false,
-			"effectiveSkill": 34,
+			"solved": true,
+			"effectiveSkill": 46,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -178,7 +179,7 @@
 			"warmListEquivalentUsd": 0.294625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -204,7 +205,7 @@
 			"warmListEquivalentUsd": 0.339625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -230,7 +231,7 @@
 			"warmListEquivalentUsd": 0.31462500000000004,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -256,8 +257,8 @@
 			"listEquivalentUsd": 0.01469,
 			"warmListEquivalentUsd": 0.0111875,
 			"classifierCostUsd": 0,
-			"solved": false,
-			"effectiveSkill": 34,
+			"solved": true,
+			"effectiveSkill": 46,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -283,7 +284,7 @@
 			"warmListEquivalentUsd": 0.334625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -309,7 +310,7 @@
 			"warmListEquivalentUsd": 0.389625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -335,7 +336,7 @@
 			"warmListEquivalentUsd": 0.30462500000000003,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -361,8 +362,8 @@
 			"listEquivalentUsd": 0.01364,
 			"warmListEquivalentUsd": 0.010437499999999999,
 			"classifierCostUsd": 0,
-			"solved": false,
-			"effectiveSkill": 34,
+			"solved": true,
+			"effectiveSkill": 46,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -388,7 +389,7 @@
 			"warmListEquivalentUsd": 0.324625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -414,7 +415,7 @@
 			"warmListEquivalentUsd": 0.374625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -440,7 +441,7 @@
 			"warmListEquivalentUsd": 0.284625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -466,7 +467,7 @@
 			"warmListEquivalentUsd": 0.324625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -492,7 +493,7 @@
 			"warmListEquivalentUsd": 0.17731249999999998,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 88,
+			"effectiveSkill": 90,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -519,7 +520,7 @@
 			"warmListEquivalentUsd": 0.414625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -545,7 +546,7 @@
 			"warmListEquivalentUsd": 0.1923125,
 			"classifierCostUsd": 0,
 			"solved": false,
-			"effectiveSkill": 84,
+			"effectiveSkill": 86,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -570,9 +571,9 @@
 			"listEquivalentUsd": 0.22731250000000003,
 			"warmListEquivalentUsd": 0.22731250000000003,
 			"classifierCostUsd": 0,
-			"solved": false,
-			"effectiveSkill": 84,
-			"inTierAlternativeWouldSolve": true
+			"solved": true,
+			"effectiveSkill": 86,
+			"inTierAlternativeWouldSolve": false
 		},
 		{
 			"taskId": "django__django-16379",
@@ -597,7 +598,7 @@
 			"warmListEquivalentUsd": 0.2623125,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 84,
+			"effectiveSkill": 86,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -623,7 +624,7 @@
 			"warmListEquivalentUsd": 0.2925125,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 88,
+			"effectiveSkill": 89,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -649,7 +650,7 @@
 			"warmListEquivalentUsd": 0.3450125,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 88,
+			"effectiveSkill": 89,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -675,7 +676,7 @@
 			"warmListEquivalentUsd": 0.3975125,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 88,
+			"effectiveSkill": 89,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -701,7 +702,7 @@
 			"warmListEquivalentUsd": 0.344625,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 72,
+			"effectiveSkill": 74,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -728,7 +729,7 @@
 			"warmListEquivalentUsd": 0.044544,
 			"classifierCostUsd": 0,
 			"solved": false,
-			"effectiveSkill": 58,
+			"effectiveSkill": 62,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -754,7 +755,7 @@
 			"warmListEquivalentUsd": 0.1648125,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 84,
+			"effectiveSkill": 86,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -780,9 +781,9 @@
 			"listEquivalentUsd": 0.01574,
 			"warmListEquivalentUsd": 0.0119375,
 			"classifierCostUsd": 0,
-			"solved": false,
-			"effectiveSkill": 34,
-			"inTierAlternativeWouldSolve": true
+			"solved": true,
+			"effectiveSkill": 46,
+			"inTierAlternativeWouldSolve": false
 		},
 		{
 			"taskId": "pydata__xarray-4094",
@@ -808,7 +809,7 @@
 			"warmListEquivalentUsd": 0.014437499999999999,
 			"classifierCostUsd": 0,
 			"solved": false,
-			"effectiveSkill": 34,
+			"effectiveSkill": 46,
 			"inTierAlternativeWouldSolve": true
 		},
 		{
@@ -834,7 +835,7 @@
 			"warmListEquivalentUsd": 0.025044,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 58,
+			"effectiveSkill": 62,
 			"inTierAlternativeWouldSolve": false
 		},
 		{
@@ -860,7 +861,7 @@
 			"warmListEquivalentUsd": 0.030504,
 			"classifierCostUsd": 0,
 			"solved": true,
-			"effectiveSkill": 58,
+			"effectiveSkill": 62,
 			"inTierAlternativeWouldSolve": false
 		}
 	]

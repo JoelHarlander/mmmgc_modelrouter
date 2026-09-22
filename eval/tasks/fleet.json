@@ -1,6 +1,12 @@
 {
 	"version": 1,
 	"note": "Offline fleet. Prices are the published list prices recorded in docs/research + the cache-cost study (USD per 1M tokens). `skill` is a declared competence used by the offline oracle; it is a stated assumption of the harness, not a measurement of any real model. Provider names are deliberately synthetic (faux-*) so a fixture can never reach a real endpoint.",
+	"skillLadder": {
+		"note": "The scale `skill` and a task's `requiredSkill` are both expressed on. The three bands deliberately restate the tier criteria in src/state.ts, so a turn's requiredSkill and the tier Jev is asked to choose mean the same thing.",
+		"30-49": "light band: answer a factual question, explain a snippet, a one-line command, a docstring, a regression test for behaviour already described",
+		"50-69": "standard band: implement a described function in one or two files, fix a bug with a clear reproduction, follow an existing pattern, a moderate refactor",
+		"70-100": "heavy band: multi-file or cross-cutting change, debugging with unclear cause, concurrency or security reasoning, design judgement"
+	},
 	"models": [
 		{
 			"key": "faux-or/glm-5.3-flash",
@@ -9,8 +15,8 @@
 			"billing": "on-demand",
 			"oauth": false,
 			"cost": { "input": 0.15, "output": 0.5, "cacheRead": 0.05, "cacheWrite": 0.15 },
-			"skill": 34,
-			"skillByCategory": { "lookup": 14, "test-writing": 4, "concurrency": -14, "architecture": -18, "security": -12 },
+			"skill": 46,
+			"skillByCategory": { "lookup": 8, "test-writing": 2, "concurrency": -16, "architecture": -18, "security": -12 },
 			"capability": 30,
 			"contextWindow": 200000
 		},
@@ -21,8 +27,8 @@
 			"billing": "on-demand",
 			"oauth": false,
 			"cost": { "input": 0.28, "output": 0.42, "cacheRead": 0.028, "cacheWrite": 0.28 },
-			"skill": 38,
-			"skillByCategory": { "lookup": 10, "refactor": 4, "concurrency": -12, "architecture": -16 },
+			"skill": 49,
+			"skillByCategory": { "lookup": 6, "refactor": 3, "concurrency": -14, "architecture": -16 },
 			"capability": 34,
 			"contextWindow": 128000
 		},
@@ -33,8 +39,8 @@
 			"billing": "on-demand",
 			"oauth": false,
 			"cost": { "input": 0.84, "output": 2.64, "cacheRead": 0.156, "cacheWrite": 0.84 },
-			"skill": 58,
-			"skillByCategory": { "test-writing": 6, "architecture": -10, "concurrency": -6 },
+			"skill": 62,
+			"skillByCategory": { "test-writing": 5, "architecture": -10, "concurrency": -7 },
 			"capability": 55,
 			"contextWindow": 200000
 		},
@@ -45,8 +51,8 @@
 			"billing": "plan",
 			"oauth": true,
 			"cost": { "input": 10.0, "output": 50.0, "cacheRead": 1.0, "cacheWrite": 12.5 },
-			"skill": 72,
-			"skillByCategory": { "concurrency": 4, "architecture": -4 },
+			"skill": 74,
+			"skillByCategory": { "concurrency": 4, "architecture": -5 },
 			"capability": 72,
 			"contextWindow": 272000
 		},
@@ -57,8 +63,8 @@
 			"billing": "plan",
 			"oauth": true,
 			"cost": { "input": 5.0, "output": 25.0, "cacheRead": 0.5, "cacheWrite": 6.25 },
-			"skill": 84,
-			"skillByCategory": { "architecture": 4, "security": 4, "lookup": -2 },
+			"skill": 86,
+			"skillByCategory": { "architecture": 3, "security": 4, "lookup": -2 },
 			"capability": 84,
 			"contextWindow": 400000
 		},
@@ -69,7 +75,7 @@
 			"billing": "on-demand",
 			"oauth": false,
 			"cost": { "input": 10.0, "output": 50.0, "cacheRead": 0.25, "cacheWrite": 12.5 },
-			"skill": 90,
+			"skill": 91,
 			"skillByCategory": { "architecture": 6, "concurrency": 6, "lookup": -4 },
 			"capability": 90,
 			"contextWindow": 400000

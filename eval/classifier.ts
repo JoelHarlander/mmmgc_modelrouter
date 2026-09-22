@@ -30,7 +30,8 @@ export interface Classification {
 
 export interface ClassifyArgs {
 	mode: ClassifierMode;
-	turn: TaskTurn;
+	/** The harness fills in the derived goldTier before calling, so `oracle` has a tier. */
+	turn: TaskTurn & { goldTier: Tier };
 	prompt: string;
 	state: RoutingState;
 	jev?: JevClient;

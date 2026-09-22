@@ -25,6 +25,7 @@ import { type Judge, type JudgeCandidate, NoisyJudge, pickCandidates, syntheticR
 import type { LoadedFleet } from "./fleet.ts";
 import { FakeSession } from "./session.ts";
 import { effectiveSkill, simulateFanoutUsage, simulateTurnUsage, solves } from "./simulate.ts";
+import { cheapestCapableTier } from "./validate.ts";
 import type { CandidateOutcome, CandidateTurnRecord, ClassifierMode, EvalTask, FleetModel, TaskPack, TurnRecord } from "./types.ts";
 
 export interface RunOptions {
@@ -119,6 +120,10 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		turnNo += 1;
 		session.addUser(turn.prompt);
 		const contextTokens = session.contextTokens;
+		const requiredSkill = turn.requiredSkill ?? task.requiredSkill;
+		// Derived, not read from the fixture: the cheapest tier that can actually do this
+		// turn is a fact about the fleet. A turn no model can do is scored against heavy.
+		const goldTier = cheapestCapableTier(loaded, task.category, requiredSkill) ?? "heavy";
 		const state = buildRoutingState(turn.prompt, session.asContext(), cfg, turnNo);
 		stateChars.push(JSON.stringify(state).length);
 
@@ -126,14 +131,14 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		let decision: Omit<Decision, "at" | "jevMs" | "jevModel" | "needsTools" | "stakes">;
 		let classifierCostUsd = 0;
 		let classifierSource: TurnRecord["classifierSource"] = "pinned";
-		let requestedTier = turn.goldTier;
+		let requestedTier = goldTier;
 		let confidence = 1;
 
 		if (isPinned) {
 			// src/index.ts returns before the Jev call, so a pinned turn costs nothing to route.
 			decision = {
-				requestedTier: turn.goldTier,
-				tier: turn.goldTier,
+				requestedTier: goldTier,
+				tier: goldTier,
 				confidence: 1,
 				model: session.model,
 				switched: false,
@@ -143,7 +148,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		} else {
 			const classification = await classify({
 				mode: options.classifier,
-				turn,
+				turn: { ...turn, goldTier },
 				prompt: turn.prompt,
 				state,
 				jev: options.jev,
@@ -178,7 +183,6 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 					? ("thinking-change" as const)
 					: undefined;
 
-		const requiredSkill = turn.requiredSkill ?? task.requiredSkill;
 		const usageArgs = {
 			contextTokens,
 			calls: task.callsPerTurn,
@@ -205,7 +209,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		const record: TurnRecord = {
 			taskId: task.id,
 			turn: turnNo,
-			goldTier: turn.goldTier,
+			goldTier,
 			requestedTier,
 			chosenTier: decision.tier,
 			confidence,

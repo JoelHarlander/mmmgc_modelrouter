@@ -20,10 +20,12 @@ import { JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../
 import { STAKES_OVERRIDE_THRESHOLD, applyStakesOverride } from "../eval/classifier.ts";
 import { loadFleet } from "../eval/fleet.ts";
 import { runEval } from "../eval/harness.ts";
-import { computeMetrics } from "../eval/metrics.ts";
+import { computeMetrics, PLAN_POINT_USD } from "../eval/metrics.ts";
 import { compareMetrics, readRun, type RunRecord, writeRun } from "../eval/results.ts";
 import { CACHE_GROWTH_TOKENS_PER_CALL, CALLS_PER_TURN, simulateFanoutUsage, simulateTurnUsage } from "../eval/simulate.ts";
-import type { TaskPack } from "../eval/types.ts";
+import { buildFleet } from "../eval/fleet.ts";
+import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
+import type { Fleet, TaskPack } from "../eval/types.ts";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FLEET = join(ROOT, "eval", "tasks", "fleet.json");
@@ -303,6 +305,63 @@ test("every metric rate stays inside its range", async () => {
 		"every turn is exactly one of: right tier, under-routed, over-routed",
 	);
 	assert.ok(m.avgStateChars > 0 && m.avgStateChars < outcome.config.jev.maxStateChars, "the classifier state must fit its budget");
+});
+
+test("the shipped pack's ground truth is consistent with the shipped fleet", () => {
+	const problems = validatePack(pack(), loadFleet(FLEET));
+	const errors = problems.filter((p) => p.level === "error");
+	assert.deepEqual(errors, [], `the pack must stay consistent:\n${errors.map((e) => `${e.where}: ${e.message}`).join("\n")}`);
+});
+
+test("the validator catches the ground-truth defects round 1 shipped", () => {
+	const loaded = loadFleet(FLEET);
+	const broken = pack();
+	// A turn labelled light whose requiredSkill only a heavy model reaches.
+	broken.tasks[0]!.turns[0]!.goldTier = "light";
+	broken.tasks[0]!.turns[0]!.requiredSkill = 95;
+	// Stakes outside the 0..2 the three criteria in src/state.ts can produce.
+	broken.tasks[1]!.turns[0]!.jev = { ...broken.tasks[1]!.turns[0]!.jev!, stakes: 2.5 };
+	broken.tasks[2]!.turns[0]!.manualPin = "anthropic/claude-opus-5";
+	const problems = validatePack(broken, loaded);
+	assert.ok(problems.some((p) => p.level === "warning" && /can never be solved/.test(p.message)));
+	assert.ok(problems.some((p) => p.level === "error" && /jev.stakes 2.5 is outside/.test(p.message)));
+	assert.ok(problems.some((p) => p.level === "error" && /manualPin .* is not in the fleet/.test(p.message)));
+
+	broken.tasks[0]!.turns[0]!.requiredSkill = 80;
+	assert.ok(
+		validatePack(broken, loaded).some((p) => p.level === "error" && /goldTier says "light" but requiredSkill 80/.test(p.message)),
+	);
+});
+
+test("goldTier is derived from the fleet, not read from the fixture", async () => {
+	const loaded = loadFleet(FLEET);
+	const turn = pack().tasks.find((t) => t.id === "django__django-11039")!.turns[0]!;
+	assert.equal(cheapestCapableTier(loaded, "bugfix", turn.requiredSkill ?? 60), "standard");
+
+	// Give the light tier a model that can do standard work and the same turn becomes light.
+	const raw = JSON.parse(readFileSync(FLEET, "utf8")) as Fleet;
+	raw.models.find((m) => m.key === "faux-or/glm-5.3-flash")!.skill = 95;
+	const stronger = buildFleet(raw);
+	assert.equal(cheapestCapableTier(stronger, "bugfix", 60), "light");
+
+	const outcome = await runEval({ pack: pack(), loaded: stronger, classifier: "scripted", ledgerFile: tmpLedger() });
+	const moved = outcome.turns.find((t) => t.taskId === "django__django-11039" && t.turn === 1)!;
+	assert.equal(moved.goldTier, "light", "a stronger light tier must move the gold label, not just the score");
+});
+
+test("the tier price inversion in the shipped defaults is reported, not hidden", () => {
+	const problems = checkTierPricing(loadFleet(FLEET));
+	assert.equal(problems.length, 1);
+	assert.equal(problems[0]!.level, "warning", "an inversion must not block a run");
+	assert.match(problems[0]!.message, /tier price inversion/);
+	assert.match(problems[0]!.message, /heavy/);
+});
+
+test("plan spend is also reported in weekly plan points", async () => {
+	const outcome = await run();
+	const m = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.ok(m.planPointsUsed > 0);
+	assert.equal(Math.round((m.planHiddenUsd / PLAN_POINT_USD) * 1e3) / 1e3, m.planPointsUsed);
 });
 
 function unpack(outcome: Awaited<ReturnType<typeof run>>): [typeof outcome.turns, number[]] {

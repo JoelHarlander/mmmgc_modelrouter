@@ -26,6 +26,8 @@ export interface FleetModel {
 export interface Fleet {
 	version: 1;
 	note?: string;
+	/** Prose description of what each band of `skill` / `requiredSkill` means. */
+	skillLadder?: Record<string, string>;
 	models: FleetModel[];
 	tiers: Record<Tier, string[]>;
 }
@@ -42,9 +44,14 @@ export interface ScriptedJev {
 
 export interface TaskTurn {
 	prompt: string;
-	/** The tier this turn genuinely needs. Ground truth for routing accuracy. */
-	goldTier: Tier;
-	/** Skill required to handle this turn. Defaults to the task's requiredSkill. */
+	/**
+	 * The tier this turn needs. **Derived**, not authoritative: the harness computes it
+	 * as the cheapest tier holding a model that reaches `requiredSkill`, because which
+	 * tier can do a piece of work is a fact about the fleet, not about the task. It is
+	 * written in the fixture for readability and `--validate` fails if the two disagree.
+	 */
+	goldTier?: Tier;
+	/** How hard this turn is, on the skill ladder documented in eval/tasks/fleet.json. */
 	requiredSkill?: number;
 	jev?: ScriptedJev;
 	/** Simulate a provider response the ledger should learn from before the next turn. */

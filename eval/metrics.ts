@@ -9,6 +9,15 @@
 import { TIERS } from "../src/config.ts";
 import type { TurnRecord } from "./types.ts";
 
+/**
+ * List-price-equivalent value of one weekly Claude-plan point, measured on this
+ * machine by the cache-cost study (§5d). It rests on two integer-percent readings, so
+ * the honest range is $33.9–$47.5 and the number is an order-of-magnitude anchor, not
+ * a price. It is here because "$11 of hidden spend" means nothing and "0.28 of a
+ * weekly point" means something.
+ */
+export const PLAN_POINT_USD = 39.57;
+
 export interface RunMetrics {
 	tasks: number;
 	turns: number;
@@ -38,6 +47,8 @@ export interface RunMetrics {
 	ledgerCostUsd: number;
 	listEquivalentUsd: number;
 	planHiddenUsd: number;
+	/** planHiddenUsd expressed in the unit that actually runs out. See PLAN_POINT_USD. */
+	planPointsUsed: number;
 	classifierCostUsd: number;
 	listUsdPerResolvedTask: number;
 
@@ -131,6 +142,7 @@ export function computeMetrics(turns: TurnRecord[], stateChars: number[]): RunMe
 		ledgerCostUsd: round(ledgerCostUsd),
 		listEquivalentUsd: round(listEquivalentUsd),
 		planHiddenUsd: round(listEquivalentUsd - ledgerCostUsd),
+		planPointsUsed: round((listEquivalentUsd - ledgerCostUsd) / PLAN_POINT_USD, 3),
 		classifierCostUsd: round(sum(turns, (t) => t.classifierCostUsd) + sum(turns, (t) => t.candidate?.judgeCostUsd ?? 0), 8),
 		listUsdPerResolvedTask: resolved === 0 ? Number.POSITIVE_INFINITY : round(listEquivalentUsd / resolved),
 
