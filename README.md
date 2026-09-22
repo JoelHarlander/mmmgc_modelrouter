@@ -94,11 +94,12 @@ paid path behind it.
 
 `scopes` maps a provider's model-scoped limit window (`"<providerGlob>:<windowId>"`) to the models it governs, so an
 exhausted Fable weekly bucket excludes Fable while the same credential keeps serving Opus. Window ids are the ones
-the provider uses on the wire (`5h`, `7d`, `7d_oi`, `primary`, `secondary`, `<family>:primary`). A `<family>:<role>`
-window needs no scope entry: it governs the model whose id matches the family — never the whole credential. Codex
-names that family by its metered-limit id on the wire (`x-codex-bengalfox-*`) and by the model name in the usage
-poll, so the header path keys the window by the `x-codex-<id>-limit-name` it comes with; both evidence paths then
-name the same meter, and a later poll refreshes what a header recorded.
+the provider uses on the wire (`5h`, `7d`, `7d_oi`, `primary`, `secondary`, `<model>:primary`). `scopes` is the only
+place that decides which windows are model-scoped; a `<model>:<role>` window is the one case it answers without an
+entry, because such ids are minted at runtime from the model the meter belongs to, so it governs that model and
+never the whole credential. Codex names the meter by an opaque limit id on the wire (`x-codex-bengalfox-*`) and by
+the model in the usage poll, so the header path keys the window by the `x-codex-<id>-limit-name` it comes with;
+both evidence paths then name the same meter, and a later poll refreshes what a header recorded.
 
 `entitlement` maps a provider to its read-only usage endpoint. The shipped entries are Anthropic's
 `/api/oauth/usage`, Codex's `/wham/usage`, OpenRouter's `/api/v1/key` and the Vercel gateway credit balance. A probe
@@ -125,7 +126,9 @@ can never name an endpoint a credential is sent to, assert what pays for a model
 
 The parallel commands share routing's gate *and* its ordering: a model that routing would refuse cannot be fanned
 out to, the slots nobody named go to the best-ranked eligible candidates, and while routing is off they refuse
-outright. An explicit `parallel.models` list is your own choice of what to compare, so it keeps its order.
+outright. An explicit `parallel.models` list is your own choice of what to compare, so it keeps its order — and
+when a better-ranked eligible route goes unused because of it, the run says so. What the fan-out spends is
+harvested like any other turn: quota headers and a 429 seen during `/duo`, `/trio` or `/par` reach the ledger.
 
 ## Development
 

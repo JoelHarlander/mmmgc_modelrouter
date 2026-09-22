@@ -70,7 +70,8 @@ test("the Codex poll path yields windows, credits and per-model families", () =>
 	assert.equal(facts.windows!.primary!.utilization, 1);
 	assert.equal(facts.windows!.primary!.status, "rejected", "limit_reached is attributed to the fullest window");
 	assert.equal(facts.windows!.secondary!.utilization, 0.3);
-	assert.equal(facts.windows!["gpt-5-3-codex-spark:primary"]!.utilization, 0.8);
+	// The family window is keyed by the model the meter names, so a scope match needs no config.
+	assert.equal(facts.windows!["gpt-5.3-codex-spark:primary"]!.utilization, 0.8);
 	assert.equal(facts.credits?.hasCredits, true);
 	assert.equal(facts.credits?.balance, "12");
 });

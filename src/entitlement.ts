@@ -10,7 +10,7 @@
  */
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import type { EntitlementSource, RouterConfig } from "./config.ts";
-import { type EntitlementFacts, type Ledger, slug, type WindowState } from "./ledger.ts";
+import { type EntitlementFacts, type Ledger, meteredModel, type WindowState } from "./ledger.ts";
 
 type RawWindow = Omit<WindowState, "source" | "lastSeen">;
 
@@ -149,7 +149,7 @@ function parseCodexUsage(body: unknown): EntitlementFacts {
 		const e = obj(entry);
 		const name = strOf(e?.limit_name) ?? strOf(e?.metered_feature);
 		if (!name) continue;
-		addCodexRateLimit(facts.windows!, `${slug(name)}:`, obj(e?.rate_limit));
+		addCodexRateLimit(facts.windows!, `${meteredModel(name)}:`, obj(e?.rate_limit));
 	}
 	const credits = obj(root?.credits);
 	if (credits) {

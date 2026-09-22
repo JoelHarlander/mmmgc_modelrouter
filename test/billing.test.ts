@@ -639,3 +639,28 @@ test("a scoped exclusion does not claim the provider is usable when the account 
 	assert.match(a.reason, /spent account-wide too \(5h rejected\)/);
 	assert.ok(!/stays usable/.test(a.reason), a.reason);
 });
+
+test("a family meter keyed by a dotted limit name still excludes exactly its own model", () => {
+	// docs/research/plan-quotas.md: `x-codex-<limitId>-limit-name` carries the model id verbatim,
+	// dots and all (`gpt-5.2-codex-sonic`), and the meter governs that model alone.
+	const sonic = model("openai-codex", "gpt-5.2-codex-sonic", { input: 1.25, output: 10 });
+	const l = ledger();
+	l.observeResponse(
+		"openai-codex",
+		200,
+		{
+			"x-codex-primary-used-percent": "20",
+			"x-codex-bengalfox-primary-used-percent": "100",
+			"x-codex-bengalfox-limit-name": "gpt-5.2-codex-sonic",
+		},
+		cfg,
+	);
+	const registry = fakeRegistry([...ALL, sonic], ["claude-bridge", "openai-codex", "xai"]);
+	const spent = assessBilling({ model: sonic, cfg, registry, ledger: l });
+	assert.equal(spent.eligibility, "excluded");
+	assert.match(spent.reason, /model-scoped quota exhausted \(gpt-5.2-codex-sonic:primary/);
+	assert.match(spent.reason, /openai-codex stays usable for other models/);
+
+	assert.notEqual(assessBilling({ model: codex, cfg, registry, ledger: l }).eligibility, "excluded", "its sibling keeps the same credential");
+	assert.deepEqual(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).exhaustedAccount, []);
+});

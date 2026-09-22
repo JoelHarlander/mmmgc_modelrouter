@@ -33,7 +33,8 @@ const opus = model("claude-bridge", "claude-opus-5", { input: 15, output: 75 });
 const fable = model("claude-bridge", "claude-fable-5-1", { input: 15, output: 75 });
 const grok = model("xai", "grok-4.7", { input: 3, output: 15 });
 const glm = model("openrouter", "z-ai/glm-5.3", { input: 0.5, output: 2 });
-const ALL = [opus, fable, grok, glm];
+const local = model("ds4", "deepseek-v4-flash");
+const ALL = [opus, fable, grok, glm, local];
 
 function ledger(): Ledger {
 	return new Ledger(ledgerPath(mkdtempSync(join(tmpdir(), "mr-par-"))));
@@ -154,7 +155,7 @@ test("an explicitly configured parallel.models list keeps its order and membersh
 	);
 	// Honoured, but not quietly: the run says what it is spending that it need not have.
 	assert.equal(notes.length, 1, notes.join(" | "));
-	assert.match(notes[0]!, /openrouter\/z-ai\/glm-5.3 bills pay-per-token/);
+	assert.match(notes[0]!, /openrouter\/z-ai\/glm-5.3 runs on pay-per-token/);
 	assert.match(notes[0]!, /claude-bridge\/claude-fable-5-1 .* was eligible and went unused/);
 });
 
@@ -186,4 +187,69 @@ test("a fan-out with nothing better passed over says nothing", () => {
 	});
 	const { notes } = pickParallelModels({ ctx: fakeCtx(opus), cfg: pinned, n: 2, ledger: ledger() });
 	assert.deepEqual(notes, []);
+});
+
+test("the fan-out discloses a passed-over zero-cost route even when nothing it runs bills", () => {
+	// Both slots are subscription routes, so nothing bills - but a free route was eligible and
+	// unused, which is exactly what the run has to say out loud.
+	const pinned = mergeConfig(cfg, {
+		parallel: { ...cfg.parallel, models: ["claude-bridge/claude-opus-5", "claude-bridge/claude-fable-5-1", "ds4/deepseek-v4-flash"] },
+	});
+	const { models, notes } = pickParallelModels({ ctx: fakeCtx(opus), cfg: pinned, n: 2, ledger: ledger() });
+	assert.deepEqual(models.map((m) => `${m.provider}/${m.id}`), ["claude-bridge/claude-opus-5", "claude-bridge/claude-fable-5-1"]);
+	assert.equal(notes.length, 2, notes.join(" | "));
+	for (const note of notes) assert.match(note, /ds4\/deepseek-v4-flash \(free \(verified\) preferred\) was eligible and went unused/);
+});
+
+test("quota a fan-out response reports reaches the ledger", async () => {
+	// The fan-out spends the same subscription the agent loop does, so a 429 seen here must land
+	// in the ledger; otherwise the next turn routes straight back to the spent model.
+	const codex = model("openai-codex", "gpt-6-astra", { input: 1.25, output: 10 });
+	const registry = {
+		find: (p: string, id: string) => [...ALL, codex].find((m) => m.provider === p && m.id === id),
+		hasConfiguredAuth: () => true,
+		isUsingOAuth: (m: Model<Api>) => m.provider !== "openrouter",
+		complete: async (m: Model<Api>, _context: unknown, options: { onResponse?: (r: { status: number; headers: Record<string, string> }, m: Model<Api>) => void }) => {
+			if (m.provider === "openai-codex") {
+				options.onResponse?.({ status: 429, headers: { "x-codex-primary-used-percent": "100", "retry-after": "120" } }, m);
+				return { usage: undefined, stopReason: "error", errorMessage: "usage_limit_reached", content: [] };
+			}
+			options.onResponse?.({ status: 200, headers: {} }, m);
+			return { usage: undefined, stopReason: "stop", content: [{ type: "text", text: "hi" }] };
+		},
+	} as unknown as ModelRegistry;
+	const notices: Notice[] = [];
+	const ctx = {
+		model: opus,
+		modelRegistry: registry,
+		getSystemPrompt: () => "",
+		sessionManager: { getBranch: () => [] },
+		ui: {
+			notify: (text: string, level: string) => notices.push({ text, level }),
+			select: async () => "None",
+			custom: <T>(build: (tui: unknown, theme: unknown, kb: unknown, done: (value: T) => void) => unknown) =>
+				new Promise<T>((resolve) => {
+					build({ requestRender: () => {} }, { fg: (_c: string, text: string) => text }, {}, resolve);
+				}),
+		},
+	} as unknown as ExtensionCommandContext;
+
+	const l = ledger();
+	const pinned = mergeConfig(cfg, {
+		parallel: { ...cfg.parallel, models: ["claude-bridge/claude-opus-5", "openai-codex/gpt-6-astra"], judge: "none" },
+	});
+	await runParallel({
+		pi: { appendEntry: () => {} } as unknown as ExtensionAPI,
+		ctx,
+		prompt: "hello",
+		n: 2,
+		cfg: pinned,
+		ledger: l,
+		jev: { available: () => false } as unknown as JevClient,
+		routerEnabled: true,
+	});
+
+	const quota = l.assess("openai-codex", "openai-codex/gpt-6-astra", pinned);
+	assert.ok(quota.cooldown, "the 429 the fan-out saw put the provider in cooldown");
+	assert.equal(l.peekProvider("openai-codex")!.windows.primary!.utilization, 1);
 });

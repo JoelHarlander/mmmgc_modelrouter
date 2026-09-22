@@ -10,7 +10,7 @@ import { uuidv7 } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import { convertToLlm } from "@earendil-works/pi-coding-agent";
 import { Container, matchesKey, Text } from "@earendil-works/pi-tui";
-import { assessBilling, billsPerToken, describeBasis } from "./billing.ts";
+import { assessBilling, describeBasis } from "./billing.ts";
 import { modelKey, type RouterConfig, TIERS } from "./config.ts";
 import type { JevChoiceAnswer, JevClient, JsonValue } from "./jev.ts";
 import type { Ledger } from "./ledger.ts";
@@ -113,16 +113,16 @@ export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 	return { models: ranked.slice(0, n).map((r) => r.candidate.model!), rejected, notes: [] };
 }
 
-/** Names each billed slot that a better-ranked eligible candidate was passed over for. */
+/** Names each slot a better-ranked eligible candidate was passed over for, billed or not. */
 function unusedPreferredNotes(taken: Candidate[], passedOver: Candidate[]): string[] {
 	const best = passedOver.reduce<Candidate | undefined>((a, c) => ((a?.assessment?.rank ?? 99) <= (c.assessment?.rank ?? 99) ? a : c), undefined);
 	const bestRank = best?.assessment?.rank;
 	if (best === undefined || bestRank === undefined) return [];
 	return taken
-		.filter((c) => c.assessment && billsPerToken(c.assessment.basis) && c.assessment.rank > bestRank)
+		.filter((c) => c.assessment && c.assessment.rank > bestRank)
 		.map(
 			(c) =>
-				`${c.key} bills ${c.assessment!.basis} for this run while ${best.key} (${describeBasis(best.assessment!)}) was eligible and went unused: parallel.models names what to compare, so it is honoured as written.`,
+				`${c.key} runs on ${describeBasis(c.assessment!)} while ${best.key} (${describeBasis(best.assessment!)}) was eligible and went unused: parallel.models names what to compare, so it is honoured as written.`,
 		);
 }
 
@@ -179,6 +179,10 @@ export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryD
 					signal: controller.signal,
 					cacheRetention: "none",
 					sessionId: uuidv7(),
+					// A fan-out spends the same quota a routed turn does, so what the provider says
+					// about that quota has to reach the ledger the same way.
+					onResponse: (res: { status: number; headers: Record<string, string> }) =>
+						ledger.observeResponse(model.provider, res.status, res.headers ?? {}, cfg),
 				} as Parameters<typeof ctx.modelRegistry.complete>[2]);
 				r.ms = Date.now() - started;
 				r.usage = response.usage;

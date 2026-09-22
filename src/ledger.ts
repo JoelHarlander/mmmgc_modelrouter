@@ -222,15 +222,6 @@ export class Ledger {
 				if (spent) out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
 				continue;
 			}
-			// `<family>:<role>` is one model family's meter, discovered at runtime. It governs the
-			// model whose id slugs to that family and nothing else: never the whole credential.
-			const family = familyOf(id);
-			if (family !== undefined) {
-				if (spent && modelKey !== undefined && slug(modelId(modelKey)) === family) {
-					out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
-				}
-				continue;
-			}
 			out.accountWindows.push(id);
 			out.accountWindowsAt = Math.max(out.accountWindowsAt ?? 0, w.lastSeen);
 			if (w.utilization !== undefined) out.accountUtilization = Math.max(out.accountUtilization ?? 0, w.utilization);
@@ -321,7 +312,7 @@ export interface EntitlementFacts {
 }
 
 /**
- * Model globs a window governs, or undefined when no scope claims the window.
+ * Model globs a window governs, or undefined when the window is account-wide.
  * Scope keys are `"<providerGlob>:<windowId>"`; window ids may themselves contain `:`
  * (a Codex per-model family arrives as `<family>:primary`), so only the first `:` splits.
  */
@@ -332,22 +323,18 @@ export function scopeGlobs(cfg: RouterConfig, provider: string, windowId: string
 		if (key.slice(colon + 1) !== windowId) continue;
 		if (globMatch(key.slice(0, colon), provider)) return globs;
 	}
-	return undefined;
+	// A `<model>:<role>` window is minted at runtime from the model its meter belongs to, so no
+	// config can name it in advance: the prefix is the one model it governs.
+	const family = windowId.lastIndexOf(":");
+	return family > 0 ? [`*/${windowId.slice(0, family)}`] : undefined;
 }
 
-/** The model family a `<family>:<role>` window meters, or undefined for an account-wide window. */
-function familyOf(windowId: string): string | undefined {
-	const colon = windowId.lastIndexOf(":");
-	return colon > 0 ? windowId.slice(0, colon) : undefined;
-}
-
-function modelId(key: string): string {
-	return key.slice(key.indexOf("/") + 1);
-}
-
-/** The id form both evidence paths agree on: a provider's family token, lower-case and hyphenated. */
-export function slug(name: string): string {
-	return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+/**
+ * The model a per-family meter belongs to, spelled as a model id is: that is what makes the
+ * window id something `scopeGlobs` can match against the routed model without a config entry.
+ */
+export function meteredModel(limitName: string): string {
+	return limitName.trim().toLowerCase();
 }
 
 /** Human reason when a window is spent, or undefined when it still has room. */
@@ -422,14 +409,14 @@ function applyCodexHeaders(state: ProviderState, headers: Record<string, string>
 	const limitNames = new Map<string, string>();
 	for (const [rawName, rawValue] of Object.entries(headers)) {
 		const m = CODEX_LIMIT_NAME.exec(rawName.toLowerCase());
-		if (m && rawValue) limitNames.set(m[1]!, slug(rawValue));
+		if (m && rawValue) limitNames.set(m[1]!, meteredModel(rawValue));
 	}
 	for (const [rawName, rawValue] of Object.entries(headers)) {
 		const name = rawName.toLowerCase();
 		const m = CODEX_FIELD.exec(name);
 		if (!m) continue;
 		const [, family, role, field] = m as unknown as [string, string | undefined, string, string];
-		const id = family ? `${limitNames.get(family) ?? slug(family)}:${role}` : role;
+		const id = family ? `${limitNames.get(family) ?? meteredModel(family)}:${role}` : role;
 		const w = (state.windows[id] ??= { source: "header", lastSeen: now });
 		w.source = "header";
 		w.lastSeen = now;
