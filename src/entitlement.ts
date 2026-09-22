@@ -9,7 +9,7 @@
  * Nothing here logs, stores or returns a credential value.
  */
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
-import type { EntitlementSource, RouterConfig } from "./config.ts";
+import { type EntitlementSource, type RouterConfig, routableModels } from "./config.ts";
 import { type EntitlementFacts, type Ledger, meteredModel, type WindowState } from "./ledger.ts";
 
 type RawWindow = Omit<WindowState, "source" | "lastSeen">;
@@ -37,8 +37,7 @@ export interface ProbeOptions {
 
 /** Providers named anywhere the router can route to. */
 export function routableProviders(cfg: RouterConfig): string[] {
-	const keys = [...Object.values(cfg.tiers).flat(), ...cfg.parallel.models];
-	return [...new Set(keys.map((k) => k.slice(0, k.indexOf("/"))).filter(Boolean))];
+	return [...new Set(routableModels(cfg).map((k) => k.slice(0, k.indexOf("/"))).filter(Boolean))];
 }
 
 /**

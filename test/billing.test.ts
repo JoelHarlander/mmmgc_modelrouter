@@ -664,3 +664,62 @@ test("a family meter keyed by a dotted limit name still excludes exactly its own
 	assert.notEqual(assessBilling({ model: codex, cfg, registry, ledger: l }).eligibility, "excluded", "its sibling keeps the same credential");
 	assert.deepEqual(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).exhaustedAccount, []);
 });
+
+test("a Fable-only rejection cools Fable, not the whole Claude credential", () => {
+	// docs/research/plan-quotas.md: an overage- or Fable-only rejection with 5h/7d allowed is
+	// model-scoped - route to another model on the same credential rather than cooling it down.
+	const l = ledger();
+	const fiveDaysOut = Math.floor((Date.now() + 5 * 24 * 60 * 60_000) / 1000);
+	l.observeResponse(
+		"claude-bridge",
+		200,
+		{
+			"anthropic-ratelimit-unified-5h-utilization": "0.12",
+			"anthropic-ratelimit-unified-5h-status": "allowed",
+			"anthropic-ratelimit-unified-7d-utilization": "0.51",
+			"anthropic-ratelimit-unified-7d-status": "allowed",
+			"anthropic-ratelimit-unified-7d_oi-status": "rejected",
+			"anthropic-ratelimit-unified-7d_oi-reset": String(fiveDaysOut),
+		},
+		cfg,
+	);
+	// The documented bare entitlement-gate 429: no unified headers, no retry-after.
+	l.observeResponse("claude-bridge", 429, {}, cfg);
+
+	const cooled = l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg);
+	assert.ok(cooled.cooldown, "the bare 429 still cools the provider");
+	assert.ok(
+		cooled.cooldown.until <= Date.now() + cfg.plan.cooldownMinutesOn429 * 60_000 + 5_000,
+		`briefly, not until Fable's weekly reset: ${new Date(cooled.cooldown.until).toISOString()}`,
+	);
+
+	l.observeResponse("claude-bridge", 200, {}, cfg);
+	assert.equal(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg).cooldown, undefined, "a success clears it; the scoped window must not hold it open");
+	assert.equal(assess(opus, l).eligibility, "preferred", "Opus is usable again");
+	assert.equal(assess(fable, l).eligibility, "excluded", "and Fable is still out on its own window");
+});
+
+test("a spent meter no configured route answers to is disclosed rather than ignored", () => {
+	// docs/research/plan-quotas.md records `premium` as a real x-codex-active-limit value: a
+	// metered-limit id that is not a model name, so nothing can place the meter it belongs to.
+	const l = ledger();
+	l.observeResponse(
+		"openai-codex",
+		200,
+		{
+			"x-codex-primary-used-percent": "20",
+			"x-codex-premium-primary-used-percent": "100",
+			"x-codex-active-limit": "premium",
+			"x-codex-plan-type": "plus",
+		},
+		cfg,
+	);
+	const a = assess(codex, l);
+	assert.notEqual(a.eligibility, "excluded", "an unplaceable meter must not deny a working subscription route");
+	assert.notEqual(a.eligibility, "preferred");
+	assert.notEqual(a.verification, "verified", "nor let the verdict claim evidence it does not have");
+	assert.ok(
+		a.uncertainty.some((u) => /spent meter no configured route answers to \(premium:primary/.test(u)),
+		a.uncertainty.join(" | "),
+	);
+});

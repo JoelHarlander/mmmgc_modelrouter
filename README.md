@@ -101,6 +101,11 @@ never the whole credential. Codex names the meter by an opaque limit id on the w
 the model in the usage poll, so the header path keys the window by the `x-codex-<id>-limit-name` it comes with;
 both evidence paths then name the same meter, and a later poll refreshes what a header recorded.
 
+A scoped window speaks only for its own models: a Fable-only or overage rejection never sets the provider-wide
+cooldown a 429 triggers, and never keeps one alive once a later call succeeds. And when a provider reports a spent
+meter that names no route your config can reach, the router neither ignores it nor calls the whole credential
+spent — it carries it as uncertainty on every route of that provider and stops calling those verdicts `verified`.
+
 `entitlement` maps a provider to its read-only usage endpoint. The shipped entries are Anthropic's
 `/api/oauth/usage`, Codex's `/wham/usage`, OpenRouter's `/api/v1/key` and the Vercel gateway credit balance. A probe
 that cannot authenticate is recorded as a failed probe — the route then stays `unverified`, which routing discloses

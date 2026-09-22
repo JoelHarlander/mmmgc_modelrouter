@@ -155,8 +155,8 @@ test("an explicitly configured parallel.models list keeps its order and membersh
 	);
 	// Honoured, but not quietly: the run says what it is spending that it need not have.
 	assert.equal(notes.length, 1, notes.join(" | "));
-	assert.match(notes[0]!, /openrouter\/z-ai\/glm-5.3 runs on pay-per-token/);
 	assert.match(notes[0]!, /claude-bridge\/claude-fable-5-1 .* was eligible and went unused/);
+	assert.match(notes[0]!, /passed over for openrouter\/z-ai\/glm-5.3 \(pay-per-token/);
 });
 
 test("the fan-out discloses the unused preferred route to the user, not just to the caller", async () => {
@@ -197,8 +197,10 @@ test("the fan-out discloses a passed-over zero-cost route even when nothing it r
 	});
 	const { models, notes } = pickParallelModels({ ctx: fakeCtx(opus), cfg: pinned, n: 2, ledger: ledger() });
 	assert.deepEqual(models.map((m) => `${m.provider}/${m.id}`), ["claude-bridge/claude-opus-5", "claude-bridge/claude-fable-5-1"]);
-	assert.equal(notes.length, 2, notes.join(" | "));
-	for (const note of notes) assert.match(note, /ds4\/deepseek-v4-flash \(free \(verified\) preferred\) was eligible and went unused/);
+	// One note, however many slots it was passed over for: `/par 8` must not raise seven toasts.
+	assert.equal(notes.length, 1, notes.join(" | "));
+	assert.match(notes[0]!, /ds4\/deepseek-v4-flash \(free \(verified\) preferred\) was eligible and went unused/);
+	assert.match(notes[0]!, /passed over for claude-bridge\/claude-opus-5 .*, claude-bridge\/claude-fable-5-1 /);
 });
 
 test("quota a fan-out response reports reaches the ledger", async () => {

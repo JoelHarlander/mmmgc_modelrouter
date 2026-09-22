@@ -15,7 +15,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { Usage } from "@earendil-works/pi-ai";
-import { anyGlobMatch, globMatch, type RouterConfig } from "./config.ts";
+import { anyGlobMatch, globMatch, routableModels, type RouterConfig } from "./config.ts";
 
 export interface ModelTotals {
 	calls: number;
@@ -82,6 +82,8 @@ export interface QuotaAssessment {
 	exhaustedAccount: ExhaustedWindow[];
 	/** Model-scoped windows governing this model that are exhausted. */
 	exhaustedScoped: ExhaustedWindow[];
+	/** Spent windows that name a meter no configured route answers to. Evidence, not a verdict. */
+	unattributed: ExhaustedWindow[];
 	/** Account-wide windows this provider actually reported. Empty means nothing was observed. */
 	accountWindows: string[];
 	/** When the newest of those windows was last seen. What a subscription verdict rests on. */
@@ -101,6 +103,12 @@ export interface QuotaAssessment {
 export interface ExhaustedWindow {
 	id: string;
 	reason: string;
+}
+
+/** Which models a window governs, and whether configuration said so or the window id implied it. */
+export interface WindowScope {
+	globs: string[];
+	declared: boolean;
 }
 
 export class Ledger {
@@ -158,11 +166,11 @@ export class Ledger {
 			// (docs/research/plan-quotas.md §1): cool down briefly, but never record it as utilization.
 			const retryAfter = num(h("retry-after"));
 			const fallbackMs = cfg.plan.cooldownMinutesOn429 * 60_000;
-			const rejectedReset = earliestRejectedReset(state, now);
+			const rejectedReset = earliestRejectedReset(state, now, cfg, provider);
 			const until = retryAfter !== undefined ? now + retryAfter * 1000 : (rejectedReset ?? now + fallbackMs);
 			state.cooldownUntil = until;
 			state.cooldownReason = status === 402 ? "budget exhausted (402)" : "rate limited (429)";
-		} else if (status >= 200 && status < 300 && state.cooldownUntil && !hasRejectedWindow(state, now)) {
+		} else if (status >= 200 && status < 300 && state.cooldownUntil && !hasRejectedWindow(state, now, cfg, provider)) {
 			// A successful call clears a stale cooldown.
 			state.cooldownUntil = undefined;
 			state.cooldownReason = undefined;
@@ -196,7 +204,7 @@ export class Ledger {
 	 * against `modelKey` through `cfg.scopes`, so an exhausted scoped quota excludes only its models.
 	 */
 	assess(provider: string, modelKey: string | undefined, cfg: RouterConfig, now = Date.now()): QuotaAssessment {
-		const out: QuotaAssessment = { exhaustedAccount: [], exhaustedScoped: [], accountWindows: [], sources: [] };
+		const out: QuotaAssessment = { exhaustedAccount: [], exhaustedScoped: [], unattributed: [], accountWindows: [], sources: [] };
 		const state = this.data.providers[provider];
 		if (!state) return out;
 		out.plan = state.plan;
@@ -215,10 +223,15 @@ export class Ledger {
 				out.overage = w;
 				continue;
 			}
-			const globs = scopeGlobs(cfg, provider, id);
+			const scope = scopeGlobs(cfg, provider, id);
 			const spent = windowExhausted(w, cfg, now);
-			if (globs !== undefined) {
-				if (!(modelKey && anyGlobMatch(globs, modelKey))) continue;
+			if (scope !== undefined) {
+				if (!(modelKey && anyGlobMatch(scope.globs, modelKey))) {
+					if (spent && !scope.declared && !routableModels(cfg).some((key) => anyGlobMatch(scope.globs, key))) {
+						out.unattributed.push({ id, reason: `${id} ${spent}` });
+					}
+					continue;
+				}
 				if (spent) out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
 				continue;
 			}
@@ -316,17 +329,17 @@ export interface EntitlementFacts {
  * Scope keys are `"<providerGlob>:<windowId>"`; window ids may themselves contain `:`
  * (a Codex per-model family arrives as `<family>:primary`), so only the first `:` splits.
  */
-export function scopeGlobs(cfg: RouterConfig, provider: string, windowId: string): string[] | undefined {
+export function scopeGlobs(cfg: RouterConfig, provider: string, windowId: string): WindowScope | undefined {
 	for (const [key, globs] of Object.entries(cfg.scopes)) {
 		const colon = key.indexOf(":");
 		if (colon < 0) continue;
 		if (key.slice(colon + 1) !== windowId) continue;
-		if (globMatch(key.slice(0, colon), provider)) return globs;
+		if (globMatch(key.slice(0, colon), provider)) return { globs, declared: true };
 	}
 	// A `<model>:<role>` window is minted at runtime from the model its meter belongs to, so no
-	// config can name it in advance: the prefix is the one model it governs.
+	// config can name it in advance: the prefix is read as the one model it governs.
 	const family = windowId.lastIndexOf(":");
-	return family > 0 ? [`*/${windowId.slice(0, family)}`] : undefined;
+	return family > 0 ? { globs: [`*/${windowId.slice(0, family)}`], declared: false } : undefined;
 }
 
 /**
@@ -345,13 +358,25 @@ export function windowExhausted(w: WindowState, cfg: RouterConfig, now: number):
 	return undefined;
 }
 
-function hasRejectedWindow(state: ProviderState, now: number): boolean {
-	return Object.values(state.windows).some((w) => w.status === "rejected" && (w.resetAt === undefined || w.resetAt > now));
+/**
+ * Windows that meter the whole credential. A model-scoped bucket (Fable's weekly, a per-model
+ * meter) and the extra-billed overage bucket speak for their own models, so neither may set the
+ * provider-wide cooldown nor keep one alive: the answer is a different model, not a cold provider.
+ */
+function accountWideRejections(state: ProviderState, now: number, cfg: RouterConfig, provider: string): WindowState[] {
+	return Object.entries(state.windows)
+		.filter(([id]) => !OVERAGE_WINDOWS.has(id) && scopeGlobs(cfg, provider, id) === undefined)
+		.map(([, w]) => w)
+		.filter((w) => w.status === "rejected" && (w.resetAt === undefined || w.resetAt > now));
 }
 
-function earliestRejectedReset(state: ProviderState, now: number): number | undefined {
-	const resets = Object.values(state.windows)
-		.filter((w) => w.status === "rejected" && w.resetAt !== undefined && w.resetAt > now)
+function hasRejectedWindow(state: ProviderState, now: number, cfg: RouterConfig, provider: string): boolean {
+	return accountWideRejections(state, now, cfg, provider).length > 0;
+}
+
+function earliestRejectedReset(state: ProviderState, now: number, cfg: RouterConfig, provider: string): number | undefined {
+	const resets = accountWideRejections(state, now, cfg, provider)
+		.filter((w) => w.resetAt !== undefined)
 		.map((w) => w.resetAt!);
 	return resets.length ? Math.min(...resets) : undefined;
 }

@@ -86,8 +86,13 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 	const { model, cfg, registry, ledger } = args;
 	const now = args.now ?? Date.now();
 	const key = modelKey(model);
-	const { billing, fromConfig } = billingLabel(model, cfg, registry);
 	const quota = ledger.assess(model.provider, key, cfg, now);
+	return withUnattributed(assessRoute(args, key, quota, now), quota, model.provider);
+}
+
+function assessRoute(args: AssessArgs, key: string, quota: QuotaAssessment, now: number): BillingAssessment {
+	const { model, cfg, registry } = args;
+	const { billing, fromConfig } = billingLabel(model, cfg, registry);
 	const evidence: string[] = [];
 	const uncertainty: string[] = [];
 
@@ -132,6 +137,23 @@ export function assessBilling(args: AssessArgs): BillingAssessment {
 
 	if (billing === "free") return assessFree(model, key, cfg, fromConfig, evidence, uncertainty);
 	return assessPayPerToken(key, cfg, evidence, uncertainty);
+}
+
+/**
+ * A spent meter this provider reports that names no route the config can reach. It says something
+ * about the credential we cannot place, so it can neither be ignored nor read as the account being
+ * spent: it travels with every verdict for that provider as uncertainty, and nothing claiming to
+ * rest on that provider's evidence gets to call itself verified while it stands.
+ */
+function withUnattributed(verdict: BillingAssessment, quota: QuotaAssessment, provider: string): BillingAssessment {
+	if (quota.unattributed.length === 0) return verdict;
+	const spent = quota.unattributed.map((w) => w.reason).join(", ");
+	return {
+		...verdict,
+		verification: verdict.verification === "verified" ? "unverified" : verdict.verification,
+		eligibility: verdict.eligibility === "preferred" ? "allowed" : verdict.eligibility,
+		uncertainty: [...verdict.uncertainty, `${provider} reports a spent meter no configured route answers to (${spent})`],
+	};
 }
 
 function assessFree(

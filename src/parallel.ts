@@ -113,17 +113,17 @@ export function pickParallelModels(args: PickParallelArgs): ParallelSelection {
 	return { models: ranked.slice(0, n).map((r) => r.candidate.model!), rejected, notes: [] };
 }
 
-/** Names each slot a better-ranked eligible candidate was passed over for, billed or not. */
+/** One note naming the best eligible route that went unused, and the slots it was passed over for. */
 function unusedPreferredNotes(taken: Candidate[], passedOver: Candidate[]): string[] {
 	const best = passedOver.reduce<Candidate | undefined>((a, c) => ((a?.assessment?.rank ?? 99) <= (c.assessment?.rank ?? 99) ? a : c), undefined);
 	const bestRank = best?.assessment?.rank;
 	if (best === undefined || bestRank === undefined) return [];
-	return taken
-		.filter((c) => c.assessment && c.assessment.rank > bestRank)
-		.map(
-			(c) =>
-				`${c.key} runs on ${describeBasis(c.assessment!)} while ${best.key} (${describeBasis(best.assessment!)}) was eligible and went unused: parallel.models names what to compare, so it is honoured as written.`,
-		);
+	const outranked = taken.filter((c) => c.assessment && c.assessment.rank > bestRank);
+	if (outranked.length === 0) return [];
+	const slots = outranked.map((c) => `${c.key} (${describeBasis(c.assessment!)})`).join(", ");
+	return [
+		`${best.key} (${describeBasis(best.assessment!)}) was eligible and went unused, passed over for ${slots}: parallel.models names what to compare, so it is honoured as written.`,
+	];
 }
 
 export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryData | undefined> {

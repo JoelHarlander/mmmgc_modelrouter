@@ -313,6 +313,11 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 
+/** Every model key the router can actually route to, from the tiers and the fan-out list. */
+export function routableModels(cfg: RouterConfig): string[] {
+	return [...new Set([...Object.values(cfg.tiers).flat(), ...cfg.parallel.models])];
+}
+
 /** True when any glob in `patterns` matches `modelKey`. */
 export function anyGlobMatch(patterns: readonly string[], modelKey: string): boolean {
 	return patterns.some((p) => globMatch(p, modelKey));
