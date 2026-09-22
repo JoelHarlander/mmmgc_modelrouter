@@ -47,12 +47,14 @@ export interface BillingAssessment {
 }
 
 /**
- * The order routes are preferred in: included subscription usage and zero-cost routes first, then
- * a plan label nothing has verified, then - once subscription capacity really is used up - the
- * account's own extra credits, and last ordinary per-token billing. Paid routes are ranked, never
- * refused: only a route that cannot serve the turn at all is excluded.
+ * The order routes are preferred in: included subscription usage and zero-cost routes first, then -
+ * once subscription capacity really is used up - the account's own extra credits, then a plan label
+ * nothing has verified, and last ordinary per-token billing. Verified evidence outranks an
+ * assumption, so credits a provider has confirmed are spent before a route whose plan is only
+ * assumed and might bill per request. Paid routes are ranked, never refused: only a route that
+ * cannot serve the turn at all is excluded.
  */
-const RANK = { verifiedSubscription: 0, free: 0, assumedSubscription: 1, extraCredits: 2, payPerToken: 3, excluded: 9 } as const;
+const RANK = { verifiedSubscription: 0, free: 0, extraCredits: 1, assumedSubscription: 2, payPerToken: 3, excluded: 9 } as const;
 
 export interface AssessArgs {
 	model: Model<Api>;

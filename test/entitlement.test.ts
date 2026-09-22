@@ -289,3 +289,64 @@ test("provider ids pi resolves to different credentials are two accounts, not on
 	assert.equal(unresolved.accountOf("claude-bridge"), "claude-bridge");
 	assert.match(unresolved.peekProvider("claude-bridge")?.probeError ?? "", /no claude-bridge credential/);
 });
+
+/** Tiers naming both ids, so the declared pair is the one under test. */
+const sharedTiers = {
+	light: ["claude-bridge/claude-opus-5"],
+	standard: ["anthropic/claude-opus-5"],
+	heavy: ["claude-bridge/claude-opus-5", "anthropic/claude-opus-5"],
+};
+
+function usageResponse(): typeof fetch {
+	return (async () => new Response(JSON.stringify({ rate_limits: { five_hour: { utilization: 10 } } }), { status: 200 })) as unknown as typeof fetch;
+}
+
+test("credential identity is resolved on the probe's own interval, and never with probing off", async () => {
+	// Resolving a credential can cost pi an OAuth refresh on the turn's critical path, so it is not
+	// per-turn work - and a project that tightened probing off has asked for no credential work.
+	const both = mergeConfig(DEFAULT_CONFIG, { tiers: sharedTiers });
+	let lookups = 0;
+	const registry = {
+		getApiKeyForProvider: async () => {
+			lookups++;
+			return "oauth";
+		},
+	} as unknown as ModelRegistry;
+	const fetchImpl = usageResponse();
+	const now = Date.now();
+
+	const l = ledger();
+	await refreshEntitlements({ cfg: both, registry, ledger: l, fetchImpl, now });
+	const first = lookups;
+	assert.ok(first > 0, "resolved once to begin with");
+
+	await refreshEntitlements({ cfg: both, registry, ledger: l, fetchImpl, now: now + 60_000 });
+	assert.equal(lookups, first, "the next turn asks the credential store nothing");
+
+	await refreshEntitlements({ cfg: both, registry, ledger: l, fetchImpl, now: now + 31 * 60_000 });
+	assert.ok(lookups > first, "and it is resolved again when the probe is due");
+
+	const off = mergeConfig(both, { billing: { ...both.billing, probe: { ...both.billing.probe, enabled: false } } });
+	const before = lookups;
+	await refreshEntitlements({ cfg: off, registry, ledger: ledger(), fetchImpl, now });
+	assert.equal(lookups, before, "probing off means no credential resolution either");
+});
+
+test("a lookup that resolves nothing leaves a proven link standing", async () => {
+	// Splitting a proven account on a transient failure strands every window already filed under
+	// it: the quota comes back as two halves that never meet again.
+	const both = mergeConfig(DEFAULT_CONFIG, { tiers: sharedTiers });
+	const fetchImpl = usageResponse();
+	const now = Date.now();
+	const l = ledger();
+
+	await refreshEntitlements({ cfg: both, registry: registryWithToken("oauth"), ledger: l, fetchImpl, now });
+	assert.equal(l.accountOf("claude-bridge"), "anthropic", "one credential, one account");
+
+	await refreshEntitlements({ cfg: both, registry: registryWithToken(undefined), ledger: l, fetchImpl, now: now + 31 * 60_000 });
+	assert.equal(l.accountOf("claude-bridge"), "anthropic", "an unanswered lookup is not evidence of a second account");
+
+	const apart = registryWithTokens({ anthropic: "key-a", "claude-bridge": "oauth-b" });
+	await refreshEntitlements({ cfg: both, registry: apart, ledger: l, fetchImpl, now: now + 62 * 60_000 });
+	assert.equal(l.accountOf("claude-bridge"), "claude-bridge", "two different credentials are");
+});

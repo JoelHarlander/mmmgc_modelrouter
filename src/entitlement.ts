@@ -47,10 +47,14 @@ export function routableProviders(cfg: RouterConfig): string[] {
  */
 export async function refreshEntitlements(opts: ProbeOptions): Promise<void> {
 	const { cfg, ledger } = opts;
+	if (!cfg.billing.probe.enabled) return;
 	const now = opts.now ?? Date.now();
 	const providers = opts.providers ?? routableProviders(cfg);
-	ledger.linkAccounts(await provenAccounts(providers, opts));
-	if (!cfg.billing.probe.enabled) return;
+	// Identity first, so a link proven now collapses this turn's probes - and on the probe's own
+	// interval, since resolving a credential can cost an OAuth refresh on the turn's critical path.
+	await Promise.all(
+		providers.filter((p) => credentialOf(cfg, p) !== p && isDue(ledger, ledger.accountOf(p), cfg, now)).map((p) => resolveAccount(p, opts)),
+	);
 	const sources = new Map<string, EntitlementSource>();
 	for (const provider of providers) {
 		const source = cfg.entitlement[provider];
@@ -64,30 +68,31 @@ export async function refreshEntitlements(opts: ProbeOptions): Promise<void> {
 }
 
 /**
- * Which provider ids pi resolves to one and the same credential. `entitlement.<id>.authProvider`
+ * Whether a provider id is one account with the credential it claims. `entitlement.<id>.authProvider`
  * only says which pair is worth asking about; the answer is the credential pi hands out for each,
- * compared here and discarded. Anything it cannot resolve, or resolves differently, stays its own
- * account: two accounts treated as one would exclude a route on the strength of a subscription
- * that does not bill it, while two halves of one account only cost a second probe.
+ * compared here and discarded. A pair pi resolves differently is two accounts - treating them as
+ * one would exclude a route on the strength of a subscription that does not bill it, while two
+ * halves of one account only cost a second probe - and a lookup that answers nothing changes
+ * nothing.
  */
-async function provenAccounts(providers: string[], opts: ProbeOptions): Promise<Map<string, string>> {
-	const { cfg, registry } = opts;
-	const links = new Map<string, string>();
-	for (const provider of providers) {
-		const declared = credentialOf(cfg, provider);
-		if (declared === provider) continue;
-		if (await sameCredential(registry, provider, declared)) links.set(provider, declared);
-	}
-	return links;
+async function resolveAccount(provider: string, opts: ProbeOptions): Promise<void> {
+	const { cfg, registry, ledger } = opts;
+	const declared = credentialOf(cfg, provider);
+	const same = await sameCredential(registry, provider, declared);
+	if (same !== undefined) ledger.linkAccount(provider, same ? declared : provider);
 }
 
-/** Compared in memory and dropped: no credential value is returned, stored, logged or reported. */
-async function sameCredential(registry: ModelRegistry, provider: string, other: string): Promise<boolean> {
+/**
+ * Compared in memory and dropped: no credential value is returned, stored, logged or reported.
+ * Undefined where pi resolved nothing to compare, which is not evidence either way.
+ */
+async function sameCredential(registry: ModelRegistry, provider: string, other: string): Promise<boolean | undefined> {
 	try {
 		const [mine, theirs] = await Promise.all([registry.getApiKeyForProvider(provider), registry.getApiKeyForProvider(other)]);
-		return mine !== undefined && mine !== "" && mine === theirs;
+		if (!mine || !theirs) return undefined;
+		return mine === theirs;
 	} catch {
-		return false;
+		return undefined;
 	}
 }
 

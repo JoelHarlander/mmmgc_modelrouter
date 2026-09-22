@@ -39,6 +39,13 @@ function fakeRegistry(models: Model<Api>[], oauth: string[] = [], unauthed: stri
 	} as unknown as ModelRegistry;
 }
 
+/** The meters a ledger holds for Codex, without the inert refusal markers a 2xx leaves behind. */
+function quotaWindowIds(l: Ledger): string[] {
+	return Object.keys(l.peekProvider("openai-codex")!.windows)
+		.filter((id) => id !== "rate-limited" && id !== "budget-exhausted")
+		.sort();
+}
+
 function ledger(): Ledger {
 	return new Ledger(join(mkdtempSync(join(tmpdir(), "mr-billing-")), "usage.json"));
 }
@@ -608,7 +615,7 @@ test("the poll path and the header path name a family window the same way", () =
 		{ "x-codex-primary-used-percent": "20", "x-codex-bengalfox-primary-used-percent": "100", "x-codex-bengalfox-limit-name": "GPT-6-Astra" },
 		cfg,
 	);
-	assert.deepEqual(Object.keys(headed.peekProvider("openai-codex")!.windows).sort(), Object.keys(polled.peekProvider("openai-codex")!.windows).sort());
+	assert.deepEqual(quotaWindowIds(headed), quotaWindowIds(polled));
 
 	headed.applyEntitlement(
 		"openai-codex",
@@ -769,7 +776,8 @@ test("a bare entitlement-gate 429 is not quota pressure and does not cool the cr
 	l.observeResponse("claude-bridge", 429, {}, cfg, t0 + 1_000);
 
 	assert.deepEqual(l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0 + 1_000).refused, [], "nothing to cool down for");
-	assert.equal(l.peekProvider("claude-bridge")?.windows["rate-limited"], undefined, "and nothing recorded that a later success would have to clear");
+	const refusal = l.peekProvider("claude-bridge")?.windows["rate-limited"];
+	assert.ok(refusal === undefined || refusal.resetAt! <= t0 + 1_000, "and nothing live that a later success would have to clear");
 	assert.equal(assess(opus, l, cfg, t0 + 1_000).eligibility, "preferred", "the windows the provider did report are still healthy");
 });
 
@@ -816,7 +824,7 @@ test("quota seen through one provider id is quota for every id on that credentia
 	// through one is a fact about the account: routing must not escalate onto the sibling id and
 	// burn another turn.
 	const l = ledger();
-	l.linkAccounts(new Map([["claude-bridge", "anthropic"]]));
+	l.linkAccount("claude-bridge", "anthropic");
 	l.observeResponse("claude-bridge", 429, { "retry-after": "600" }, cfg);
 
 	const sibling = assessBilling({ model: claudeApi, cfg, registry: fakeRegistry(ALL, ["claude-bridge", "anthropic"]), ledger: l });
@@ -908,7 +916,55 @@ test("a subscription refusal on the bridge does not exclude a separately authent
 	// And that is the fallback, not the only answer: the same evidence excludes it once pi has
 	// resolved one credential for both ids.
 	const proven = ledger();
-	proven.linkAccounts(new Map([["claude-bridge", "anthropic"]]));
+	proven.linkAccount("claude-bridge", "anthropic");
 	proven.observeResponse("claude-bridge", 200, spent, cfg);
 	assert.equal(assess(claudeApi, proven).eligibility, "excluded", "one proven account is one quota");
+});
+
+test("an overage-only refusal is the credential's own, not something the extra-billed pool explains", () => {
+	// docs/research/plan-quotas.md §1: the overage bucket is the extra-billed pool, so a rejection
+	// there refuses credits and nothing else. It cannot be what refused a call on included usage,
+	// and reading it that way leaves the router looping on a route the provider just turned away.
+	const l = ledger();
+	const t0 = Date.now();
+	l.observeResponse(
+		"claude-bridge",
+		429,
+		{
+			"anthropic-ratelimit-unified-5h-utilization": "0.2",
+			"anthropic-ratelimit-unified-5h-status": "allowed",
+			"anthropic-ratelimit-unified-7d-utilization": "0.4",
+			"anthropic-ratelimit-unified-7d-status": "allowed",
+			"anthropic-ratelimit-unified-overage-status": "rejected",
+			"retry-after": "600",
+		},
+		cfg,
+		t0,
+	);
+
+	const q = l.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0);
+	assert.match(q.refused.map((w) => w.reason).join(","), /rate limited \(429\)/, "the refusal is recorded, not swallowed");
+	assert.deepEqual(q.exhaustedAccount, [], "and the included windows are not called spent");
+	assert.equal(assess(opus, l, cfg, t0).eligibility, "excluded");
+	assert.equal(assess(opus, l, cfg, t0 + 611_000).eligibility, "preferred", "included usage is untouched once the refusal lifts");
+});
+
+test("verified credits are preferred over a plan nothing has verified", () => {
+	// The ChatGPT plan is spent but its credits are confirmed, while `xai/*` is a plan only because
+	// pi holds OAuth for it - and the intent records xAI per-request billing as unproven. Evidence
+	// has to outrank an assumption, or the turn overflows onto the guess instead of the credits.
+	const l = ledger();
+	l.applyEntitlement(
+		"openai-codex",
+		parseEntitlement("codex-wham-usage", { rate_limit: { primary_window: { used_percent: 100 } }, credits: { has_credits: true, balance: "9" } }),
+	);
+
+	const credits = assess(codex, l);
+	const assumed = assess(grok, l);
+	assert.equal(credits.basis, "extra-credits");
+	assert.equal(credits.verification, "verified");
+	assert.equal(assumed.basis, "subscription");
+	assert.notEqual(assumed.verification, "verified");
+	assert.notEqual(assumed.eligibility, "excluded", "still reachable, just not first");
+	assert.ok(credits.rank < assumed.rank, "verified credits outrank an assumed plan");
 });

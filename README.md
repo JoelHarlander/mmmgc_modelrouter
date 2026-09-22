@@ -8,7 +8,7 @@ A [pi](https://github.com/earendil-works/pi) extension that routes every turn to
 - **Billing eligibility**: every candidate is assessed before it can be picked. The router separates *what pays*
   (`subscription`, `extra-credits`, `pay-per-token`, `free`) from *how well that is established*
   (`verified`, `stale`, `unverified`), and only a verified subscription-backed route is `preferred`.
-  Paid routes are ordered, not banned: included usage first, then the account's own credits, then per-token
+  Paid routes are ordered, not banned: included usage first, then the account's own verified credits, then per-token
   billing — so when the subscription really is used up the turn still runs, and the explanation says what paid.
 - **Plan vs on-demand**: subscription (OAuth) providers cost nothing at the margin until their window fills.
   The ledger reads Anthropic and Codex quota headers and 429/402 responses, polls the providers' read-only usage
@@ -78,10 +78,11 @@ Billing labels: a `models` label wins wherever one matches, glob or not; only wh
 live quota headers and the read-only usage endpoints in `src/entitlement.ts` decide the answer.
 
 Precedence, once every candidate is assessed: a verified subscription-backed route or a genuinely zero-cost one
-first, then a `plan` label nothing has verified, then the account's own extra credits once its subscription window
-is really spent (the ChatGPT overflow), and last ordinary per-token billing — paid Anthropic and xAI included. A
-route is excluded only when it cannot serve the turn: no auth, a cooldown, or a spent window or balance with no
-paid path behind it.
+first, then the account's own extra credits once its subscription window is really spent (the ChatGPT overflow),
+then a `plan` label nothing has verified, and last ordinary per-token billing — paid Anthropic and xAI included.
+Verified evidence outranks an assumption, so confirmed credits are spent before a route whose plan is only guessed
+from an OAuth login and might bill per request. A route is excluded only when it cannot serve the turn: no auth, a
+cooldown, or a spent window or balance with no paid path behind it.
 
 ### Billing policy
 
@@ -107,7 +108,9 @@ response reported spent can answer whose refusal it is; a window stored hours ag
 attributes to no window of its own — or attributes only to a meter that governs no route you can reach — is the
 credential's own, and is recorded as one more account-wide window — `rate limited (429)` or
 `budget exhausted (402)` — that expires after the `retry-after` it came with or `plan.cooldownMinutesOn429`, and
-that the credential's next successful answer clears. A refusal that carries no quota evidence at all — no window
+that the credential's next successful answer clears - the clear is written whether or not the session that got
+the answer ever saw the refusal, since a concurrent session may have recorded it. An `overage` rejection refuses
+extra billed usage and only that, so it can never be the window that explains a refusal of included usage. A refusal that carries no quota evidence at all — no window
 headers and no `retry-after` — is Anthropic's entitlement gate rather than quota pressure
 (docs/research/plan-quotas.md §1) and is not recorded: backing a healthy subscription off itself on evidence the
 provider never gave would also route away from the only credential that could clear it. While it stands it excludes every route on that credential

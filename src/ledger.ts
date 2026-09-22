@@ -187,13 +187,16 @@ export class Ledger {
 			// Whose refusal is this? Only the evidence *this* response carried can answer - a window
 			// stored days ago says nothing about a refusal arriving now. A window it reported spent
 			// that the router can place already excludes the models it governs and nothing else. A
-			// refusal that places nothing but still bounds itself - a `retry-after`, or a meter no
-			// route answers to - is the credential's own, for as long as it says. A refusal carrying
+			// refusal that places nothing but still bounds itself - a `retry-after`, a meter no route
+			// answers to, or a spent extra-billed pool, which excludes credits and nothing else - is
+			// the credential's own, for as long as it says. A refusal carrying
 			// no quota evidence whatsoever is Anthropic's entitlement gate rather than quota
 			// pressure (docs/research/plan-quotas.md §1), and recording it as exhaustion would back
 			// a healthy account off its own subscription, so nothing is recorded for it.
 			const reported = Object.entries(state.windows).filter(([id, w]) => w.lastSeen === now && REFUSAL_WINDOWS[id] === undefined);
-			const placed = reported.some(([id, w]) => windowExhausted(w, cfg, now) !== undefined && windowPlaceable(cfg, scoped, id));
+			const placed = reported.some(
+				([id, w]) => !OVERAGE_WINDOWS.has(id) && windowExhausted(w, cfg, now) !== undefined && windowPlaceable(cfg, scoped, id),
+			);
 			const retryAfter = num(h("retry-after"));
 			if (!placed && (reported.length > 0 || retryAfter !== undefined)) {
 				const id = status === 402 ? "budget-exhausted" : "rate-limited";
@@ -205,11 +208,12 @@ export class Ledger {
 				};
 			}
 		} else if (status >= 200 && status < 300) {
-			// The credential answered, so its own refusal is over: record that as an expired refusal,
-			// which merges like any other window. A window that is genuinely spent stays spent and
-			// keeps excluding what it governs on its own terms.
+			// The credential answered, so its own refusal is over. The clear is recorded whether or
+			// not this session ever saw the refusal: a concurrent session may have written one, and
+			// only a marker of its own carrying this timestamp outlives the merge. A window that is
+			// genuinely spent stays spent and keeps excluding what it governs on its own terms.
 			for (const id of Object.keys(REFUSAL_WINDOWS)) {
-				if (state.windows[id]) state.windows[id] = { status: "rejected", resetAt: now, source: "header", lastSeen: now };
+				state.windows[id] = { status: "rejected", resetAt: now, source: "header", lastSeen: now };
 			}
 		}
 		this.scheduleSave();
@@ -252,18 +256,19 @@ export class Ledger {
 		let newest: number | undefined;
 
 		for (const [id, w] of Object.entries(state.windows)) {
-			sources.add(w.source);
-			newest = Math.max(newest ?? 0, w.lastSeen);
 			if (REFUSAL_WINDOWS[id] !== undefined) {
 				// The credential refusing is not a spent subscription window: it keeps every route on
 				// the credential out until it resets, and extra billed credits cannot buy past it. It
 				// is never quota evidence about a window the provider reported either, so it stays
-				// out of `accountWindows`.
-				if (windowExhausted(w, cfg, now) !== undefined) {
-					out.refused.push({ id, reason: `${REFUSAL_WINDOWS[id]} until ${new Date(w.resetAt!).toLocaleTimeString()}` });
-				}
+				// out of `accountWindows`, and once it has expired it says nothing at all.
+				if (windowExhausted(w, cfg, now) === undefined) continue;
+				sources.add(w.source);
+				newest = Math.max(newest ?? 0, w.lastSeen);
+				out.refused.push({ id, reason: `${REFUSAL_WINDOWS[id]} until ${new Date(w.resetAt!).toLocaleTimeString()}` });
 				continue;
 			}
+			sources.add(w.source);
+			newest = Math.max(newest ?? 0, w.lastSeen);
 			if (OVERAGE_WINDOWS.has(id)) {
 				out.overage = w;
 				continue;
@@ -292,9 +297,17 @@ export class Ledger {
 		return out;
 	}
 
-	/** Record which provider ids pi resolved to one credential. Proven links only. */
-	linkAccounts(accounts: ReadonlyMap<string, string>): void {
-		this.accounts = accounts;
+	/**
+	 * Record what pi resolved for one provider id: the credential it shares, or itself when the
+	 * two are demonstrably different. Only an answer updates the link - a lookup that could not be
+	 * resolved leaves the last proven one standing, because silently splitting an account strands
+	 * the windows already filed under it.
+	 */
+	linkAccount(provider: string, account: string): void {
+		const links = new Map(this.accounts);
+		if (account === provider) links.delete(provider);
+		else links.set(provider, account);
+		this.accounts = links;
 	}
 
 	/** The account a provider's quota is filed under: its own id unless identity was proven. */

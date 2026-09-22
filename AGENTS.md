@@ -19,14 +19,18 @@ must live, since a project file may not state them) and the user's real global c
   or model names carry no billing meaning on their own — `src/billing.ts` decides eligibility from live evidence.
 - `src/billing.ts` keeps three questions separate and every explanation should too: the **basis** (what pays), the
   **verification** (how well that is established), and the **eligibility** (what the config permits). Only a
-  verified subscription route is `preferred`. Never let a config label stand in for evidence.
+  verified subscription route is `preferred`. Never let a config label stand in for evidence, and keep `RANK`
+  ordered so verified evidence beats an assumption - confirmed credits before a plan guessed from an OAuth login.
 - Quota state is keyed by *credential*, not provider id, but only where that is proven. `credentialOf()` is what
   the config declares - it keys `cfg.scopes` and names the pair worth testing - while `refreshEntitlements`
   resolves both ids' credentials through pi, compares them in memory (never logged, persisted or put in the
-  ledger) and hands `Ledger.linkAccounts` the links it proved; `Ledger.accountOf` files and reads quota by that.
-  Auth *type* or a config declaration is not proof: anything unresolved or different stays its own account, both
-  for quota and for the probe, since a wrong alias removes the paid overflow at the moment it is needed while a
-  missed one costs only a second probe. Ids that do share must never grow a second copy of the same account's
+  ledger) and tells `Ledger.linkAccount` what it found; `Ledger.accountOf` files and reads quota by that. It runs
+  behind the probe gate and on the probe's own interval - resolving a credential can cost an OAuth refresh on the
+  turn's critical path - and only an answer moves a link: a lookup that resolves nothing leaves the last proven one
+  alone, because splitting a proven account strands the windows already filed under it. Auth *type* or a config
+  declaration is not proof: two ids pi resolves differently stay separate accounts, both for quota and for the
+  probe, since a wrong alias removes the paid overflow at the moment it is needed while a missed one costs only a
+  second probe. Ids that do share must never grow a second copy of the same account's
   windows.
 - Quota window ids are the provider's own wire names (`5h`, `7d`, `7d_oi`, `primary`); a per-model meter is keyed
   `<model>:<role>` from the limit name the provider reports, which is what lets `scopeGlobs` match it with no config.
@@ -35,8 +39,11 @@ must live, since a project file may not state them) and the user's real global c
   refusal is the credential's own and is stored as one more account-wide window (`REFUSAL_WINDOWS`) rather than a
   second kind of state. A 429/402 carrying no quota evidence whatsoever is the entitlement gate, not quota
   (docs/research/plan-quotas.md §1), and is recorded nowhere — keep it that way, since every earlier attempt to
-  hold a provider-wide cooldown beside the windows traded one wrong answer for another. Clearing one is an expired
-  window carrying its own `lastSeen`, never a deleted key, so `mergeLedgers` can settle it. Such a refusal reaches
+  hold a provider-wide cooldown beside the windows traded one wrong answer for another. An `overage` rejection refuses extra billed
+  usage and only that, so it is never what places a refusal. Clearing one is an expired window carrying its own
+  `lastSeen`, never a deleted key, so `mergeLedgers` can settle it, and every 2xx writes that marker whether or not
+  this session held the refusal - a concurrent session's refusal would otherwise come back over the top of a
+  credential that just answered. Such a refusal reaches
   `assess` as `refused`, not `exhaustedAccount`: it excludes every route on the credential whatever the basis, and
   must never be read as spent subscription quota that extra credits may cover. A spent meter that matches
   no routable model (`windowPlaceable`) is carried as uncertainty, never as account-wide exhaustion, and can never

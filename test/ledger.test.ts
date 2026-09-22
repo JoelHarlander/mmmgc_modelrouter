@@ -97,6 +97,24 @@ test("a stale lock left by a crashed session is broken instead of blocking forev
 	clearLedgerLock(file);
 });
 
+test("a success clears a refusal another session wrote", () => {
+	// Two sessions, one file: the refusal B never saw is still B's problem once the merge brings it
+	// back, so B's own 200 has to leave a mark that outlives it.
+	const file = scratch();
+	const t0 = Date.now();
+	const a = new Ledger(file);
+	const b = new Ledger(file);
+
+	a.observeResponse("claude-bridge", 429, { "retry-after": "600" }, cfg, t0);
+	a.save();
+	b.observeResponse("claude-bridge", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.1" }, cfg, t0 + 1_000);
+	b.save();
+
+	assert.deepEqual(b.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0 + 2_000).refused, [], "the session that was answered stays clear");
+	const reopened = new Ledger(file);
+	assert.deepEqual(reopened.assess("claude-bridge", "claude-bridge/claude-opus-5", cfg, t0 + 2_000).refused, [], "and so does the file");
+});
+
 test("a v2 ledger file is upgraded rather than discarded", () => {
 	// A file a concurrent session may still be writing: dropping it would erase that session's
 	// totals and every quota window it has learned.
