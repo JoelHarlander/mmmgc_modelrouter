@@ -646,12 +646,12 @@ set rather than `pickParallelModels`'s.
 
 | prediction (long pack, 175 turns) | value | 95% interval | resolvable? |
 | --- | ---: | --- | --- |
-| session success, fan-out vs none | **+25.7pp** | [+6.9, +46.5] | **yes** |
-| spend, fan-out vs none | **+$360.61** | [+$308, +$421] | **yes** |
-| wall-clock, fan-out vs none | **+3477s** | [+3179, +4133] | **yes** |
-| spend, `tier-top` vs the shipped set | **−$220.03** | [−$256, −$189] | **yes** |
-| wall-clock, `tier-top` vs the shipped set | **−2258s** | [−2684, −2065] | **yes** |
-| session success, `tier-top` vs the shipped set | +5.7pp | [0.0, +14.8] | **no** |
+| session success, fan-out vs none | **+24.6pp** | [+4.5, +47.3] | **yes** |
+| spend, fan-out vs none | **+$316.35** | [+$226, +$417] | **yes** |
+| wall-clock, fan-out vs none | **+2979s** | [+2184, +4093] | **yes** |
+| spend, `tier-top` vs the shipped set | **−$175.77** | [−$253, −$104] | **yes** |
+| wall-clock, `tier-top` vs the shipped set | **−1760s** | [−2630, −1068] | **yes** |
+| session success, `tier-top` vs the shipped set | +6.9pp | [0.0, +18.5] | **no** |
 
 **Check it with:**
 
@@ -661,19 +661,19 @@ npm run eval -- --pack eval/tasks/swe-router-long-v1.json --sweep paired    # th
 npm run eval -- --pack eval/tasks/swe-router-long-v1.json --sweep policy    # tier-top vs the rest
 ```
 
-**Acceptance:** fan-out's quality gain clears **+6.9pp** (the interval's lower bound) and
-its spend lands inside **[+$308, +$421]** per 175 turns. If spend lands outside that, the
+**Acceptance:** fan-out's quality gain clears **+4.5pp** (the interval's lower bound) and
+its spend lands inside **[+$226, +$417]** per 175 turns. If spend lands outside that, the
 candidate set or the cache assumptions differ from what was modelled — `--explain <task>`
 will say which.
 
 **Not resolvable:** *which* candidate set is better on quality. `tier-top` measures
-+5.7pp over the shipped set with an interval touching zero. Choose it for the cost and
++6.9pp over the shipped set with an interval touching zero. Choose it for the cost and
 time, which are resolved, and treat the quality edge as a bonus — that is exactly the
 argument §5 makes.
 
 **Also worth predicting:** `--explore-turns 3` reaches the same quality as fanning out
-every turn (+0.0pp, [−17.7, +11.0] — *not resolvable*) for **−$238.37** [−$323, −$175]
-and **−1818s** [−3153, −1085], both resolved. If spend matters more than the last point
+every turn (+0.6pp, [−17.7, +13.6] — *not resolvable*) for **−$204.65** [−$319, −$112],
+which resolves. Its wall-clock saving (−930s, [−3126, +866]) no longer does. If spend matters more than the last point
 of quality, that is the cheaper shape of the same change.
 
 ---

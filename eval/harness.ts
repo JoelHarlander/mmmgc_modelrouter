@@ -15,6 +15,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Api, Model } from "@earendil-works/pi-ai";
+import { assessBilling } from "../src/billing.ts";
 import { modelKey, type RouterConfig, type ThinkingLevel, TIERS } from "../src/config.ts";
 
 import { Ledger } from "../src/ledger.ts";
@@ -80,16 +81,6 @@ export interface RunOptions {
 	contextSensitivity?: number;
 	/** Which stakes-override variant to apply. Defaults to the shipped one. */
 	stakesOverride?: StakesOverride;
-	/**
-	 * Simulate the §0 fix: when the router would keep the current model but the ledger
-	 * has that provider blocked, fall through to tier selection instead.
-	 *
-	 * `chooseModel`'s low-confidence branch returns `current` without consulting
-	 * `ledger.isBlocked`, so this re-asks it with the confidence gate satisfied - which is
-	 * what "fall through to tier selection when blocked" means. Nothing in src/ changes;
-	 * this exists so the harness can predict what the fix will do before it lands.
-	 */
-	blockedAwareKeep?: boolean;
 	signal?: AbortSignal;
 }
 
@@ -248,13 +239,6 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 				ledger,
 				contextTokens,
 			});
-			// The §0 fix, simulated: a kept model that the ledger has blocked is not kept.
-			if (options.blockedAwareKeep && decision.model && !decision.switched) {
-				const held = checkEligibility(decision.model, loaded, ledger, cfg);
-				if (!held.eligible) {
-					decision = chooseModel({ tier: requestedTier, confidence: 1, current: session.model, registry, cfg, ledger, contextTokens });
-				}
-			}
 			if (decision.model && decision.switched) session.model = decision.model;
 		}
 
@@ -442,7 +426,7 @@ function resolvePolicy(name: string | undefined): CandidatePolicy {
 
 async function runCandidateTurn(args: CandidateTurnArgs): Promise<CandidateTurnRecord | undefined> {
 	const { task, turn, prompt, requiredSkill, contextTokens, current, baselineSolved, cfg, loaded, ledger, judge, candidateN, minConfidence } = args;
-	const specs = args.policy({ current, cfg, n: candidateN, byKey: loaded.byKey, unauthed: loaded.unauthed });
+	const specs = args.policy({ current, cfg, n: candidateN, byKey: loaded.byKey, unauthed: loaded.unauthed, registry: loaded.registry, ledger });
 	if (specs.length < 2) return undefined;
 
 	const outputTokens = cfg.switching.expectedOutputTokens;
@@ -521,8 +505,11 @@ function checkEligibility(
 	const key = modelKey(model);
 	if (!loaded.byKey.has(key)) return { eligible: false, reason: "model is not in the fleet" };
 	if (!loaded.registry.hasConfiguredAuth(model)) return { eligible: false, reason: "no auth" };
-	const block = ledger.isBlocked(model.provider, cfg);
-	if (block.blocked) return { eligible: false, reason: block.reason };
+	// Billing is the eligibility input as of the billing merge: src/router.ts asks
+	// assessBilling and drops a candidate when the verdict is `excluded`, so the harness
+	// asks exactly the same question rather than keeping a second notion of "blocked".
+	const assessment = assessBilling({ model, cfg, registry: loaded.registry, ledger });
+	if (assessment.eligibility === "excluded") return { eligible: false, reason: assessment.reason };
 	return { eligible: true };
 }
 

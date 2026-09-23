@@ -2,20 +2,22 @@
  * pi-modelrouter — route each turn to the right-sized model, cheaply.
  *
  * Per turn: build a compact state -> one Jev call (tier / needs_tools / stakes)
- * -> pick the cheapest authed model in that tier (plan quota + cache-switch aware)
- * -> pi.setModel before the agent loop starts.
+ * -> pick the cheapest billing-eligible model in that tier (billing basis + plan quota +
+ * cache-switch aware, see billing.ts) -> pi.setModel before the agent loop starts.
  *
- * Commands: /router [status|on|off|reload|explain], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
+ * Commands: /router [status|on|off|reload|explain|billing], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
  */
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Container, Text } from "@earendil-works/pi-tui";
+import { assessBilling, billsPerToken, describeBasis } from "./billing.ts";
 import { loadConfig, modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
+import { refreshEntitlements } from "./entitlement.ts";
 import { type JevChoiceAnswer, JevClient, type JevNoulAnswer, type JevScoreAnswer } from "./jev.ts";
-import { Ledger } from "./ledger.ts";
+import { Ledger, ledgerPath } from "./ledger.ts";
 import { PARALLEL_ENTRY_TYPE, type ParallelEntryData, renderParallelEntry, runParallel } from "./parallel.ts";
-import { billingFor, chooseModel, type Decision, heuristicTier } from "./router.ts";
+import { chooseModel, type Decision, heuristicTier } from "./router.ts";
 import { buildRoutingState, routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "./state.ts";
 
 const STATUS_KEY = "modelrouter";
@@ -23,7 +25,8 @@ const STATUS_KEY = "modelrouter";
 export default function modelRouter(pi: ExtensionAPI) {
 	let cfg: RouterConfig = loadConfig(process.cwd()).config;
 	let jev = new JevClient(cfg.jev);
-	const ledger = new Ledger(join(getAgentDir(), "modelrouter", "usage.json"));
+	// Shared with every other pi session on this agent dir; Ledger.save() locks and merges.
+	const ledger = new Ledger(ledgerPath(join(getAgentDir(), "modelrouter")));
 
 	let turn = 0;
 	let pinnedUntilTurn = 0;
@@ -53,11 +56,25 @@ export default function modelRouter(pi: ExtensionAPI) {
 		}
 	};
 
+	/**
+	 * Read-only entitlement refresh. Never sends inference. It runs before the routing decision,
+	 * so a turn whose probe interval has elapsed waits for it (bounded by billing.probe.timeoutMs);
+	 * probing off the turn's critical path would route on older evidence and is a follow-up.
+	 */
+	const refreshBilling = async (ctx: ExtensionContext) => {
+		try {
+			await refreshEntitlements({ cfg, registry: ctx.modelRegistry, ledger });
+		} catch {
+			// probe failures are recorded per provider; routing continues on an unverified basis
+		}
+	};
+
 	pi.on("session_start", async (_event, ctx) => {
 		reload(ctx.cwd);
 		await refreshGatewayKey(ctx);
 		turn = 0;
 		pinnedUntilTurn = 0;
+		await refreshBilling(ctx);
 		updateStatus(ctx);
 	});
 
@@ -65,7 +82,13 @@ export default function modelRouter(pi: ExtensionAPI) {
 		turn += 1;
 		if (!enabled || !ctx.model) return;
 		if (turn <= pinnedUntilTurn) {
-			setStatus(ctx, `pinned ${modelKey(ctx.model)} (${pinnedUntilTurn - turn + 1} more turn${pinnedUntilTurn - turn === 0 ? "" : "s"})`);
+			// A manual /model choice is honoured, but never without saying what pays for it.
+			await refreshBilling(ctx);
+			const pinned = assessBilling({ model: ctx.model, cfg, registry: ctx.modelRegistry, ledger });
+			setStatus(ctx, `pinned ${modelKey(ctx.model)} (${pinnedUntilTurn - turn + 1} more turn${pinnedUntilTurn - turn === 0 ? "" : "s"}, ${describeBasis(pinned)})`);
+			if (pinned.eligibility === "excluded" && ctx.hasUI) {
+				ctx.ui.notify(`router: pinned ${modelKey(ctx.model)} is not billing-eligible: ${pinned.reason}`, "warning");
+			}
 			return;
 		}
 		const started = Date.now();
@@ -103,6 +126,7 @@ export default function modelRouter(pi: ExtensionAPI) {
 			confidence = h.confidence;
 		}
 
+		await refreshBilling(ctx);
 		const choice = chooseModel({
 			tier,
 			confidence,
@@ -122,8 +146,14 @@ export default function modelRouter(pi: ExtensionAPI) {
 				lastDecision.reason += " (setModel refused: no auth)";
 				lastDecision.switched = false;
 			} else if (cfg.notifyOnSwitch && ctx.hasUI) {
-				ctx.ui.notify(`router: ${tier} -> ${modelKey(choice.model)} (${(confidence * 100).toFixed(0)}%)`, "info");
+				const basis = choice.billing ? describeBasis(choice.billing) : "billing unknown";
+				const spend = choice.billing && billsPerToken(choice.billing.basis) ? `, ~$${estimatedSpend(choice).toFixed(4)} this turn` : "";
+				ctx.ui.notify(`router: ${tier} -> ${modelKey(choice.model)} (${(confidence * 100).toFixed(0)}%, ${basis}${spend})`, "info");
 			}
+		}
+		// Staying on a model the billing gate would refuse is worth saying out loud.
+		if (choice.ineligibleCurrent && ctx.hasUI) {
+			ctx.ui.notify(`router: no billing-eligible model; staying on ${modelKey(ctx.model)} which is itself ${choice.ineligibleCurrent}`, "warning");
 		}
 		const level = cfg.thinking[choice.tier];
 		if (level && choice.model?.reasoning) pi.setThinkingLevel(level);
@@ -155,7 +185,7 @@ export default function modelRouter(pi: ExtensionAPI) {
 	// ---- commands ------------------------------------------------------------
 
 	pi.registerCommand("router", {
-		description: "Model router: status | on | off | reload | explain",
+		description: "Model router: status | on | off | reload | explain | billing",
 		handler: async (args, ctx) => {
 			const sub = (args ?? "").trim().split(/\s+/)[0] ?? "";
 			switch (sub) {
@@ -167,9 +197,14 @@ export default function modelRouter(pi: ExtensionAPI) {
 					enabled = false;
 					ctx.ui.notify("router: disabled (model stays as is)", "info");
 					break;
+				case "billing":
+					await refreshBilling(ctx);
+					showBilling(ctx);
+					break;
 				case "reload": {
 					const loaded = reload(ctx.cwd);
 					await refreshGatewayKey(ctx);
+					await refreshBilling(ctx);
 					ctx.ui.notify(`router: reloaded (${loaded.sources.length ? loaded.sources.join(", ") : "defaults"})${loaded.errors.length ? `; errors: ${loaded.errors.join("; ")}` : ""}`, loaded.errors.length ? "warning" : "info");
 					break;
 				}
@@ -198,13 +233,20 @@ export default function modelRouter(pi: ExtensionAPI) {
 			if (!typed?.trim()) return;
 			rest = typed.trim();
 		}
-		await runParallel({ pi, ctx, prompt: rest, n, cfg, ledger, jev });
+		await runParallel({ pi, ctx, prompt: rest, n, cfg, ledger, jev, routerEnabled: enabled });
 	};
 	pi.registerCommand("duo", { description: "Ask 2 models the same prompt in parallel", handler: parallelCommand(2) });
 	pi.registerCommand("trio", { description: "Ask 3 models the same prompt in parallel", handler: parallelCommand(3) });
 	pi.registerCommand("par", { description: "Ask N models in parallel: /par [N] <prompt>", handler: parallelCommand() });
 
 	// ---- helpers -------------------------------------------------------------
+
+	/** What the chosen route is estimated to bill this turn, so moving onto paid usage is visible. */
+	function estimatedSpend(choice: Pick<Decision, "model" | "candidates">): number {
+		const key = choice.model ? modelKey(choice.model) : undefined;
+		const chosen = choice.candidates.find((c) => c.key === key);
+		return (chosen?.costUsd ?? 0) + (chosen?.switchPenaltyUsd ?? 0);
+	}
 
 	function setStatus(ctx: ExtensionContext, text: string) {
 		if (ctx.hasUI) ctx.ui.setStatus(STATUS_KEY, text);
@@ -223,15 +265,15 @@ export default function modelRouter(pi: ExtensionAPI) {
 	function showStatus(ctx: ExtensionCommandContext) {
 		const lines: string[] = [];
 		lines.push(`enabled: ${enabled}   jev: ${jev.describe()}   pinned: ${pinnedUntilTurn > turn ? `${pinnedUntilTurn - turn} turns` : "no"}`);
-		if (ctx.model) lines.push(`current: ${modelKey(ctx.model)} (${billingFor(ctx.model, cfg, ctx.modelRegistry)})`);
+		if (ctx.model) lines.push(`current: ${modelKey(ctx.model)} (${basisOf(ctx, ctx.model)})`);
 		for (const tier of TIERS) {
 			const items = (cfg.tiers[tier] ?? []).map((key) => {
 				const slash = key.indexOf("/");
 				const m = ctx.modelRegistry.find(key.slice(0, slash), key.slice(slash + 1));
 				if (!m) return `${key}✗`;
 				if (!ctx.modelRegistry.hasConfiguredAuth(m)) return `${key}(no auth)`;
-				const block = ledger.isBlocked(m.provider, cfg);
-				return block.blocked ? `${key}(blocked: ${block.reason})` : `${key}(${billingFor(m, cfg, ctx.modelRegistry)})`;
+				const a = assessBilling({ model: m, cfg, registry: ctx.modelRegistry, ledger });
+				return a.eligibility === "excluded" ? `${key}(excluded: ${a.reason})` : `${key}(${describeBasis(a)})`;
 			});
 			lines.push(`${tier}: ${items.join(", ") || "-"}`);
 		}
@@ -253,14 +295,50 @@ export default function modelRouter(pi: ExtensionAPI) {
 			`chosen: ${d.model ? modelKey(d.model) : "-"}${d.switched ? " (switched)" : ""}`,
 			`reason: ${d.reason}`,
 		];
+		if (d.billing) {
+			lines.push(`billing: ${describeBasis(d.billing)} — ${d.billing.reason}`);
+			for (const e of d.billing.evidence) lines.push(`  evidence: ${e}`);
+			for (const u of d.billing.uncertainty) lines.push(`  uncertain: ${u}`);
+			if (d.billing.uncertainty.length === 0) lines.push("  uncertain: none");
+		}
 		for (const c of d.candidates) {
 			lines.push(
 				c.skipped
 					? `  ${c.key}: skipped (${c.skipped})`
-					: `  ${c.key}: ${c.billing} ~$${c.costUsd.toFixed(4)}${c.switchPenaltyUsd ? ` +switch $${c.switchPenaltyUsd.toFixed(4)}` : ""} cap ${c.capability}`,
+					: `  ${c.key}: ${c.assessment ? describeBasis(c.assessment) : c.billing} ~$${c.costUsd.toFixed(4)}${c.switchPenaltyUsd ? ` +switch $${c.switchPenaltyUsd.toFixed(4)}` : ""} cap ${c.capability}`,
 			);
 		}
 		showCard(ctx, "router explain", lines);
+	}
+
+	function basisOf(ctx: ExtensionCommandContext, model: NonNullable<ExtensionCommandContext["model"]>): string {
+		return describeBasis(assessBilling({ model, cfg, registry: ctx.modelRegistry, ledger }));
+	}
+
+	/** Full billing picture: what pays for each configured route, and what is still unproven. */
+	function showBilling(ctx: ExtensionCommandContext) {
+		const lines: string[] = [];
+		const seen = new Set<string>();
+		for (const key of [...TIERS.flatMap((t) => cfg.tiers[t] ?? []), ...cfg.parallel.models]) {
+			if (seen.has(key)) continue;
+			seen.add(key);
+			const slash = key.indexOf("/");
+			const m = ctx.modelRegistry.find(key.slice(0, slash), key.slice(slash + 1));
+			if (!m) {
+				lines.push(`${key}: unknown model`);
+				continue;
+			}
+			if (!ctx.modelRegistry.hasConfiguredAuth(m)) {
+				lines.push(`${key}: no auth`);
+				continue;
+			}
+			const a = assessBilling({ model: m, cfg, registry: ctx.modelRegistry, ledger });
+			lines.push(`${key}: ${describeBasis(a)} — ${a.reason}`);
+			for (const e of a.evidence) lines.push(`    evidence: ${e}`);
+			for (const u of a.uncertainty) lines.push(`    uncertain: ${u}`);
+		}
+		lines.push(...ledger.summaryLines().filter((l) => l.startsWith("quota ")));
+		showCard(ctx, "router billing", lines);
 	}
 
 	function showCard(ctx: ExtensionCommandContext, title: string, lines: string[]) {

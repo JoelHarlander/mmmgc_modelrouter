@@ -34,6 +34,17 @@ export interface LoadFleetOptions {
 	 * same prices, same declared competence, one thing changed.
 	 */
 	billing?: "as-configured" | "all-on-demand" | "all-plan";
+	/**
+	 * Whether the modelled user has allowed per-token spend on this fleet's billed models.
+	 *
+	 * Billing became a routing input, and a per-token route is excluded unless
+	 * `billing.allowPayPerToken` names it. The fleet is the statement of what this user
+	 * can route to, so by default every model it declares `on-demand` or `free` is
+	 * permitted — otherwise the shipped globs, which name real providers, would silently
+	 * exclude every synthetic key and the eval would measure a router with no billed
+	 * routes at all. Set `false` to model the opposite user: one who has allowed nothing.
+	 */
+	allowPayPerToken?: boolean;
 }
 
 export function loadFleet(path: string, options: LoadFleetOptions = {}): LoadedFleet {
@@ -62,10 +73,14 @@ export function buildFleet(input: Fleet, options: LoadFleetOptions = {}): Loaded
 		overrides[spec.key] = { billing: spec.billing, capability: spec.capability ?? spec.skill };
 	}
 
+	// Same principle as `models` below: a fleet key must never inherit a real provider's
+	// billing permissions, nor be excluded by failing to match them.
+	const billed = fleet.models.filter((m) => m.billing !== "plan").map((m) => m.key);
 	const config = mergeConfig(DEFAULT_CONFIG, {
 		tiers: fleet.tiers,
 		// Replace the shipped globs entirely: a fleet key must never inherit a real provider's billing.
 		models: overrides,
+		billing: { ...DEFAULT_CONFIG.billing, allowPayPerToken: options.allowPayPerToken === false ? [] : billed },
 		...(options.configPatch ?? {}),
 	});
 	// mergeConfig merges `models` over the defaults, so drop the shipped globs explicitly.

@@ -10,8 +10,11 @@
  * both against that file so the copy cannot drift silently.
  */
 import type { Api, Model } from "@earendil-works/pi-ai";
+import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { modelKey, type RouterConfig, TIERS } from "../src/config.ts";
 import { choiceConfidence, type JevChoiceAnswer, type JevClient, JevError, type JsonValue } from "../src/jev.ts";
+import type { Ledger } from "../src/ledger.ts";
+import { evaluateCandidate } from "../src/router.ts";
 import type { FleetModel } from "./types.ts";
 import { effectiveSkill, hashUnit } from "./simulate.ts";
 import { splitKey } from "./fleet.ts";
@@ -276,6 +279,15 @@ export interface CandidatePolicyArgs {
 	n: number;
 	byKey: Map<string, FleetModel>;
 	unauthed: Set<string>;
+	/**
+	 * Only the `shipped` policy needs these, and only because it mirrors
+	 * `src/parallel.ts#pickParallelModels` — which now orders its slots by billing rank,
+	 * a verdict that cannot be read off the fleet. Passing the real registry and ledger
+	 * lets the mirror call the router's own `evaluateCandidate` instead of restating its
+	 * rules here, so the two cannot drift apart.
+	 */
+	registry?: ModelRegistry;
+	ledger?: Ledger;
 }
 
 export type CandidatePolicy = (args: CandidatePolicyArgs) => FleetModel[];
@@ -359,30 +371,46 @@ function rank(args: CandidatePolicyArgs, cmp: (a: FleetModel, b: FleetModel) => 
 }
 
 /**
- * Mirrors src/parallel.ts#pickParallelModels for the eval fleet: the routed model
- * first, then the strongest configured model of each tier from heavy down, then
- * the remaining tier entries, skipping anything unauthed.
+ * Mirrors src/parallel.ts#pickParallelModels for the eval fleet: the routed model first,
+ * then the strongest configured model of each tier from heavy down, then the remaining
+ * tier entries — and since billing became a routing input, that discovery order is then
+ * stably re-sorted by billing rank before the first `n` are taken. Anything the billing
+ * gate or auth turns down is dropped rather than ranked.
+ *
+ * The rank comes from `evaluateCandidate` in `src/router.ts`, not from a copy of its
+ * rules, which is what keeps this a mirror rather than a second implementation.
  */
 export function pickCandidates(args: CandidatePolicyArgs): FleetModel[] {
-	const { current, cfg, n, byKey, unauthed } = args;
-	const chosen: FleetModel[] = [];
+	const { current, cfg, n, byKey, unauthed, registry, ledger } = args;
+	const order: string[] = [];
 	const seen = new Set<string>();
-	const add = (key: string | undefined) => {
-		if (!key || chosen.length >= n) return;
-		const spec = byKey.get(key);
-		if (!spec || seen.has(key) || unauthed.has(key)) return;
+	const consider = (key: string | undefined) => {
+		if (!key || seen.has(key)) return;
 		seen.add(key);
-		chosen.push(spec);
+		if (!byKey.has(key) || unauthed.has(key)) return;
+		order.push(key);
 	};
 
 	if (cfg.parallel.models.length > 0) {
-		for (const key of cfg.parallel.models) add(key);
-		return chosen;
+		// An explicit list is the caller's own choice of what to compare, so src/ honours
+		// it in configured order and never reorders it for a better-ranked route.
+		for (const key of cfg.parallel.models) consider(key);
+		return order.slice(0, n).map((k) => byKey.get(k)!);
 	}
-	add(current ? modelKey(current) : undefined);
-	for (const tier of [...TIERS].reverse()) add(cfg.tiers[tier]?.[0]);
-	for (const tier of [...TIERS].reverse()) for (const key of cfg.tiers[tier] ?? []) add(key);
-	return chosen;
+	consider(current ? modelKey(current) : undefined);
+	for (const tier of [...TIERS].reverse()) consider(cfg.tiers[tier]?.[0]);
+	for (const tier of [...TIERS].reverse()) for (const key of cfg.tiers[tier] ?? []) consider(key);
+
+	if (!registry || !ledger) {
+		throw new Error("the shipped candidate policy needs the registry and ledger to read billing rank; pass them from the loaded fleet");
+	}
+	const currentKey = current ? modelKey(current) : undefined;
+	const chooseArgs = { tier: "standard" as const, confidence: 1, current, registry, cfg, ledger, contextTokens: 0 };
+	const ranked = order
+		.map((key, at) => ({ key, at, candidate: evaluateCandidate(key, chooseArgs, currentKey) }))
+		.filter((r) => !r.candidate.skipped && r.candidate.model)
+		.sort((a, b) => (a.candidate.assessment?.rank ?? 0) - (b.candidate.assessment?.rank ?? 0) || a.at - b.at);
+	return ranked.slice(0, n).map((r) => byKey.get(r.key)!);
 }
 
 /** Candidate response text the offline judge is handed, so live and offline share a shape. */

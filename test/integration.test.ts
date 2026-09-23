@@ -51,7 +51,7 @@ const FAUX_FLEET: Fleet = {
 			capability: 90,
 		},
 	],
-	tiers: { light: ["faux/b"], standard: ["faux/b"], heavy: ["faux/a"] },
+	tiers: { light: ["faux/b"], standard: ["faux/a"], heavy: ["faux/a"] },
 };
 
 type SmokeConfig = { switching: { minConfidence: number; cacheSwitchPenalty: boolean; manualPinTurns: number; expectedOutputTokens: number } };
@@ -86,7 +86,9 @@ function askPi(prompt: string): string | undefined {
 			"a",
 			prompt,
 		],
-		{ cwd: SMOKE, encoding: "utf8", timeout: 120_000 },
+		// The same isolation `npm run smoke` uses: without it this reads the machine's real
+		// global agent config and the cross-check becomes a test of whoever's laptop it is.
+		{ cwd: SMOKE, encoding: "utf8", timeout: 120_000, env: { ...process.env, PI_CODING_AGENT_DIR: join(SMOKE, "agent") } },
 	);
 	const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
 	const logged = /came from faux\/([ab])/.exec(output)?.[1];
@@ -137,13 +139,21 @@ test("the smoke config pins everything the prediction depends on", () => {
 	// If a setting the routing depends on is left to the machine's global config, this
 	// cross-check silently becomes a test of whoever's laptop it runs on.
 	const cfg = JSON.parse(readFileSync(join(SMOKE, ".pi", "modelrouter.json"), "utf8")) as Record<string, unknown>;
-	for (const key of ["enabled", "jev", "tiers", "models", "switching", "thinking"]) {
+	for (const key of ["enabled", "jev", "tiers", "models", "billing", "switching", "thinking"]) {
 		assert.ok(key in cfg, `test/smoke/.pi/modelrouter.json no longer pins "${key}"`);
 	}
 	const jev = cfg.jev as { transport: string; apiKeyEnv: string };
 	assert.equal(jev.transport, "typesafe", "the transport must be one whose credential can be guaranteed absent");
 	assert.equal(process.env[jev.apiKeyEnv], undefined, `${jev.apiKeyEnv} is set, so the smoke run would reach the network`);
 	assert.deepEqual(Object.keys(cfg.tiers as object).sort(), ["heavy", "light", "standard"]);
+	// Billing is a routing input now, so an unpinned allowPayPerToken would decide the
+	// route from the shipped globs - which name real providers and match no faux key.
+	const billing = cfg.billing as { allowPayPerToken: string[]; probe: { enabled: boolean } };
+	assert.ok(billing.allowPayPerToken.length > 0, "the faux models must be allowed to bill, or nothing is routable");
+	assert.equal(billing.probe.enabled, false, "the entitlement probe must stay off; it would reach the network");
+	// And the agent layer must be the fixture's own, not the machine's.
+	const agent = JSON.parse(readFileSync(join(SMOKE, "agent", "modelrouter.json"), "utf8")) as { tiers: Record<string, string[]> };
+	assert.deepEqual(agent.tiers, cfg.tiers, "the project and agent fixtures disagree about tier membership");
 	// The fleet mirrored in this file must match the tiers pi is given.
 	assert.deepEqual(FAUX_FLEET.tiers, cfg.tiers);
 });

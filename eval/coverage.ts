@@ -52,8 +52,6 @@ export interface CoverageOptions {
 	minConfidences?: number[];
 	pinTurns?: number[];
 	unauthedSets?: string[][];
-	/** Simulate the section-0 fix while sweeping, to predict what it removes. */
-	blockedAwareKeep?: boolean;
 }
 
 export async function runCoverage(options: CoverageOptions): Promise<CoverageReport> {
@@ -79,11 +77,11 @@ export async function runCoverage(options: CoverageOptions): Promise<CoverageRep
 								...base,
 								config: mergeConfig(base.config, { switching: { ...base.config.switching, minConfidence, manualPinTurns } }),
 							};
-							const outcome = await runEval({ pack: options.pack, loaded, classifier, startModel, blockedAwareKeep: options.blockedAwareKeep });
+							const outcome = await runEval({ pack: options.pack, loaded, classifier, startModel });
 							const metrics = computeMetrics(outcome.turns, outcome.stateChars);
 							report.configurations += 1;
 
-							const violations = check(outcome.turns, metrics, configuration);
+							const violations = checkInvariants(outcome.turns, metrics, configuration);
 							if (violations.length > 0) {
 								report.violations.push({ configuration, violations });
 								for (const v of violations) report.byInvariant[v.invariant] = (report.byInvariant[v.invariant] ?? 0) + 1;
@@ -97,7 +95,13 @@ export async function runCoverage(options: CoverageOptions): Promise<CoverageRep
 	return report;
 }
 
-function check(turns: TurnRecord[], m: RunMetrics, configuration: Configuration): Violation[] {
+/**
+ * The invariants, separated from the sweep that drives them so they can be tested on a
+ * record built to break one. Since the billing merge fixed the router bug this sweep was
+ * built to find, a clean sweep is the expected result - and a detector that has quietly
+ * stopped detecting would look exactly the same from outside.
+ */
+export function checkInvariants(turns: TurnRecord[], m: RunMetrics, configuration: Configuration): Violation[] {
 	const out: Violation[] = [];
 	const repro = reproduce(configuration);
 	const add = (invariant: string, detail: string) => out.push({ invariant, detail, reproduce: repro });

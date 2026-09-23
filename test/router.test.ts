@@ -40,6 +40,8 @@ const cfg: RouterConfig = mergeConfig(DEFAULT_CONFIG, {
 		heavy: ["plan/top", "cheap/top"],
 	},
 	models: { "plan/*": { billing: "plan" }, "cheap/*": { billing: "on-demand" }, "local/*": { billing: "free" } },
+	// Pay-per-token routes are reachable only where they are named, so this fixture names its own.
+	billing: { ...DEFAULT_CONFIG.billing, allowPayPerToken: ["cheap/*"], probe: { ...DEFAULT_CONFIG.billing.probe, enabled: false } },
 });
 
 const models = [
@@ -69,24 +71,28 @@ test("plan model beats on-demand in the same tier at zero marginal cost", () => 
 
 test("exhausted plan provider is skipped and the tier falls back to on-demand", () => {
 	const l = ledger();
-	l.observeResponse("plan", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.97", "anthropic-ratelimit-unified-status": "allowed_warning" }, cfg);
+	l.observeResponse("plan", 200, { "anthropic-ratelimit-unified-5h-utilization": "0.97", "anthropic-ratelimit-unified-5h-status": "allowed_warning" }, cfg);
 	const d = chooseModel({ tier: "standard", confidence: 0.9, current: undefined, registry: fakeRegistry(models), cfg, ledger: l, contextTokens: 10_000 });
 	assert.equal(d.model?.id, "big");
-	assert.match(d.candidates.find((c) => c.key === "plan/mid")?.skipped ?? "", /plan 97% used/);
+	assert.match(d.candidates.find((c) => c.key === "plan/mid")?.skipped ?? "", /5h 97% used/);
 });
 
 test("429 puts the provider in cooldown using retry-after", () => {
 	const l = ledger();
 	l.observeResponse("plan", 429, { "retry-after": "120" }, cfg);
-	assert.equal(l.isBlocked("plan", cfg).blocked, true);
-	assert.equal(l.isBlocked("plan", cfg, Date.now() + 121_000).blocked, false);
+	const d = chooseModel({ tier: "standard", confidence: 0.9, current: undefined, registry: fakeRegistry(models), cfg, ledger: l, contextTokens: 0 });
+	assert.match(d.candidates.find((c) => c.key === "plan/mid")?.skipped ?? "", /rate limited \(429\)/);
+	assert.deepEqual(l.assess("plan", "plan/mid", cfg, Date.now() + 121_000).refused, [], "and it lifts when retry-after has passed");
 });
 
-test("codex used-percent headers map to 0..1 utilization", () => {
+test("codex used-percent headers map to 0..1 utilization per window", () => {
 	const l = ledger();
 	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "42", "x-codex-secondary-used-percent": "88", "x-codex-primary-reset-after-seconds": "600" }, cfg);
-	assert.equal(l.planState("openai-codex")?.utilization, 0.88);
-	assert.equal(l.isBlocked("openai-codex", cfg).blocked, true);
+	const state = l.peekProvider("openai-codex")!;
+	assert.equal(state.windows.primary?.utilization, 0.42);
+	assert.equal(state.windows.secondary?.utilization, 0.88);
+	assert.ok(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).exhaustedAccount.some((w) => w.id === "secondary"));
+	assert.equal(l.assess("openai-codex", "openai-codex/gpt-6-astra", cfg).accountUtilization, 0.88);
 });
 
 test("low confidence keeps the current model", () => {
@@ -141,4 +147,53 @@ test("glob and heuristics", () => {
 	assert.equal(heuristicTier("ls").tier, "light");
 	assert.equal(heuristicTier("why does this deadlock under load?").tier, "heavy");
 	assert.equal(choiceConfidence({ a: 0.9, b: 0.06, c: 0.04 }).toFixed(2), "0.85");
+});
+
+test("a low-confidence turn keeps the current model only once billing has cleared it", () => {
+	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[2], registry: fakeRegistry(models), cfg, ledger: ledger(), contextTokens: 0 });
+	assert.equal(d.model?.id, "mid", "an eligible model is still kept below the confidence floor");
+	assert.equal(d.switched, false);
+	assert.equal(d.billing?.basis, "subscription", "and its basis travels with the decision");
+	assert.ok(d.candidates.some((c) => c.key === "plan/mid"));
+});
+
+test("a low-confidence turn routes away from a current model the billing gate refuses", () => {
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowPayPerToken: [] } });
+	const d = chooseModel({ tier: "light", confidence: 0.2, current: models[3], registry: fakeRegistry(models), cfg: denied, ledger: ledger(), contextTokens: 0 });
+	assert.notEqual(d.model?.provider, "cheap", "an ineligible route is not kept for want of confidence");
+	assert.equal(d.switched, true);
+	assert.notEqual(d.billing?.eligibility, "excluded");
+});
+
+test("a low-confidence turn with nothing eligible names the current model as ineligible", () => {
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowPayPerToken: [] } });
+	const d = chooseModel({
+		tier: "light",
+		confidence: 0.2,
+		current: models[3],
+		registry: fakeRegistry(models, [], ["plan", "local"]),
+		cfg: denied,
+		ledger: ledger(),
+		contextTokens: 0,
+	});
+	assert.equal(d.model?.id, "big", "there is nowhere else to go, so the session stays put");
+	assert.match(d.ineligibleCurrent ?? "", /not in billing\.allowPayPerToken/, "but it is never kept silently");
+});
+
+test("the model the router refused to keep is still named in the explanation", () => {
+	// A manual /model pick can leave the session on a model no tier lists; leaving it must be explained.
+	const legacy = model("cheap", "legacy", { input: 10, output: 50 });
+	const denied = mergeConfig(cfg, { billing: { ...cfg.billing, allowPayPerToken: [] } });
+	const d = chooseModel({
+		tier: "light",
+		confidence: 0.2,
+		current: legacy,
+		registry: fakeRegistry([...models, legacy]),
+		cfg: denied,
+		ledger: ledger(),
+		contextTokens: 0,
+	});
+	assert.equal(d.switched, true);
+	const held = d.candidates.find((c) => c.key === "cheap/legacy");
+	assert.match(held?.skipped ?? "", /not in billing\.allowPayPerToken/);
 });

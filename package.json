@@ -12,7 +12,8 @@
     "test": "node --test --import tsx test/*.test.ts",
     "eval": "tsx eval/cli.ts",
     "eval:all": "tsx eval/run-all.ts",
-    "smoke": "cd test/smoke && pi -p --no-extensions --no-skills --no-prompt-templates --no-context-files --no-session --approve -e ../faux-provider.ext.ts -e ../../src/index.ts --provider faux --model a 'ls'"
+    "smoke": "cd test/smoke && PI_CODING_AGENT_DIR=\"$PWD/agent\" pi -p --no-extensions --no-skills --no-prompt-templates --no-context-files --no-session --approve -e ../faux-provider.ext.ts -e ../../src/index.ts --provider faux --model a 'ls'",
+    "smoke:billing": "cd test/smoke-billing && PI_CODING_AGENT_DIR=\"$PWD/agent\" pi -p --no-extensions --no-skills --no-prompt-templates --no-context-files --no-session --approve -e ../faux-provider.ext.ts -e ../../src/index.ts --provider faux --model a 'ls'"
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "0.85.1",

@@ -10,6 +10,10 @@
  * Every cell is the mean over several seeds, with the spread reported, so a cell can
  * be read as a result rather than a coincidence.
  */
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Ledger } from "../src/ledger.ts";
 import { bootstrapDifference, renderPaired, tasksNeededFor } from "./bootstrap.ts";
 import { type BiasAxis, CANDIDATE_POLICIES, NoisyJudge } from "./candidates.ts";
 import { STAKES_OVERRIDES } from "./classifier.ts";
@@ -324,6 +328,8 @@ export async function runAxisSweep(options: SweepOptions & { policies?: string[]
 			n: options.candidateN ?? 3,
 			byKey: options.loaded.byKey,
 			unauthed: options.loaded.unauthed,
+			registry: options.loaded.registry,
+			ledger: new Ledger(join(mkdtempSync(join(tmpdir(), "router-eval-policy-")), "usage.json")),
 		});
 		const strongest = [...set].sort((a, b) => b.skill - a.skill)[0];
 		for (const axis of axes) {

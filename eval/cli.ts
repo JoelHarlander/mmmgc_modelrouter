@@ -126,7 +126,6 @@ interface Args {
 	judgeMinConfidence?: number;
 	compactionPenalty?: number;
 	contextSensitivity?: number;
-	blockedAwareKeep: boolean;
 	callsPerTurn?: number;
 	probe: boolean;
 	probePhrasing: boolean;
@@ -151,7 +150,6 @@ function parseArgs(argv: string[]): Args {
 		billing: "as-configured",
 		json: false,
 		noWrite: false,
-		blockedAwareKeep: false,
 		validateOnly: false,
 		auditConfig: false,
 		calibration: false,
@@ -255,9 +253,6 @@ function parseArgs(argv: string[]): Args {
 				break;
 			case "--validate":
 				args.validateOnly = true;
-				break;
-			case "--blocked-aware-keep":
-				args.blockedAwareKeep = true;
 				break;
 			case "--context-sensitivity":
 				args.contextSensitivity = Number(next());
@@ -409,8 +404,6 @@ const HELP = `router eval — SWE-bench-style measurement of the model switcher
   --explore-turns <n>    fan out for n turns, then commit to the judge's favourite
   --compaction-penalty <n>  skill points a fully-forgotten turn gains (default 12)
   --context-sensitivity <x>  override every task's declared contextSensitivity (0..1)
-  --blocked-aware-keep   simulate the section-0 fix: do not keep a model the ledger has
-                         blocked. Predicts what that change will do before it lands.
   --calibration          is the classifier's confidence worth anything?
   --explain <task id>    print the turn-by-turn trace behind one task's score
   --bootstrap <n>        resample tasks n times and report 95% intervals on the metrics
@@ -538,7 +531,7 @@ async function main(): Promise<number> {
 			rendered = renderAxisSweep(c, title);
 		} else if (args.sweep === "coverage") {
 			title = `invariant coverage — pack ${pack.id}`;
-			const c = await runCoverage({ pack, loaded, blockedAwareKeep: args.blockedAwareKeep });
+			const c = await runCoverage({ pack, loaded });
 			cells = c.violations;
 			rendered = renderCoverage(c, title);
 			if (!args.json) process.stdout.write(rendered);
@@ -631,7 +624,6 @@ async function main(): Promise<number> {
 		exploreTurns: args.exploreTurns,
 		compactionPenalty: args.compactionPenalty,
 		contextSensitivity: args.contextSensitivity,
-		blockedAwareKeep: args.blockedAwareKeep,
 		seed: args.seed,
 		jev,
 		traffic: args.callsPerTurn ? { ...DEFAULT_TRAFFIC, callsPerTurn: args.callsPerTurn } : undefined,
