@@ -1,3 +1,9 @@
 node_modules/
 *.log
 .DS_Store
+
+# Smoke fixtures own their agent dir; only the config file in it is tracked.
+test/smoke/agent/*
+!test/smoke/agent/modelrouter.json
+test/smoke-billing/agent/*
+!test/smoke-billing/agent/modelrouter.json

@@ -1,16 +1,21 @@
 /**
- * Usage ledger + plan-quota state.
+ * Usage ledger + subscription quota state.
  *
  * - Records tokens/cost per provider/model from assistant messages (session + persisted totals).
- * - Harvests plan utilization from response headers (Anthropic unified, Codex) and
- *   429/402 responses, so the router can steer away from exhausted subscriptions.
+ * - Harvests quota windows and credit facts from response headers (Anthropic unified, Codex) and
+ *   429/402 responses, and accepts the same facts from the read-only entitlement polls in
+ *   `entitlement.ts`, so routing can tell subscription usage from extra billed usage.
+ * - Windows are kept individually, so a model-scoped window (Anthropic's Fable bucket, a Codex
+ *   per-model family) can exclude one model while its provider stays usable.
+ * - The shared usage file is written under a lock and merged against what is on disk, so
+ *   concurrent sessions do not clobber each other's totals.
  *
- * Header names per docs/research/plan-quotas.md.
+ * Header names, value scales and JSON shapes per docs/research/plan-quotas.md.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { Usage } from "@earendil-works/pi-ai";
-import type { RouterConfig } from "./config.ts";
+import { anyGlobMatch, credentialOf, globMatch, routableModels, type RouterConfig } from "./config.ts";
 
 export interface ModelTotals {
 	calls: number;
@@ -21,37 +26,120 @@ export interface ModelTotals {
 	costUsd: number;
 }
 
-export interface PlanState {
-	/** 0..1, max over the provider's windows. */
+/** One quota window (Anthropic `5h`/`7d`/`7d_oi`/`overage`, Codex `primary`/`secondary`/`<family>:primary`). */
+export interface WindowState {
+	/** 0..1, normalised from whichever scale the source uses. */
 	utilization?: number;
+	/** `allowed` | `allowed_warning` | `rejected`, when the source reports one. */
 	status?: string;
-	/** Epoch ms when the binding window resets. */
+	/** Epoch ms when this window resets. */
 	resetAt?: number;
-	/** Epoch ms until which the provider is considered unusable (429/402). */
-	cooldownUntil?: number;
-	cooldownReason?: string;
+	source: EvidenceSource;
+	lastSeen: number;
+}
+
+/** Extra billed usage beyond the subscription: ChatGPT credits, Anthropic usage credits (overage). */
+export interface CreditState {
+	hasCredits?: boolean;
+	unlimited?: boolean;
+	/** Opaque balance string as the provider reports it. Never a secret. */
+	balance?: string;
+	/** Non-empty when the account has extra usage switched off. */
+	disabledReason?: string;
+	source: EvidenceSource;
+	lastSeen: number;
+}
+
+export type EvidenceSource = "header" | "poll";
+
+export interface ProviderState {
+	/** Plan id as the provider reports it (`plus`, `pro`, ...). Never inferred from a name. */
+	plan?: string;
+	windows: Record<string, WindowState>;
+	credits?: CreditState;
+	/** Last read-only entitlement poll. */
+	probedAt?: number;
+	probeError?: string;
 	lastSeen: number;
 }
 
 interface LedgerFile {
-	version: 1;
+	version: 3;
 	totals: Record<string, ModelTotals>;
-	plans: Record<string, PlanState>;
+	providers: Record<string, ProviderState>;
+}
+
+/** Windows that meter extra billed usage rather than included subscription usage. */
+const OVERAGE_WINDOWS = new Set(["overage"]);
+
+/**
+ * A refusal the response attributed to no window of its own is the credential's own refusal, and
+ * is recorded as one more window rather than as a second kind of state: what governs which models,
+ * and until when, is then answered in exactly one place for every kind of evidence. A refusal that
+ * is over is stored expired rather than deleted, because a deleted key is invisible to the
+ * strictly-newer-wins merge in `mergeLedgers` and the next save would resurrect it.
+ */
+const REFUSAL_WINDOWS: Record<string, string> = {
+	"rate-limited": "rate limited (429)",
+	"budget-exhausted": "budget exhausted (402)",
+};
+
+/** What the router needs to know about one provider/model pair right now. */
+export interface QuotaAssessment {
+	/** Account-wide windows that are exhausted (the whole credential is spent). */
+	exhaustedAccount: ExhaustedWindow[];
+	/** Refusals the response attributed to no window of its own: the credential itself said no. */
+	refused: ExhaustedWindow[];
+	/** Model-scoped windows governing this model that are exhausted. */
+	exhaustedScoped: ExhaustedWindow[];
+	/** Spent windows that name a meter no configured route answers to. Evidence, not a verdict. */
+	unattributed: ExhaustedWindow[];
+	/** Account-wide windows this provider actually reported. Empty means nothing was observed. */
+	accountWindows: string[];
+	/** When the newest of those windows was last seen. What a subscription verdict rests on. */
+	accountWindowsAt?: number;
+	/** Highest account-wide utilization observed, 0..1. */
+	accountUtilization?: number;
+	credits?: CreditState;
+	/** The extra-billed bucket, when the provider reports one. */
+	overage?: WindowState;
+	/** Newest evidence timestamp across everything consulted. */
+	lastEvidenceAt?: number;
+	/** Distinct evidence sources behind this assessment. */
+	sources: EvidenceSource[];
+	plan?: string;
+}
+
+export interface ExhaustedWindow {
+	id: string;
+	reason: string;
+}
+
+/** Which models a window governs, and whether configuration said so or the window id implied it. */
+export interface WindowScope {
+	globs: string[];
+	declared: boolean;
 }
 
 export class Ledger {
 	readonly session: Record<string, ModelTotals> = {};
-	private data: LedgerFile = { version: 1, totals: {}, plans: {} };
+	private data: LedgerFile = { version: 3, totals: {}, providers: {} };
+	/**
+	 * Provider ids pi resolved to one and the same credential, as `refreshEntitlements` proved
+	 * them. Only these share an account's quota; anything unproven keeps its own, because a route
+	 * billed on a different credential must never be excluded by a subscription it does not pay
+	 * for. In memory only: it is evidence about now, and it is never written to the ledger file.
+	 */
+	private accounts: ReadonlyMap<string, string> = new Map();
+	/** `data.totals` as of the last disk sync; the delta against it is what a merged save applies. */
+	private baseline: Record<string, ModelTotals> = {};
 	private saveTimer: NodeJS.Timeout | undefined;
 
 	constructor(private readonly file: string) {
-		if (existsSync(file)) {
-			try {
-				const parsed = JSON.parse(readFileSync(file, "utf8")) as LedgerFile;
-				if (parsed && parsed.version === 1) this.data = parsed;
-			} catch {
-				// corrupt ledger: start fresh, keep the old file until next save overwrites it
-			}
+		const loaded = readLedgerFile(file);
+		if (loaded) {
+			this.data = loaded;
+			this.baseline = structuredClone(loaded.totals);
 		}
 	}
 
@@ -59,7 +147,7 @@ export class Ledger {
 		if (!usage) return;
 		const key = `${provider}/${modelId}`;
 		for (const bucket of [this.session, this.data.totals]) {
-			const t = (bucket[key] ??= { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 });
+			const t = (bucket[key] ??= emptyTotals());
 			t.calls += 1;
 			t.input += usage.input ?? 0;
 			t.output += usage.output ?? 0;
@@ -83,64 +171,164 @@ export class Ledger {
 	}
 
 	/** Called from after_provider_response. Headers are lower-cased by pi. */
-	observeResponse(provider: string, status: number, headers: Record<string, string>, cfg: RouterConfig): void {
-		const now = Date.now();
-		const plan = (this.data.plans[provider] ??= { lastSeen: now });
-		plan.lastSeen = now;
+	observeResponse(provider: string, status: number, headers: Record<string, string>, cfg: RouterConfig, now = Date.now()): void {
+		const account = this.accountOf(provider);
+		// Which models a window governs is a fact about the provider's windows, not about which
+		// account bucket the numbers are filed in, so scopes are read in the terms the config
+		// states them: the declared credential, whether or not its quota is shared.
+		const scoped = credentialOf(cfg, provider);
+		const state = this.providerState(account, now);
 		const h = (name: string) => headers[name] ?? headers[name.toLowerCase()];
 
-		// Anthropic OAuth (Claude Pro/Max): unified windows, utilization is 0..1
-		const anth5h = num(h("anthropic-ratelimit-unified-5h-utilization"));
-		const anth7d = num(h("anthropic-ratelimit-unified-7d-utilization"));
-		if (anth5h !== undefined || anth7d !== undefined) {
-			plan.utilization = Math.max(anth5h ?? 0, anth7d ?? 0);
-			plan.status = h("anthropic-ratelimit-unified-status") ?? plan.status;
-			const reset = num(h("anthropic-ratelimit-unified-reset"));
-			if (reset !== undefined) plan.resetAt = reset * 1000;
-		}
-
-		// OpenAI Codex (ChatGPT plan): used-percent is 0..100
-		const codexPrimary = num(h("x-codex-primary-used-percent"));
-		const codexSecondary = num(h("x-codex-secondary-used-percent"));
-		if (codexPrimary !== undefined || codexSecondary !== undefined) {
-			plan.utilization = Math.max(codexPrimary ?? 0, codexSecondary ?? 0) / 100;
-			const resetAfter = num(h("x-codex-primary-reset-after-seconds"));
-			const resetAt = num(h("x-codex-primary-reset-at"));
-			if (resetAfter !== undefined) plan.resetAt = now + resetAfter * 1000;
-			else if (resetAt !== undefined) plan.resetAt = resetAt * 1000;
-		}
+		applyAnthropicHeaders(state, headers, now);
+		applyCodexHeaders(state, headers, now);
 
 		if (status === 429 || status === 402) {
+			// Whose refusal is this? Only the evidence *this* response carried can answer - a window
+			// stored days ago says nothing about a refusal arriving now. A window it reported spent
+			// that the router can place already excludes the models it governs and nothing else. A
+			// refusal that places nothing but still bounds itself - a `retry-after`, a meter no route
+			// answers to, or a spent extra-billed pool, which excludes credits and nothing else - is
+			// the credential's own, for as long as it says. A 429 carrying no quota evidence at all
+			// is Anthropic's entitlement gate rather than quota pressure
+			// (docs/research/plan-quotas.md §1), and recording it as exhaustion would back a healthy
+			// account off its own subscription, so nothing is recorded for it. A 402 is never that:
+			// payment required is the credential's own answer about money whatever else it carries,
+			// and the providers that send it (plan-quotas.md §4, §5) report no windows at all.
+			const reported = Object.entries(state.windows).filter(([id, w]) => w.lastSeen === now && REFUSAL_WINDOWS[id] === undefined);
+			const placed =
+				status !== 402 &&
+				reported.some(
+					([id, w]) => !OVERAGE_WINDOWS.has(id) && windowExhausted(w, cfg, now) !== undefined && windowPlaceable(cfg, scoped, id),
+				);
 			const retryAfter = num(h("retry-after"));
-			const fallbackMs = cfg.plan.cooldownMinutesOn429 * 60_000;
-			const until = retryAfter !== undefined ? now + retryAfter * 1000 : (plan.resetAt && plan.resetAt > now ? plan.resetAt : now + fallbackMs);
-			plan.cooldownUntil = until;
-			plan.cooldownReason = status === 402 ? "budget exhausted (402)" : "rate limited (429)";
-		} else if (status >= 200 && status < 300 && plan.cooldownUntil && plan.status !== "rejected") {
-			// A successful call clears a stale cooldown.
-			plan.cooldownUntil = undefined;
-			plan.cooldownReason = undefined;
+			if (!placed && (status === 402 || reported.length > 0 || retryAfter !== undefined)) {
+				const id = status === 402 ? "budget-exhausted" : "rate-limited";
+				state.windows[id] = {
+					status: "rejected",
+					resetAt: now + (retryAfter !== undefined ? retryAfter * 1000 : cfg.plan.cooldownMinutesOn429 * 60_000),
+					source: "header",
+					lastSeen: now,
+				};
+			}
+		} else if (status >= 200 && status < 300) {
+			// The credential answered, so its own refusal is over. The clear is recorded whether or
+			// not this session ever saw the refusal: a concurrent session may have written one, and
+			// only a marker of its own carrying this timestamp outlives the merge. A window that is
+			// genuinely spent stays spent and keeps excluding what it governs on its own terms.
+			for (const id of Object.keys(REFUSAL_WINDOWS)) {
+				state.windows[id] = { status: "rejected", resetAt: now, source: "header", lastSeen: now };
+			}
 		}
 		this.scheduleSave();
 	}
 
-	isBlocked(provider: string, cfg: RouterConfig, now = Date.now()): { blocked: boolean; reason?: string } {
-		const plan = this.data.plans[provider];
-		if (!plan) return { blocked: false };
-		if (plan.cooldownUntil && plan.cooldownUntil > now) {
-			return { blocked: true, reason: `${plan.cooldownReason ?? "cooldown"} until ${new Date(plan.cooldownUntil).toLocaleTimeString()}` };
+	/** Merge facts from a read-only entitlement poll (see entitlement.ts). Never inference. */
+	applyEntitlement(provider: string, facts: EntitlementFacts, now = Date.now()): void {
+		const state = this.providerState(provider, now);
+		state.probedAt = now;
+		state.probeError = undefined;
+		if (facts.plan) state.plan = facts.plan;
+		for (const [id, w] of Object.entries(facts.windows ?? {})) {
+			state.windows[id] = { ...w, source: "poll", lastSeen: now };
 		}
-		if (plan.status === "rejected" && (!plan.resetAt || plan.resetAt > now)) {
-			return { blocked: true, reason: "plan window rejected" };
-		}
-		if (plan.utilization !== undefined && plan.utilization >= cfg.plan.utilizationCeiling && (!plan.resetAt || plan.resetAt > now)) {
-			return { blocked: true, reason: `plan ${Math.round(plan.utilization * 100)}% used` };
-		}
-		return { blocked: false };
+		if (facts.credits) state.credits = { ...facts.credits, source: "poll", lastSeen: now };
+		this.scheduleSave();
 	}
 
-	planState(provider: string): PlanState | undefined {
-		return this.data.plans[provider];
+	/** Record that a probe was attempted and failed, so the age of the attempt is visible. */
+	recordProbeError(provider: string, error: string, now = Date.now()): void {
+		const state = this.providerState(provider, now);
+		state.probedAt = now;
+		state.probeError = error;
+		this.scheduleSave();
+	}
+
+	/**
+	 * Everything routing needs about one provider/model pair. Model-scoped windows are matched
+	 * against `modelKey` through `cfg.scopes`, so an exhausted scoped quota excludes only its models.
+	 */
+	assess(provider: string, modelKey: string | undefined, cfg: RouterConfig, now = Date.now()): QuotaAssessment {
+		const out: QuotaAssessment = { exhaustedAccount: [], exhaustedScoped: [], refused: [], unattributed: [], accountWindows: [], sources: [] };
+		const account = this.accountOf(provider);
+		const scoped = credentialOf(cfg, provider);
+		const state = this.data.providers[account];
+		if (!state) return out;
+		out.plan = state.plan;
+		out.credits = state.credits;
+		const sources = new Set<EvidenceSource>();
+		let newest: number | undefined;
+
+		for (const [id, w] of Object.entries(state.windows)) {
+			if (REFUSAL_WINDOWS[id] !== undefined) {
+				// The credential refusing is not a spent subscription window: it keeps every route on
+				// the credential out until it resets, and extra billed credits cannot buy past it. It
+				// is never quota evidence about a window the provider reported either, so it stays
+				// out of `accountWindows`, and once it has expired it says nothing at all.
+				if (windowExhausted(w, cfg, now) === undefined) continue;
+				sources.add(w.source);
+				newest = Math.max(newest ?? 0, w.lastSeen);
+				out.refused.push({ id, reason: `${REFUSAL_WINDOWS[id]} until ${new Date(w.resetAt!).toLocaleTimeString()}` });
+				continue;
+			}
+			sources.add(w.source);
+			newest = Math.max(newest ?? 0, w.lastSeen);
+			if (OVERAGE_WINDOWS.has(id)) {
+				out.overage = w;
+				continue;
+			}
+			const scope = scopeGlobs(cfg, scoped, id);
+			const spent = windowExhausted(w, cfg, now);
+			if (scope !== undefined) {
+				if (!(modelKey && anyGlobMatch(scope.globs, modelKey))) {
+					if (spent && !windowPlaceable(cfg, scoped, id)) out.unattributed.push({ id, reason: `${id} ${spent}` });
+					continue;
+				}
+				if (spent) out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
+				continue;
+			}
+			out.accountWindows.push(id);
+			out.accountWindowsAt = Math.max(out.accountWindowsAt ?? 0, w.lastSeen);
+			if (w.utilization !== undefined) out.accountUtilization = Math.max(out.accountUtilization ?? 0, w.utilization);
+			if (spent) out.exhaustedAccount.push({ id, reason: `${id} ${spent}` });
+		}
+		if (state.credits) {
+			sources.add(state.credits.source);
+			newest = Math.max(newest ?? 0, state.credits.lastSeen);
+		}
+		out.lastEvidenceAt = newest;
+		out.sources = [...sources];
+		return out;
+	}
+
+	/**
+	 * Record what pi resolved for one provider id: the credential it shares, or itself when the
+	 * two are demonstrably different. Only an answer is recorded - a lookup that could not be
+	 * resolved leaves the last one standing, because silently splitting an account strands the
+	 * windows already filed under it.
+	 */
+	linkAccount(provider: string, account: string): void {
+		this.accounts = new Map(this.accounts).set(provider, account);
+	}
+
+	/** Whether this session has an answer about a provider's identity at all. */
+	accountResolved(provider: string): boolean {
+		return this.accounts.has(provider);
+	}
+
+	/** The account a provider's quota is filed under: its own id unless identity was proven. */
+	accountOf(provider: string): string {
+		return this.accounts.get(provider) ?? provider;
+	}
+
+	providerState(provider: string, now = Date.now()): ProviderState {
+		const state = (this.data.providers[provider] ??= { windows: {}, lastSeen: now });
+		state.lastSeen = now;
+		return state;
+	}
+
+	peekProvider(provider: string): ProviderState | undefined {
+		return this.data.providers[provider];
 	}
 
 	summaryLines(): string[] {
@@ -150,13 +338,23 @@ export class Ledger {
 		for (const [key, t] of entries) {
 			lines.push(`session ${key}: ${t.calls} calls, in ${fmt(t.input)} (cache ${fmt(t.cacheRead)}), out ${fmt(t.output)}, $${t.costUsd.toFixed(4)}`);
 		}
-		for (const [provider, p] of Object.entries(this.data.plans)) {
+		for (const [provider, p] of Object.entries(this.data.providers)) {
 			const parts: string[] = [];
-			if (p.utilization !== undefined) parts.push(`${Math.round(p.utilization * 100)}% used`);
-			if (p.status) parts.push(p.status);
-			if (p.resetAt) parts.push(`resets ${new Date(p.resetAt).toLocaleTimeString()}`);
-			if (p.cooldownUntil && p.cooldownUntil > Date.now()) parts.push(`COOLDOWN ${p.cooldownReason}`);
-			if (parts.length) lines.push(`plan ${provider}: ${parts.join(", ")}`);
+			if (p.plan) parts.push(`plan ${p.plan}`);
+			for (const [id, w] of Object.entries(p.windows)) {
+				const refusal = REFUSAL_WINDOWS[id];
+				if (refusal !== undefined) {
+					if (w.resetAt !== undefined && w.resetAt > Date.now()) parts.push(`COOLDOWN ${refusal}`);
+					continue;
+				}
+				const bits = [id];
+				if (w.utilization !== undefined) bits.push(`${Math.round(w.utilization * 100)}%`);
+				if (w.status) bits.push(w.status);
+				parts.push(bits.join(" "));
+			}
+			if (p.credits) parts.push(describeCredits(p.credits));
+			if (p.probeError) parts.push(`probe: ${p.probeError}`);
+			if (parts.length) lines.push(`quota ${provider}: ${parts.join(", ")}`);
 		}
 		return lines;
 	}
@@ -170,20 +368,322 @@ export class Ledger {
 		this.saveTimer.unref?.();
 	}
 
+	/**
+	 * Locked read-modify-write. Totals are applied as deltas against the last disk sync, so a
+	 * concurrent session's calls survive; quota facts win by recency per window.
+	 */
 	save(): void {
+		const lock = `${this.file}.lock`;
+		let held = false;
 		try {
 			mkdirSync(dirname(this.file), { recursive: true });
-			writeFileSync(this.file, JSON.stringify(this.data, null, 2));
+			held = acquireLock(lock);
+			const onDisk = readLedgerFile(this.file);
+			const merged = onDisk ? mergeLedgers(onDisk, this.data, this.baseline) : this.data;
+			const tmp = `${this.file}.${process.pid}.tmp`;
+			writeFileSync(tmp, JSON.stringify(merged, null, 2));
+			renameSync(tmp, this.file);
+			this.data = merged;
+			this.baseline = structuredClone(merged.totals);
 		} catch {
-			// best effort
+			// best effort: a failed save must never break a turn
+		} finally {
+			if (held) releaseLock(lock);
 		}
 	}
+}
+
+/** Quota facts a read-only entitlement poll produced. */
+export interface EntitlementFacts {
+	plan?: string;
+	windows?: Record<string, Omit<WindowState, "source" | "lastSeen">>;
+	credits?: Omit<CreditState, "source" | "lastSeen">;
+}
+
+/**
+ * Model globs a window governs, or undefined when the window is account-wide.
+ * Scope keys are `"<providerGlob>:<windowId>"`; window ids may themselves contain `:`
+ * (a Codex per-model family arrives as `<family>:primary`), so only the first `:` splits.
+ */
+export function scopeGlobs(cfg: RouterConfig, provider: string, windowId: string): WindowScope | undefined {
+	for (const [key, globs] of Object.entries(cfg.scopes)) {
+		const colon = key.indexOf(":");
+		if (colon < 0) continue;
+		if (key.slice(colon + 1) !== windowId) continue;
+		if (globMatch(key.slice(0, colon), provider)) return { globs, declared: true };
+	}
+	// A `<model>:<role>` window is minted at runtime from the model its meter belongs to, so no
+	// config can name it in advance: the prefix is read as the one model it governs.
+	const family = windowId.lastIndexOf(":");
+	return family > 0 ? { globs: [`*/${windowId.slice(0, family)}`], declared: false } : undefined;
+}
+
+/**
+ * The model a per-family meter belongs to, spelled as a model id is: that is what makes the
+ * window id something `scopeGlobs` can match against the routed model without a config entry.
+ */
+export function meteredModel(limitName: string): string {
+	return limitName.trim().toLowerCase();
+}
+
+/** Human reason when a window is spent, or undefined when it still has room. */
+export function windowExhausted(w: WindowState, cfg: RouterConfig, now: number): string | undefined {
+	if (w.resetAt !== undefined && w.resetAt <= now) return undefined;
+	if (w.status === "rejected") return "rejected";
+	if (w.utilization !== undefined && w.utilization >= cfg.plan.utilizationCeiling) return `${Math.round(w.utilization * 100)}% used`;
+	return undefined;
+}
+
+/**
+ * Whether a window governs anything the router can act on: account-wide, named by `cfg.scopes`, or
+ * a runtime `<model>:<role>` meter whose model the config can actually route to. A window that
+ * places nothing is evidence the router cannot use, so it can neither absorb a refusal nor stand
+ * as a verdict about the account.
+ */
+function windowPlaceable(cfg: RouterConfig, account: string, windowId: string): boolean {
+	const scope = scopeGlobs(cfg, account, windowId);
+	return scope === undefined || scope.declared || routableModels(cfg).some((key) => anyGlobMatch(scope.globs, key));
+}
+
+export function describeCredits(c: CreditState): string {
+	if (c.disabledReason) return `extra usage off (${c.disabledReason})`;
+	if (c.unlimited) return "credits unlimited";
+	if (c.hasCredits === false) return "no credits";
+	if (c.hasCredits) return `credits available${c.balance ? ` (${c.balance})` : ""}`;
+	return "credits unknown";
+}
+
+// ---- header parsing --------------------------------------------------------
+
+const ANTHROPIC_WINDOW = /^anthropic-ratelimit-unified-(.+)-(utilization|status|reset)$/;
+const CODEX_FIELD = /^x-codex-(?:(.+)-)?(primary|secondary)-(used-percent|reset-after-seconds|reset-at)$/;
+/** `x-codex-<limitId>-limit-name` carries the model a per-family meter belongs to. */
+const CODEX_LIMIT_NAME = /^x-codex-(.+)-limit-name$/;
+
+/**
+ * Anthropic unified headers. Utilization is already 0..1 here; the poll path is 0..100 and is
+ * normalised in entitlement.ts. Unknown window names are kept verbatim rather than dropped.
+ */
+function applyAnthropicHeaders(state: ProviderState, headers: Record<string, string>, now: number): void {
+	let touched = false;
+	for (const [rawName, rawValue] of Object.entries(headers)) {
+		const name = rawName.toLowerCase();
+		const m = ANTHROPIC_WINDOW.exec(name);
+		if (!m) continue;
+		const [, id, field] = m as unknown as [string, string, string];
+		const w = (state.windows[id] ??= { source: "header", lastSeen: now });
+		w.source = "header";
+		w.lastSeen = now;
+		if (field === "utilization") w.utilization = clamp01(num(rawValue));
+		else if (field === "status") w.status = rawValue;
+		else if (field === "reset") w.resetAt = epochMs(rawValue);
+		touched = true;
+	}
+	const disabled = headers["anthropic-ratelimit-unified-overage-disabled-reason"];
+	if (disabled !== undefined && disabled !== "") {
+		state.credits = { ...(state.credits ?? {}), disabledReason: disabled, hasCredits: false, source: "header", lastSeen: now };
+		touched = true;
+	}
+	if (touched) state.lastSeen = now;
+}
+
+/**
+ * Codex `x-codex-*` headers. `used-percent` is 0..100. Per-model families arrive as
+ * `x-codex-<family>-primary-*` and become `<family>:primary` windows.
+ */
+function applyCodexHeaders(state: ProviderState, headers: Record<string, string>, now: number): void {
+	let touched = false;
+	// The per-family prefix is an opaque metered-limit id (`bengalfox`); the model it meters comes
+	// in its own header. Keying by that name is what lets the poll path and this one agree.
+	const limitNames = new Map<string, string>();
+	for (const [rawName, rawValue] of Object.entries(headers)) {
+		const m = CODEX_LIMIT_NAME.exec(rawName.toLowerCase());
+		if (m && rawValue) limitNames.set(m[1]!, meteredModel(rawValue));
+	}
+	for (const [rawName, rawValue] of Object.entries(headers)) {
+		const name = rawName.toLowerCase();
+		const m = CODEX_FIELD.exec(name);
+		if (!m) continue;
+		const [, family, role, field] = m as unknown as [string, string | undefined, string, string];
+		const id = family ? `${limitNames.get(family) ?? meteredModel(family)}:${role}` : role;
+		const w = (state.windows[id] ??= { source: "header", lastSeen: now });
+		w.source = "header";
+		w.lastSeen = now;
+		if (field === "used-percent") w.utilization = clamp01(divide100(num(rawValue)));
+		else if (field === "reset-after-seconds") {
+			const secs = num(rawValue);
+			if (secs !== undefined) w.resetAt = now + secs * 1000;
+		} else if (field === "reset-at") w.resetAt = epochMs(rawValue);
+		touched = true;
+	}
+	const plan = headers["x-codex-plan-type"];
+	if (plan) {
+		state.plan = plan;
+		touched = true;
+	}
+	const hasCredits = headers["x-codex-credits-has-credits"];
+	const unlimited = headers["x-codex-credits-unlimited"];
+	const balance = headers["x-codex-credits-balance"];
+	if (hasCredits !== undefined || unlimited !== undefined || balance !== undefined) {
+		state.credits = {
+			...(state.credits ?? {}),
+			hasCredits: hasCredits !== undefined ? truthy(hasCredits) : state.credits?.hasCredits,
+			unlimited: unlimited !== undefined ? truthy(unlimited) : state.credits?.unlimited,
+			balance: balance ?? state.credits?.balance,
+			source: "header",
+			lastSeen: now,
+		};
+		touched = true;
+	}
+	if (touched) state.lastSeen = now;
+}
+
+// ---- persistence -----------------------------------------------------------
+
+function readLedgerFile(file: string): LedgerFile | undefined {
+	if (!existsSync(file)) return undefined;
+	try {
+		const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<LedgerFile> & { version?: number; plans?: Record<string, unknown> };
+		if (parsed?.version === 3) return { version: 3, totals: parsed.totals ?? {}, providers: parsed.providers ?? {} };
+		// v2 differs only by a provider-level cooldown nothing reads any more: the windows and the
+		// totals come across as they are, because discarding a file a live session may still be
+		// writing would erase its work.
+		if (parsed?.version === 2) return { version: 3, totals: parsed.totals ?? {}, providers: parsed.providers ?? {} };
+		if (parsed?.version === 1) return { version: 3, totals: (parsed.totals as Record<string, ModelTotals>) ?? {}, providers: {} };
+	} catch {
+		// corrupt ledger: start fresh, keep the old file until the next save replaces it
+	}
+	return undefined;
+}
+
+/**
+ * `disk` is authoritative for whatever other sessions wrote; `mine` contributes the token/cost
+ * delta it accumulated since `baseline` plus any quota fact that is newer than the disk copy.
+ */
+export function mergeLedgers(disk: LedgerFile, mine: LedgerFile, baseline: Record<string, ModelTotals>): LedgerFile {
+	const totals: Record<string, ModelTotals> = structuredClone(disk.totals);
+	for (const [key, mineTotals] of Object.entries(mine.totals)) {
+		const base = baseline[key] ?? emptyTotals();
+		const target = (totals[key] ??= emptyTotals());
+		target.calls += mineTotals.calls - base.calls;
+		target.input += mineTotals.input - base.input;
+		target.output += mineTotals.output - base.output;
+		target.cacheRead += mineTotals.cacheRead - base.cacheRead;
+		target.cacheWrite += mineTotals.cacheWrite - base.cacheWrite;
+		target.costUsd += mineTotals.costUsd - base.costUsd;
+	}
+
+	const providers: Record<string, ProviderState> = structuredClone(disk.providers);
+	for (const [name, mineState] of Object.entries(mine.providers)) {
+		const theirs = providers[name];
+		if (!theirs) {
+			providers[name] = structuredClone(mineState);
+			continue;
+		}
+		// Strictly newer wins, so replaying an observation another session already superseded
+		// cannot roll it back.
+		const newer = mineState.lastSeen > theirs.lastSeen ? mineState : theirs;
+		const merged: ProviderState = { ...theirs, ...newer, windows: { ...theirs.windows } };
+		for (const [id, w] of Object.entries(mineState.windows)) {
+			const existing = merged.windows[id];
+			if (!existing || w.lastSeen > existing.lastSeen) merged.windows[id] = w;
+		}
+		if (mineState.credits && (!theirs.credits || mineState.credits.lastSeen > theirs.credits.lastSeen)) merged.credits = mineState.credits;
+		else if (theirs.credits) merged.credits = theirs.credits;
+		merged.lastSeen = Math.max(mineState.lastSeen, theirs.lastSeen);
+		providers[name] = merged;
+	}
+	return { version: 3, totals, providers };
+}
+
+const LOCK_STALE_MS = 10_000;
+const LOCK_ATTEMPTS = 50;
+const LOCK_WAIT_MS = 20;
+
+/** Directory-based mutex: mkdir is atomic on every platform pi runs on. */
+function acquireLock(lock: string): boolean {
+	for (let i = 0; i < LOCK_ATTEMPTS; i++) {
+		try {
+			mkdirSync(lock);
+			return true;
+		} catch {
+			try {
+				if (Date.now() - statSync(lock).mtimeMs > LOCK_STALE_MS) {
+					rmdirSync(lock);
+					continue;
+				}
+			} catch {
+				continue;
+			}
+			sleepSync(LOCK_WAIT_MS);
+		}
+	}
+	// Writing without the lock is still better than dropping the session's usage entirely.
+	return false;
+}
+
+function releaseLock(lock: string): void {
+	try {
+		rmdirSync(lock);
+	} catch {
+		// already gone
+	}
+}
+
+function sleepSync(ms: number): void {
+	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/** The shared usage file inside a ledger directory. */
+export function ledgerPath(dir: string): string {
+	return join(dir, "usage.json");
+}
+
+/** Remove a ledger's lock directory; used when a test or tool aborts mid-save. */
+export function clearLedgerLock(file: string): void {
+	try {
+		rmdirSync(`${file}.lock`);
+	} catch {
+		// nothing to clear
+	}
+	try {
+		unlinkSync(`${file}.${process.pid}.tmp`);
+	} catch {
+		// nothing to clear
+	}
+}
+
+// ---- small helpers ---------------------------------------------------------
+
+function emptyTotals(): ModelTotals {
+	return { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, costUsd: 0 };
 }
 
 function num(v: string | undefined): number | undefined {
 	if (v === undefined || v === "") return undefined;
 	const n = Number(v);
 	return Number.isFinite(n) ? n : undefined;
+}
+
+function divide100(n: number | undefined): number | undefined {
+	return n === undefined ? undefined : n / 100;
+}
+
+function clamp01(n: number | undefined): number | undefined {
+	return n === undefined ? undefined : Math.min(1, Math.max(0, n));
+}
+
+/** Epoch seconds, or an RFC 3339 / HTTP date. Providers have shipped all three. */
+function epochMs(v: string | undefined): number | undefined {
+	const n = num(v);
+	if (n !== undefined) return n * 1000;
+	if (!v) return undefined;
+	const parsed = Date.parse(v);
+	return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function truthy(v: string): boolean {
+	return /^(true|1|yes)$/i.test(v.trim());
 }
 
 function fmt(n: number): string {
