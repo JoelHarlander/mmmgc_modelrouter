@@ -78,6 +78,9 @@ what the harness predicts each queued fix will do, with the command that checks 
   `docs/research/plan-quotas.md` is the authority for header names, JSON shapes and value scales — note especially
   that Anthropic utilization is 0..1 in headers but 0..100 from `/api/oauth/usage`.
 - `src/entitlement.ts` may only call read-only usage endpoints. Nothing here may send inference or log a credential.
+- The only config writer is `/router models` (`src/picker.ts` -> `src/configfile.ts`): it rewrites just the changed
+  `tiers.<tier>` arrays of the **global** file as a text edit, so every other byte survives. Never widen it to another
+  key or to the project file; per-model verdicts it shows come from `evaluateCandidate`, never a parallel judgment.
 
 ## Sharp edges
 
