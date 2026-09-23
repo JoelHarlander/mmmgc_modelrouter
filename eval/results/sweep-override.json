@@ -1,0 +1,64 @@
+{
+	"title": "stakes-override sweep — pack swe-router-long-v1, classifier scripted",
+	"at": "2026-09-22T16:05:42.470Z",
+	"git": "8216ffa",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"variant": "off",
+			"toStandard": null,
+			"toHeavy": null,
+			"tierAccuracy": 0.6514,
+			"sessionSuccessRate": 0.6457,
+			"underRouteRate": 0.1943,
+			"overRouteRate": 0.1543,
+			"inTierMisses": 25,
+			"listEquivalentUsd": 67.6558
+		},
+		{
+			"variant": "shipped",
+			"toStandard": 1.5,
+			"toHeavy": null,
+			"tierAccuracy": 0.6571,
+			"sessionSuccessRate": 0.6457,
+			"underRouteRate": 0.1886,
+			"overRouteRate": 0.1543,
+			"inTierMisses": 26,
+			"listEquivalentUsd": 67.5291
+		},
+		{
+			"variant": "lower",
+			"toStandard": 1.2,
+			"toHeavy": null,
+			"tierAccuracy": 0.6514,
+			"sessionSuccessRate": 0.6514,
+			"underRouteRate": 0.1886,
+			"overRouteRate": 0.16,
+			"inTierMisses": 25,
+			"listEquivalentUsd": 68.5092
+		},
+		{
+			"variant": "two-step",
+			"toStandard": 1.5,
+			"toHeavy": 1.8,
+			"tierAccuracy": 0.6571,
+			"sessionSuccessRate": 0.6457,
+			"underRouteRate": 0.1886,
+			"overRouteRate": 0.1543,
+			"inTierMisses": 26,
+			"listEquivalentUsd": 67.5291
+		},
+		{
+			"variant": "lower-two-step",
+			"toStandard": 1.2,
+			"toHeavy": 1.8,
+			"tierAccuracy": 0.6514,
+			"sessionSuccessRate": 0.6514,
+			"underRouteRate": 0.1886,
+			"overRouteRate": 0.16,
+			"inTierMisses": 25,
+			"listEquivalentUsd": 68.5092
+		}
+	]
+}

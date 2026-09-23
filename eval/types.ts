@@ -1,0 +1,203 @@
+/**
+ * Shared shapes for the router eval harness.
+ *
+ * Nothing here is imported by `src/`; the harness only ever reads the router.
+ */
+import type { Tier } from "../src/config.ts";
+
+/** A synthetic model in the offline fleet. Prices are real published list prices (see eval/README.md). */
+export interface FleetModel {
+	key: string;
+	name: string;
+	tier: Tier;
+	billing: "plan" | "on-demand" | "free";
+	/** True for subscription/OAuth routes, which the ledger sees as $0. */
+	oauth: boolean;
+	cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
+	/** Published best time-to-first-token, ms. See docs/data/operational-stats.json. */
+	ttftMs?: number;
+	/** Published output throughput, tokens/second. */
+	throughputTps?: number;
+	/**
+	 * How long and elaborate this model's answers tend to be, 0..100. Declared, and
+	 * deliberately uncorrelated with price and skill, so a length-biased judge can be
+	 * told apart from a price-biased one.
+	 */
+	verbosity?: number;
+	/** 0..100 declared competence. The offline oracle's ground truth. */
+	skill: number;
+	/** Per-category adjustments, so the fleet is not totally ordered. */
+	skillByCategory?: Record<string, number>;
+	/** Capability hint handed to the router for tie-breaking (config `models[key].capability`). */
+	capability?: number;
+	contextWindow?: number;
+}
+
+export interface Fleet {
+	version: 1;
+	note?: string;
+	/** Prose description of what each band of `skill` / `requiredSkill` means. */
+	skillLadder?: Record<string, string>;
+	models: FleetModel[];
+	tiers: Record<Tier, string[]>;
+}
+
+/** A scripted classifier answer: what Jev is expected to say for this turn. */
+export interface ScriptedJev {
+	tier: Tier;
+	confidence: number;
+	needsTools?: number;
+	stakes?: number;
+	/** Set when the fixture models a Jev outage for this turn. */
+	fail?: boolean;
+}
+
+export interface TaskTurn {
+	prompt: string;
+	/**
+	 * The tier this turn needs. **Derived**, not authoritative: the harness computes it
+	 * as the cheapest tier holding a model that reaches `requiredSkill`, because which
+	 * tier can do a piece of work is a fact about the fleet, not about the task. It is
+	 * written in the fixture for readability and `--validate` fails if the two disagree.
+	 */
+	goldTier?: Tier;
+	/** How hard this turn is, on the skill ladder documented in eval/tasks/fleet.json. */
+	requiredSkill?: number;
+	jev?: ScriptedJev;
+	/** Simulate a provider response the ledger should learn from before the next turn. */
+	providerEvent?: { provider: string; status: number; headers: Record<string, string> };
+	/** Simulate the operator pinning a model with /model before this turn. */
+	manualPin?: string;
+	expectedOutputTokens?: number;
+}
+
+export interface EvalTask {
+	id: string;
+	repo: string;
+	category: string;
+	/** Default skill needed by this task's turns. */
+	requiredSkill: number;
+	startContextTokens: number;
+	contextGrowthPerTurn: number;
+	/** Provider calls the agent makes per user turn (see docs: median ~5). */
+	callsPerTurn?: number;
+	/**
+	 * How much this task's turns lean on remembering earlier ones, 0..1. Only matters
+	 * after a compaction has discarded that memory. Defaults to 0.5.
+	 */
+	contextSensitivity?: number;
+	turns: TaskTurn[];
+	note?: string;
+}
+
+export interface TaskPack {
+	version: 1;
+	id: string;
+	description: string;
+	tasks: EvalTask[];
+}
+
+export type ClassifierMode = "scripted" | "heuristic" | "oracle" | "live";
+
+export interface TurnRecord {
+	taskId: string;
+	turn: number;
+	/** The user message for this turn, so a trace can be read without the pack open. */
+	prompt?: string;
+	goldTier: Tier;
+	/** What the classifier asked for, after the stakes override. Measures the classifier. */
+	requestedTier: Tier;
+	/** What src/router.ts's Decision reports as its tier. */
+	chosenTier: Tier;
+	/**
+	 * The tier the router actually *landed* in: the tier list containing the model it
+	 * selected. These diverge when confidence falls below the bar - src/router.ts returns
+	 * the requested tier while keeping the current model - and it is this one that decides
+	 * the outcome, so it is what tierAccuracy is measured on.
+	 */
+	effectiveTier: Tier;
+	confidence: number;
+	/** "heuristic" means the classifier failed and src/router.ts#heuristicTier routed instead. */
+	classifierSource: "jev" | "heuristic" | "oracle" | "pinned";
+	/** The classifier's raw answer, before the stakes override. What `--record` writes back. */
+	classifierAnswer?: ScriptedJev;
+	model: string;
+	previousModel?: string;
+	switched: boolean;
+	pinned: boolean;
+	/**
+	 * Set on turns served by a model the exploration phase committed to, rather than by
+	 * the router. Harness-side only: it measures fan-out-as-exploration as an idea and
+	 * changes nothing about how the shipped router or fan-out behaves.
+	 */
+	committed?: boolean;
+	reason: string;
+	/** Did the router pick a model that was authed, unblocked and inside the fleet? */
+	eligible: boolean;
+	ineligibleReason?: string;
+	contextTokens: number;
+	thinkingLevel?: string;
+	/** Cold = the prompt cache was discarded before this turn. */
+	cold: boolean;
+	coldCause?: "first-turn" | "model-switch" | "thinking-change" | "compaction";
+	/** Set when pi would have compacted before this turn, given the model the router chose. */
+	compaction?: { tokensBefore: number; tokensAfter: number; listEquivalentUsd: number; ledgerCostUsd: number; avoidable: boolean };
+	coldWriteTokens: number;
+	ledgerCostUsd: number;
+	listEquivalentUsd: number;
+	/** Modelled wall-clock for the turn, from published TTFT and throughput. */
+	wallClockMs: number;
+	/** What the same turn would have cost on the same model with a warm cache. */
+	warmListEquivalentUsd: number;
+	classifierCostUsd: number;
+	solved: boolean;
+	effectiveSkill: number;
+	/** requiredSkill for this turn, after any penalty for context the session has lost. */
+	requiredSkill: number;
+	/** Skill points this turn gained because a compaction discarded what it needed. */
+	compactionPenalty: number;
+	/** A different model in the tier the router chose would have solved this turn. */
+	inTierAlternativeWouldSolve: boolean;
+	candidate?: CandidateTurnRecord;
+}
+
+export interface CandidateOutcome {
+	key: string;
+	label: string;
+	effectiveSkill: number;
+	solved: boolean;
+	judgeScore: number;
+	judgeProbability: number;
+	cold: boolean;
+	ledgerCostUsd: number;
+	listEquivalentUsd: number;
+}
+
+export interface CandidateTurnRecord {
+	candidates: CandidateOutcome[];
+	judgePick: string;
+	judgeConfidence: number;
+	judgeSolved: boolean;
+	/**
+	 * What a session would actually end up with. src/parallel.ts only auto-adopts the
+	 * judge's pick when its confidence clears `switching.minConfidence`; below that the
+	 * turn keeps the routed model's answer. `gated` marks the turns where that happened.
+	 */
+	gated: boolean;
+	adoptedKey: string;
+	adoptedSolved: boolean;
+	/** The best candidate by true skill: the ceiling a perfect judge would reach. */
+	oracleBest: string;
+	oracleSolved: boolean;
+	baselineSolved: boolean;
+	judgeCostUsd: number;
+	/**
+	 * Wall-clock the fan-out added. src/parallel.ts runs candidates through
+	 * Promise.allSettled, so this is the *slowest* candidate plus the judge, not the sum.
+	 * Money therefore scales with the number of candidates and time does not - but time
+	 * scales with the worst one, so a single slow model taxes every turn.
+	 */
+	fanoutWallClockMs: number;
+	fanoutLedgerCostUsd: number;
+	fanoutListEquivalentUsd: number;
+}

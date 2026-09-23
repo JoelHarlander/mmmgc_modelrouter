@@ -1,3 +1,18 @@
 {
-  "switching": { "minConfidence": 0.3, "manualPinTurns": 0 }
+	"_comment": "Project config for `npm run smoke` and the cross-validation in test/integration.test.ts. It pins every setting the predicted routing depends on, so the run is deterministic whatever the machine's global agent config says: the two faux models as the tiers, a Jev transport whose credential is never present (so routing falls to src/router.ts#heuristicTier, offline), a confidence bar the heuristic can clear, and — since billing became a routing input — pay-per-token allowed for both faux models with the entitlement probe off, so eligibility is decided offline and identically on both sides. Tier membership and the switching block mirror test/smoke/agent/modelrouter.json, which the smoke scripts pin via PI_CODING_AGENT_DIR; the values are kept identical so this file isolates the run without silently overriding it.",
+	"enabled": true,
+	"notifyOnSwitch": false,
+	"jev": { "transport": "typesafe", "apiKeyEnv": "MODELROUTER_SMOKE_NO_SUCH_KEY" },
+	"tiers": {
+		"light": ["faux/b"],
+		"standard": ["faux/a"],
+		"heavy": ["faux/a"]
+	},
+	"models": {
+		"faux/a": { "billing": "on-demand", "capability": 90 },
+		"faux/b": { "billing": "on-demand", "capability": 40 }
+	},
+	"billing": { "allowPayPerToken": ["faux/*"], "probe": { "enabled": false } },
+	"switching": { "minConfidence": 0.3, "cacheSwitchPenalty": true, "manualPinTurns": 0, "expectedOutputTokens": 1500 },
+	"thinking": { "light": "low", "standard": "medium", "heavy": "high" }
 }

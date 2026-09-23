@@ -1,0 +1,209 @@
+{
+	"title": "bias-axis sweep — pack swe-router-long-v1, n=3, mean of 5 seeds per cell",
+	"at": "2026-09-22T15:42:14.028Z",
+	"git": "2a310c6",
+	"pack": "swe-router-long-v1",
+	"classifier": "scripted",
+	"cells": [
+		{
+			"policy": "shipped",
+			"axis": "price",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": 0.3017,
+			"judgeRegressions": 1.4,
+			"favoured": "faux-plan-codex/gpt-6-astra",
+			"favouredIsStrongest": false
+		},
+		{
+			"policy": "shipped",
+			"axis": "price",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": 0.1429,
+			"judgeRegressions": 18,
+			"favoured": "faux-plan-codex/gpt-6-astra",
+			"favouredIsStrongest": false
+		},
+		{
+			"policy": "shipped",
+			"axis": "length",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": 0.3017,
+			"judgeRegressions": 1.4,
+			"favoured": "faux-plan-anthropic/claude-opus-5",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "shipped",
+			"axis": "length",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": 0.2183,
+			"judgeRegressions": 0,
+			"favoured": "faux-plan-anthropic/claude-opus-5",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "strongest",
+			"axis": "price",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": 0.3486,
+			"judgeRegressions": 0,
+			"favoured": "faux-gw/claude-fable-5-1",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "strongest",
+			"axis": "price",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": 0.3543,
+			"judgeRegressions": 0,
+			"favoured": "faux-gw/claude-fable-5-1",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "strongest",
+			"axis": "length",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": 0.3486,
+			"judgeRegressions": 0,
+			"favoured": "faux-plan-anthropic/claude-opus-5",
+			"favouredIsStrongest": false
+		},
+		{
+			"policy": "strongest",
+			"axis": "length",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": 0.3143,
+			"judgeRegressions": 0,
+			"favoured": "faux-plan-anthropic/claude-opus-5",
+			"favouredIsStrongest": false
+		},
+		{
+			"policy": "cheapest",
+			"axis": "price",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": -0.0754,
+			"judgeRegressions": 29.4,
+			"favoured": "faux-or/glm-5.3",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "cheapest",
+			"axis": "price",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": -0.0457,
+			"judgeRegressions": 25,
+			"favoured": "faux-or/glm-5.3",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "cheapest",
+			"axis": "length",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": -0.0754,
+			"judgeRegressions": 29.4,
+			"favoured": "faux-or/glm-5.3",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "cheapest",
+			"axis": "length",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": -0.0457,
+			"judgeRegressions": 25,
+			"favoured": "faux-or/glm-5.3",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "spread",
+			"axis": "price",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": 0.3497,
+			"judgeRegressions": 0,
+			"favoured": "faux-gw/claude-fable-5-1",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "spread",
+			"axis": "price",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": 0.3543,
+			"judgeRegressions": 0,
+			"favoured": "faux-gw/claude-fable-5-1",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "spread",
+			"axis": "length",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": 0.3497,
+			"judgeRegressions": 0,
+			"favoured": "faux-plan-anthropic/claude-opus-5",
+			"favouredIsStrongest": false
+		},
+		{
+			"policy": "spread",
+			"axis": "length",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": 0.1772,
+			"judgeRegressions": 0,
+			"favoured": "faux-plan-anthropic/claude-opus-5",
+			"favouredIsStrongest": false
+		},
+		{
+			"policy": "tier-top",
+			"axis": "price",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": 0.3143,
+			"judgeRegressions": 0,
+			"favoured": "faux-plan-anthropic/claude-opus-5",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "tier-top",
+			"axis": "price",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": 0.3143,
+			"judgeRegressions": 0,
+			"favoured": "faux-plan-anthropic/claude-opus-5",
+			"favouredIsStrongest": true
+		},
+		{
+			"policy": "tier-top",
+			"axis": "length",
+			"bias": 0,
+			"seeds": 5,
+			"adoptedLift": 0.3143,
+			"judgeRegressions": 0,
+			"favoured": "faux-or/glm-5.3",
+			"favouredIsStrongest": false
+		},
+		{
+			"policy": "tier-top",
+			"axis": "length",
+			"bias": 40,
+			"seeds": 5,
+			"adoptedLift": -0.0274,
+			"judgeRegressions": 22.8,
+			"favoured": "faux-or/glm-5.3",
+			"favouredIsStrongest": false
+		}
+	]
+}

@@ -1,0 +1,59 @@
+{
+	"turns": 160,
+	"buckets": [
+		{
+			"lower": 0,
+			"upper": 0.5,
+			"turns": 48,
+			"meanConfidence": 0.3227,
+			"accuracy": 0.5625,
+			"belowBar": true
+		},
+		{
+			"lower": 0.5,
+			"upper": 0.6,
+			"turns": 15,
+			"meanConfidence": 0.548,
+			"accuracy": 0.6667,
+			"belowBar": false
+		},
+		{
+			"lower": 0.6,
+			"upper": 0.7,
+			"turns": 19,
+			"meanConfidence": 0.6489,
+			"accuracy": 0.7368,
+			"belowBar": false
+		},
+		{
+			"lower": 0.7,
+			"upper": 0.8,
+			"turns": 23,
+			"meanConfidence": 0.7565,
+			"accuracy": 0.9565,
+			"belowBar": false
+		},
+		{
+			"lower": 0.8,
+			"upper": 0.9,
+			"turns": 28,
+			"meanConfidence": 0.8468,
+			"accuracy": 0.8929,
+			"belowBar": false
+		},
+		{
+			"lower": 0.9,
+			"upper": 1,
+			"turns": 27,
+			"meanConfidence": 0.9596,
+			"accuracy": 0.963,
+			"belowBar": false
+		}
+	],
+	"ece": 0.1309,
+	"bias": -0.1309,
+	"discrimination": 0.3139,
+	"minConfidence": 0.5,
+	"suppressed": 48,
+	"suppressedCorrect": 27
+}

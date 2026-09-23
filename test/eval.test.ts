@@ -1,0 +1,2190 @@
+/**
+ * Behavioural tests for the eval harness itself.
+ *
+ * The harness is a measuring instrument, so these tests check the instrument:
+ * that it is deterministic, that it never reaches the network, that it books cost
+ * and cache the way the router's own code would, and that the parts it mirrors
+ * from src/ (the fan-out candidate policy, the judge question, the stakes
+ * override) still match the files they were copied from.
+ */
+import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type { Api, Model } from "@earendil-works/pi-ai";
+import { DEFAULT_CONFIG, mergeConfig, modelKey, TIERS } from "../src/config.ts";
+import { auditAssumptions } from "../eval/assumptions.ts";
+import { auditConfig, loadCatalogue, resolveCatalogue } from "../eval/audit.ts";
+import { bootstrapDifference, tasksNeededFor } from "../eval/bootstrap.ts";
+import { computeCalibration } from "../eval/calibration.ts";
+import { type Classify, loadPhrasingPack, type PhrasingPack, proposedRoutingQuestions, renderPhrasing, runPhrasingProbe } from "../eval/phrasing.ts";
+import { routingQuestions } from "../src/state.ts";
+import { checkInvariants, runCoverage } from "../eval/coverage.ts";
+import { explainTask } from "../eval/explain.ts";
+import { recordAnswers } from "../eval/record.ts";
+import { Ledger } from "../src/ledger.ts";
+import { pickParallelModels } from "../src/parallel.ts";
+import { heuristicTier } from "../src/router.ts";
+import { CANDIDATE_POLICIES, JUDGE_CRITERION, JUDGE_QUESTION, NoisyJudge, pickCandidates } from "../eval/candidates.ts";
+import { applyStakesOverride, STAKES_OVERRIDE_THRESHOLD, STAKES_OVERRIDES } from "../eval/classifier.ts";
+import { loadFleet } from "../eval/fleet.ts";
+import { runEval } from "../eval/harness.ts";
+import { computeMetrics, PLAN_POINT_USD } from "../eval/metrics.ts";
+import { compareMetrics, GATED_METRICS, gateRegressions, latestPath, readRun, type RunRecord, writeRun } from "../eval/results.ts";
+import {
+	CACHE_GROWTH_TOKENS_PER_CALL,
+	CALLS_PER_TURN,
+	callLatencyMs,
+	COMPACTION_SKILL_PENALTY,
+	COMPACTION_SUMMARY_TOKENS,
+	planCompaction,
+	simulateFanoutUsage,
+	simulateTurnUsage,
+} from "../eval/simulate.ts";
+import { DEFAULT_COMPACTION_SETTINGS } from "@earendil-works/pi-coding-agent";
+import { buildFleet, rebill } from "../eval/fleet.ts";
+import { cheapestCapableTier, checkTierPricing, validatePack } from "../eval/validate.ts";
+import {
+	type ConfidenceCell,
+	type OracleCell,
+	type PinCell,
+	perturbFleet,
+	runJudgeSweep,
+	runConfidenceSweep,
+	runOracleSweep,
+	runOverrideSweep,
+	runPairedComparisons,
+	runAxisSweep,
+	runPinSweep,
+	runStartSweep,
+	runPolicySweep,
+	runStrategySweep,
+	runTrafficSweep,
+	type SweepCell,
+	type TrafficCell,
+} from "../eval/sweep.ts";
+import { loadProbePack, runProbe } from "../eval/probe.ts";
+import type { Fleet, FleetModel, TaskPack } from "../eval/types.ts";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const FLEET = join(ROOT, "eval", "tasks", "fleet.json");
+const PACK = join(ROOT, "eval", "tasks", "swe-router-v1.json");
+const LONG_PACK = join(ROOT, "eval", "tasks", "swe-router-long-v1.json");
+const PROBE_PACK = join(ROOT, "eval", "tasks", "judge-probe-v1.json");
+const DOCS = join(ROOT, "docs");
+const PHRASING_PACK = join(ROOT, "eval", "tasks", "phrasing-probe-v1.json");
+
+function pack(path = PACK): TaskPack {
+	return JSON.parse(readFileSync(path, "utf8")) as TaskPack;
+}
+
+function tmpLedger(): string {
+	return join(mkdtempSync(join(tmpdir(), "router-eval-test-")), "usage.json");
+}
+
+/** Policy args carrying the registry and ledger the shipped policy needs to read billing rank. */
+function policyArgsFor(loaded: ReturnType<typeof loadFleet>, current: Model<Api> | undefined, n: number) {
+	return { current, cfg: loaded.config, n, byKey: loaded.byKey, unauthed: loaded.unauthed, registry: loaded.registry, ledger: new Ledger(tmpLedger()) };
+}
+
+type RunOpts = Partial<Omit<Parameters<typeof runEval>[0], "loaded">> & { unauthed?: string[]; billing?: Parameters<typeof loadFleet>[1] extends infer O ? (O extends { billing?: infer B } ? B : never) : never };
+
+async function run(options: RunOpts = {}) {
+	const { unauthed, billing, ...rest } = options;
+	const loaded = loadFleet(FLEET, { unauthed, billing });
+	return runEval({ pack: pack(), loaded, classifier: "scripted", ledgerFile: tmpLedger(), ...rest });
+}
+
+test("the offline run is deterministic: same inputs, byte-identical turn records", async () => {
+	const a = await run();
+	const b = await run();
+	assert.deepEqual(a.turns, b.turns);
+	assert.ok(a.turns.length > 20, "the pack should exercise more than 20 turns");
+});
+
+test("candidate mode is deterministic for a given seed and moves with the seed", async () => {
+	const a = await run({ candidateN: 3, seed: "s1" });
+	const b = await run({ candidateN: 3, seed: "s1" });
+	assert.deepEqual(a.turns, b.turns);
+	const noisier = await run({ candidateN: 3, seed: "s1", judge: new NoisyJudge(60, "s1") });
+	const picks = (r: Awaited<ReturnType<typeof run>>) => r.turns.map((t) => t.candidate?.judgePick ?? "-").join(",");
+	assert.notEqual(picks(a), picks(noisier), "a much noisier judge must change some picks");
+});
+
+test("the router never chooses an ineligible model, and the fleet is offline-only", async () => {
+	const outcome = await run();
+	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.equal(metrics.ineligibleChoices, 0);
+	for (const turn of outcome.turns) {
+		assert.ok(turn.model.startsWith("faux-"), `${turn.model} is not a faux fleet model`);
+	}
+	// The registry refuses to complete: nothing in the offline path may call a provider.
+	assert.throws(() => (outcome.config, loadFleet(FLEET).registry.complete(null as never, null as never)), /never called/);
+});
+
+test("an unauthed model is skipped and the tier falls through to the next candidate", async () => {
+	const outcome = await run({ unauthed: ["faux-plan-codex/gpt-6-astra"] });
+	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.equal(metrics.ineligibleChoices, 0);
+	assert.ok(!outcome.turns.some((t) => t.model === "faux-plan-codex/gpt-6-astra"));
+	assert.ok(outcome.turns.some((t) => t.model === "faux-or/glm-5.3"), "standard tier should fall through to the on-demand model");
+});
+
+test("a 429 in one task keeps the router off that provider for the rest of the run", async () => {
+	const outcome = await run();
+	const fixture = pack().tasks.find((t) => t.turns.some((turn) => turn.providerEvent?.status === 429));
+	assert.ok(fixture, "the pack must exercise a plan 429");
+	const cutoff = outcome.turns.findIndex((t) => t.taskId === fixture.id);
+	assert.ok(cutoff >= 0);
+	const after = outcome.turns.slice(cutoff + 1);
+	assert.ok(after.length > 0, "the 429 must land before the end of the pack");
+	assert.ok(
+		!after.some((t) => t.model.startsWith("faux-plan-codex/")),
+		"a cooled-down plan provider must not be chosen again while the cooldown holds",
+	);
+});
+
+test("a manual /model pin is respected for switching.manualPinTurns and costs no classifier call", async () => {
+	const outcome = await run();
+	const pinnedTask = pack().tasks.find((t) => t.turns.some((turn) => turn.manualPin));
+	assert.ok(pinnedTask);
+	const pinKey = pinnedTask.turns.find((t) => t.manualPin)!.manualPin!;
+	const pinned = outcome.turns.filter((t) => t.taskId === pinnedTask.id && t.pinned);
+	assert.ok(pinned.length >= 1);
+	for (const turn of pinned) {
+		assert.equal(turn.model, pinKey);
+		assert.equal(turn.classifierCostUsd, 0, "src/index.ts returns before the Jev call on a pinned turn");
+		assert.equal(turn.classifierSource, "pinned");
+	}
+});
+
+test("cache accounting: a switch and a thinking-level change both go cold, a repeat does not", async () => {
+	const outcome = await run();
+	for (const turn of outcome.turns) {
+		if (turn.coldCause === "model-switch") assert.notEqual(turn.model, turn.previousModel);
+		if (turn.coldCause === "thinking-change") assert.equal(turn.model, turn.previousModel);
+		if (!turn.cold) {
+			assert.equal(turn.model, turn.previousModel);
+			assert.equal(turn.coldWriteTokens, 0);
+		} else {
+			assert.equal(turn.coldWriteTokens, turn.contextTokens);
+			assert.ok(turn.listEquivalentUsd > turn.warmListEquivalentUsd, "a cold turn must cost more than the same turn warm");
+		}
+	}
+	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.ok(metrics.coldPremiumUsd > 0);
+	assert.equal(metrics.coldByCause["first-turn"], outcome.tasks.length, "every task session starts cold");
+});
+
+test("plan routes bill the ledger nothing but are still counted at list price", async () => {
+	const outcome = await run();
+	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+	const planTurns = outcome.turns.filter((t) => t.model.startsWith("faux-plan-"));
+	assert.ok(planTurns.length > 0);
+	for (const turn of planTurns) {
+		assert.equal(turn.ledgerCostUsd, 0, "a subscription route bills the ledger $0");
+		assert.ok(turn.listEquivalentUsd > 0, "...but still consumes the plan");
+	}
+	assert.ok(metrics.planHiddenUsd > 0);
+	assert.equal(
+		Math.round((metrics.listEquivalentUsd - metrics.ledgerCostUsd) * 1e4),
+		Math.round(metrics.planHiddenUsd * 1e4),
+	);
+});
+
+test("the classifier fallback is recorded when the fixture models a Jev outage", async () => {
+	const outcome = await run();
+	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+	const outages = pack().tasks.flatMap((t) => t.turns.filter((turn) => turn.jev?.fail));
+	assert.equal(metrics.heuristicFallbacks, outages.length);
+	for (const turn of outcome.turns.filter((t) => t.classifierSource === "heuristic")) {
+		assert.equal(turn.classifierCostUsd, 0, "a failed classifier call must not be billed");
+	}
+});
+
+test("the heuristic classifier routes the whole pack without help, and scores worse than scripted Jev", async () => {
+	const scripted = computeMetrics(...unpack(await run()));
+	const heuristic = computeMetrics(...unpack(await run({ classifier: "heuristic" })));
+	assert.equal(heuristic.ineligibleChoices, 0);
+	assert.ok(heuristic.tierAccuracy < scripted.tierAccuracy, "the zero-cost fallback should classify worse than Jev");
+	assert.equal(heuristic.classifierCostUsd, 0);
+});
+
+test("a perfect classifier does not give a perfect router: a manual pin outlives its turn", async () => {
+	const scripted = computeMetrics(...unpack(await run()));
+	const outcome = await run({ classifier: "oracle" });
+	const oracle = computeMetrics(outcome.turns, outcome.stateChars);
+
+	assert.equal(oracle.classifierAccuracy, 1, "the oracle classifier is right by construction");
+	assert.equal(oracle.overRouteRate, 0);
+
+	// Note what this does *not* assert. Since round 35 the scripted answers are Jev's own,
+	// and on the short pack Jev out-scores the oracle - because it over-routes, and the
+	// tier price inversion means escalating is free. Landing in the "right" tier is not
+	// the same as landing in the best one, which is the round-1 tier table all over again.
+	assert.ok(scripted.overRouteRate > scripted.underRouteRate, "real Jev over-routes on the short pack");
+
+	// ...and yet the router still lands in the wrong tier, because `switching.manualPinTurns`
+	// holds a /model pin across turns the operator did not choose it for.
+	const missed = outcome.turns.filter((t) => t.effectiveTier !== t.goldTier);
+	assert.ok(oracle.tierAccuracy < 1, "landing accuracy must be able to fall below classifier accuracy");
+	assert.ok(missed.length > 0);
+	for (const turn of missed) {
+		assert.equal(turn.pinned, true, `${turn.taskId} t${turn.turn} landed wrong without being pinned`);
+		assert.equal(turn.requestedTier, turn.goldTier, "the classifier was right; the pin overrode it");
+	}
+});
+
+test("candidate metrics bracket correctly: baseline <= judge <= oracle, and lift is priced", async () => {
+	const outcome = await run({ candidateN: 3 });
+	const m = computeMetrics(outcome.turns, outcome.stateChars).candidate;
+	assert.ok(m);
+	assert.ok(m.judgeSuccessRate <= m.oracleSuccessRate + 1e-9, "the judge cannot beat the best candidate");
+	assert.ok(m.judgeRecall >= 0 && m.judgeRecall <= 1);
+	assert.equal(Math.round((m.judgeSuccessRate - m.baselineSuccessRate) * 1e4) / 1e4, m.judgeLift);
+	assert.ok(m.fanoutListEquivalentUsd > 0, "a fan-out is never free");
+	if (m.judgeLift > 0) assert.ok(Number.isFinite(m.listUsdPerExtraSolve));
+});
+
+test("a fan-out candidate neither reads nor writes the session cache", () => {
+	// src/parallel.ts passes cacheRetention: "none" and a fresh sessionId.
+	const { usage } = simulateFanoutUsage(
+		{ key: "x/y", name: "y", tier: "light", billing: "on-demand", oauth: false, cost: { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 1 }, skill: 1 },
+		100_000,
+		1500,
+	);
+	assert.equal(usage.cacheRead, 0);
+	assert.equal(usage.cacheWrite, 0);
+	assert.equal(usage.input, 100_000);
+	const src = readFileSync(join(ROOT, "src", "parallel.ts"), "utf8");
+	assert.match(src, /cacheRetention:\s*"none"/, "src/parallel.ts no longer opts out of the cache; the fan-out cost model must be revisited");
+});
+
+test("a routed turn's usage follows the measured traffic profile", () => {
+	const model = {
+		key: "x/y",
+		name: "y",
+		tier: "heavy" as const,
+		billing: "on-demand" as const,
+		oauth: false,
+		cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+		skill: 80,
+	};
+	const warm = simulateTurnUsage({ model, contextTokens: 100_000, cold: false });
+	const cold = simulateTurnUsage({ model, contextTokens: 100_000, cold: true });
+	assert.equal(warm.coldWriteTokens, 0);
+	assert.equal(cold.coldWriteTokens, 100_000);
+	assert.ok(cold.listEquivalentUsd > warm.listEquivalentUsd);
+	// The cold turn's first call writes the whole prefix instead of reading it and
+	// appending the turn's new tokens, so the premium is P*(write-read) - growth*write.
+	const expected = (100_000 * (6.25 - 0.5) - CACHE_GROWTH_TOKENS_PER_CALL * 6.25) / 1_000_000;
+	assert.ok(
+		Math.abs(cold.listEquivalentUsd - warm.listEquivalentUsd - expected) < 1e-9,
+		`cold premium ${cold.listEquivalentUsd - warm.listEquivalentUsd} != ${expected}`,
+	);
+	assert.equal(warm.usage.cacheRead, 100_000 * CALLS_PER_TURN + 650 * (0 + 1 + 2 + 3 + 4));
+});
+
+test("the harness's candidate policy matches src/parallel.ts#pickParallelModels", () => {
+	const loaded = loadFleet(FLEET);
+	for (const startKey of [...loaded.byKey.keys(), undefined]) {
+		const current = startKey ? loaded.models.find((m) => modelKey(m) === startKey) : undefined;
+		const ctx = { model: current, modelRegistry: loaded.registry } as unknown as ExtensionCommandContext;
+		for (const n of [2, 3, 4, 6]) {
+			// The billing merge gave pickParallelModels an args object and a ledger, and made
+			// billing eligibility part of the same gate automatic routing uses.
+			const shipped = pickParallelModels({ ctx, cfg: loaded.config, n, ledger: new Ledger(join(mkdtempSync(join(tmpdir(), "eval-policy-")), "usage.json")) }).models.map(modelKey);
+			const policyArgs = policyArgsFor(loaded, current, n);
+			const harness = pickCandidates(policyArgs).map((m) => m.key);
+			assert.deepEqual(harness, shipped, `candidate policy drifted for n=${n}, current=${startKey ?? "none"}`);
+			// ...and the registry entry the sweeps use must be that same policy.
+			assert.deepEqual(CANDIDATE_POLICIES.shipped!(policyArgs).map((m) => m.key), shipped);
+		}
+	}
+});
+
+test("the harness's judge question is still the one src/parallel.ts sends", () => {
+	const src = readFileSync(join(ROOT, "src", "parallel.ts"), "utf8");
+	assert.ok(src.includes(JUDGE_QUESTION), "src/parallel.ts's judge question changed; update eval/candidates.ts JUDGE_QUESTION");
+	assert.equal(JUDGE_CRITERION("A"), "Response A in `responses`");
+	assert.ok(src.includes("`Response ${r.label} in \\`responses\\``"), "src/parallel.ts's judge criteria changed; update JUDGE_CRITERION");
+});
+
+test("the harness's stakes override is still the one src/index.ts applies", () => {
+	const src = readFileSync(join(ROOT, "src", "index.ts"), "utf8");
+	const match = src.match(/stakes >= ([\d.]+) && tier === "light"\) tier = "standard"/);
+	assert.ok(match, "src/index.ts's stakes override changed shape; update eval/classifier.ts");
+	assert.equal(Number(match[1]), STAKES_OVERRIDE_THRESHOLD);
+	assert.equal(applyStakesOverride("light", STAKES_OVERRIDE_THRESHOLD), "standard");
+	assert.equal(applyStakesOverride("light", STAKES_OVERRIDE_THRESHOLD - 0.01), "light");
+	assert.equal(applyStakesOverride("heavy", 3), "heavy");
+});
+
+test("results round-trip and the comparison knows which direction is better", async () => {
+	const outcome = await run();
+	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+	const root = mkdtempSync(join(tmpdir(), "router-eval-results-"));
+	const record: RunRecord = {
+		version: 1,
+		runId: "2026-01-01T00-00-00-test-abc1234",
+		at: "2026-01-01T00:00:00.000Z",
+		profile: "test",
+		pack: "swe-router-v1",
+		fleet: "eval/tasks/fleet.json",
+		classifier: "scripted",
+		candidateN: 0,
+		judge: "none",
+		seed: "s",
+		startModel: outcome.startModel,
+		live: false,
+		metrics,
+		turns: outcome.turns,
+	};
+	const written = writeRun(root, record);
+	assert.ok(written.latestPath, "an ungated run updates the baseline");
+	const back = readRun(written.latestPath);
+	assert.ok(back);
+	assert.deepEqual(back.metrics, metrics);
+
+	// The committed baseline carries the numbers and not the turn records: the gate and
+	// --compare read metrics only, and the turns are ~50x larger than what supports them.
+	assert.equal(back.turns, undefined, "the baseline should not carry per-turn detail");
+	// Compared through JSON on both sides: a round trip drops keys whose value is
+	// undefined, which is a serialisation artefact rather than a difference.
+	assert.deepEqual(readRun(written.runPath)?.turns, JSON.parse(JSON.stringify(outcome.turns)), "...but the per-run record still should");
+	assert.ok(
+		readFileSync(written.runPath, "utf8").length > readFileSync(written.latestPath, "utf8").length * 5,
+		"dropping turns should make the baseline dramatically smaller",
+	);
+
+	// A regressed run is recorded for inspection but must not become the new baseline.
+	const regressed = writeRun(root, { ...record, runId: "2026-01-02T00-00-00-test-def5678" }, { updateLatest: false });
+	assert.equal(regressed.latestPath, undefined);
+	assert.equal(readRun(latestPath(root, "test"))?.runId, record.runId, "the known-good baseline must survive a failing gate");
+	assert.ok(readRun(regressed.runPath), "...while the failing run is still written out");
+
+	const better = { ...metrics, taskResolveRate: metrics.taskResolveRate + 0.1, listEquivalentUsd: metrics.listEquivalentUsd - 1 };
+	const deltas = compareMetrics(metrics, better);
+	assert.equal(deltas.find((d) => d.key === "taskResolveRate")?.direction, "better");
+	assert.equal(deltas.find((d) => d.key === "listEquivalentUsd")?.direction, "better");
+	assert.equal(deltas.find((d) => d.key === "tierAccuracy")?.direction, "same");
+
+	const worse = compareMetrics(metrics, { ...metrics, underRouteRate: metrics.underRouteRate + 0.1 });
+	assert.equal(worse.find((d) => d.key === "underRouteRate")?.direction, "worse");
+});
+
+test("every metric rate stays inside its range", async () => {
+	const outcome = await run({ candidateN: 2 });
+	const m = computeMetrics(outcome.turns, outcome.stateChars);
+	const rates: [string, number][] = [
+		["taskResolveRate", m.taskResolveRate],
+		["turnSuccessRate", m.turnSuccessRate],
+		["tierAccuracy", m.tierAccuracy],
+		["underRouteRate", m.underRouteRate],
+		["overRouteRate", m.overRouteRate],
+		["switchesPerTurn", m.switchesPerTurn],
+		["candidate.judgeRecall", m.candidate!.judgeRecall],
+	];
+	for (const [name, value] of rates) assert.ok(value >= 0 && value <= 1, `${name} = ${value} is outside 0..1`);
+	assert.equal(
+		Math.round((m.tierAccuracy + m.underRouteRate + m.overRouteRate) * 1e4) / 1e4,
+		1,
+		"every turn is exactly one of: right tier, under-routed, over-routed",
+	);
+	assert.ok(m.avgStateChars > 0 && m.avgStateChars < outcome.config.jev.maxStateChars, "the classifier state must fit its budget");
+});
+
+test("the long-session pack reaches the context sizes the cache-cost study measured", () => {
+	const long = pack(LONG_PACK);
+	const contexts: number[] = [];
+	for (const task of long.tasks) {
+		for (let i = 0; i < task.turns.length; i++) contexts.push(task.startContextTokens + i * task.contextGrowthPerTurn);
+		assert.ok(task.turns.length >= 8, `${task.id} is not a long session (${task.turns.length} turns)`);
+	}
+	const max = Math.max(...contexts);
+	assert.ok(max >= 200_000, `the long pack tops out at ${max} tokens; the measured p50 is 235k`);
+	assert.ok(Math.min(...contexts) >= 50_000, "a long session does not start at a short pack's context size");
+	assert.deepEqual(validatePack(long, loadFleet(FLEET)).filter((p) => p.level === "error"), []);
+});
+
+test("context size is what makes the cache dominate, and the harness shows it", async () => {
+	const short = computeMetrics(...unpack(await run()));
+	const long = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	assert.ok(long.coldWriteTokens > short.coldWriteTokens * 5, "long sessions must re-write far more context");
+	assert.ok(
+		long.coldPremiumShare > short.coldPremiumShare,
+		`cold starts should take a bigger share of spend at long context (${long.coldPremiumShare} vs ${short.coldPremiumShare})`,
+	);
+	assert.ok(long.coldPremiumShare > 0.3, "at the measured context sizes the cold premium is a large share of spend");
+});
+
+test("fan-out gets dramatically more expensive at realistic context", async () => {
+	const short = computeMetrics(...unpack(await run({ candidateN: 3 }))).candidate!;
+	const long = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), candidateN: 3 }))).candidate!;
+
+	// Per fanned-out turn, because that is the mechanism: a candidate pays the full
+	// uncached input rate for the whole prompt, so its bill scales with context and
+	// nothing else. ($/extra solve also moves with how many solves were available.)
+	const perTurn = (m: typeof short) => m.fanoutListEquivalentUsd / m.turns;
+	assert.ok(
+		perTurn(long) > perTurn(short) * 2,
+		`a fan-out candidate pays full uncached input, so its price must scale with context ($${perTurn(short).toFixed(2)} -> $${perTurn(long).toFixed(2)} per turn)`,
+	);
+	// Deliberately not asserting $/extra solve: that also depends on how much headroom the
+	// pack leaves, which round 22 showed is a property of the fixture rather than the idea.
+	assert.ok(Number.isFinite(short.listUsdPerExtraSolve) && Number.isFinite(long.listUsdPerExtraSolve));
+});
+
+test("on long sessions the all-or-nothing rate understates the work, so the median carries it", async () => {
+	const long = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	const short = computeMetrics(...unpack(await run()));
+
+	// A 10-turn session has ten chances to fail, so "every turn solved" collapses far
+	// below the share of turns actually solved. The median per-task rate does not.
+	assert.ok(long.taskResolveRate < long.medianTaskTurnSuccess - 0.2, "resolve rate should understate a long pack badly");
+	assert.ok(long.medianTaskTurnSuccess > 0 && long.medianTaskTurnSuccess <= 1);
+	assert.ok(long.worstTaskTurnSuccess <= long.medianTaskTurnSuccess);
+	// The gap is a property of session length, so it is much smaller on the short pack.
+	const gap = (m: typeof long) => m.medianTaskTurnSuccess - m.taskResolveRate;
+	assert.ok(gap(long) > gap(short));
+});
+
+test("the judge sweep degrades with noise and is reproducible", async () => {
+	const loaded = loadFleet(FLEET);
+	const opts = { pack: pack(), loaded, classifier: "scripted" as const, candidateNs: [3], seeds: ["s1", "s2", "s3"] };
+	const cells = await runJudgeSweep({ ...opts, noises: [0, 20, 80] });
+	assert.equal(cells.length, 3);
+	assert.deepEqual(await runJudgeSweep({ ...opts, noises: [0, 20, 80] }), cells);
+
+	const [perfect, middling, awful] = cells as [SweepCell, SweepCell, SweepCell];
+	assert.equal(perfect.liftSpread, 0, "a judge with no error cannot vary by seed");
+	assert.equal(perfect.judgeRecall, 1);
+	assert.ok(perfect.judgeLift > middling.judgeLift, "more noise must not help");
+	assert.ok(middling.judgeLift > awful.judgeLift);
+	for (const cell of cells) assert.ok(cell.judgeSuccessRate <= cell.oracleSuccessRate + 1e-9);
+});
+
+test("a judge that systematically prefers the flashy answer makes the fan-out worse than not running it", async () => {
+	const loaded = loadFleet(FLEET);
+	const cells = await runJudgeSweep({
+		pack: pack(),
+		loaded,
+		classifier: "scripted",
+		candidateNs: [3],
+		noises: [10],
+		biases: [0, 40],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const [unbiased, biased] = cells as [SweepCell, SweepCell];
+	assert.ok(unbiased.judgeLift > 0, "the unbiased judge should still help");
+	assert.ok(biased.judgeLift < 0, "a strong flagship bias should cost more turns than it wins");
+	assert.ok(biased.judgeRegressions > unbiased.judgeRegressions);
+});
+
+test("every model in the shipped tiers resolves to a published price", () => {
+	const audit = auditConfig(DEFAULT_CONFIG, DOCS);
+	assert.deepEqual(
+		audit.unresolved,
+		[],
+		`DEFAULT_CONFIG.tiers references models missing from ${audit.source.prices}; the config and the catalogue have drifted apart`,
+	);
+	for (const tier of audit.tiers) {
+		assert.ok(tier.models.length > 0, `tier ${tier.tier} is empty`);
+		assert.ok(tier.preferred, `tier ${tier.tier} has no usable model`);
+		for (const m of tier.models) {
+			assert.ok(m.warmTurnUsd! > 0);
+			assert.equal(m.marginalTurnUsd, m.billing === "on-demand" ? m.warmTurnUsd : 0, `${m.key}: marginal cost must follow its billing`);
+		}
+	}
+});
+
+test("catalogue ids resolve across the punctuation the three sources disagree on", () => {
+	const { entries } = loadCatalogue(DOCS);
+	const cases: [string, string][] = [
+		// pi key -> the catalogue model it must land on
+		["claude-bridge/claude-fable-5-1", "Claude Fable 5.1"],
+		["anthropic/claude-opus-5", "Claude Opus 5"],
+		["openrouter/z-ai/glm-5.3-flash", "GLM 5.3 Flash"],
+		["vercel-ai-gateway/deepseek/deepseek-v4.1-flash", "DeepSeek V4.1 Flash"],
+		["ds4/deepseek-v4-flash", "DeepSeek V4 Flash"],
+		["openai-codex/gpt-6-astra", "GPT-6 Astra"],
+		["xai/grok-4.6", "Grok 4.6"],
+	];
+	for (const [key, expected] of cases) assert.equal(resolveCatalogue(key, entries)?.model, expected, `${key} resolved wrong`);
+	assert.equal(resolveCatalogue("openrouter/not-a-real-model", entries), undefined);
+});
+
+test("the shipped standard tier is dominated by the heavy tier, on published prices", () => {
+	const audit = auditConfig(DEFAULT_CONFIG, DOCS);
+	// Not a claim about the eval fixture: these are list prices from
+	// docs/data/operational-stats.json and AA Intelligence Index from docs/data/benchmarks.json.
+	assert.equal(audit.priceInversions.length, 1, audit.priceInversions.join("; "));
+	assert.match(audit.priceInversions[0]!, /heavy's preferred .* is cheaper at list than standard's/);
+	assert.equal(audit.dominatedTiers.length, 1, audit.dominatedTiers.join("; "));
+	assert.match(audit.dominatedTiers[0]!, /^standard is dominated by heavy/);
+
+	const [light, standard, heavy] = audit.tiers.map((t) => t.preferred!);
+	assert.ok(heavy!.warmTurnUsd! < standard!.warmTurnUsd!, "the heavy tier's pick is the cheaper of the two");
+	assert.ok(heavy!.intelligence! >= standard!.intelligence!, "...and at least as capable");
+	// The capability ladder itself is monotone; it is the price ladder that is broken.
+	assert.ok(light!.intelligence! < standard!.intelligence!);
+	assert.equal(audit.capabilityInversions.length, 0);
+});
+
+test("the gate fails on a real regression and stays quiet on an improvement", async () => {
+	const outcome = await run();
+	const base = computeMetrics(outcome.turns, outcome.stateChars);
+
+	assert.deepEqual(gateRegressions(compareMetrics(base, base)), [], "an identical run must not trip the gate");
+
+	// Inside tolerance: 1pp of turn success and 3% of spend are noise, not a regression.
+	const noise = { ...base, turnSuccessRate: base.turnSuccessRate - 0.01, listEquivalentUsd: base.listEquivalentUsd * 1.03 };
+	assert.deepEqual(gateRegressions(compareMetrics(base, noise)), []);
+
+	// Past tolerance, in both directions of "worse".
+	const worse = { ...base, turnSuccessRate: base.turnSuccessRate - 0.05, listEquivalentUsd: base.listEquivalentUsd * 1.2 };
+	const failures = gateRegressions(compareMetrics(base, worse));
+	assert.deepEqual(failures.map((f) => f.key).sort(), ["listEquivalentUsd", "turnSuccessRate"]);
+
+	// Improvements never fail, however large.
+	const better = { ...base, turnSuccessRate: 1, listEquivalentUsd: 0.01, coldPremiumUsd: 0 };
+	assert.deepEqual(gateRegressions(compareMetrics(base, better)), []);
+
+	// Any ineligible route at all is a regression: this one has no tolerance.
+	const bug = { ...base, ineligibleChoices: base.ineligibleChoices + 1 };
+	assert.deepEqual(gateRegressions(compareMetrics(base, bug)).map((f) => f.key), ["ineligibleChoices"]);
+
+	// And the tolerance multiplier widens the band rather than changing direction.
+	assert.deepEqual(gateRegressions(compareMetrics(base, worse), 10), []);
+});
+
+test("the candidate lift is gated on the adopted outcome, not the raw pick", async () => {
+	const outcome = await run({ candidateN: 3 });
+	const base = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.ok(base.candidate);
+	const worse = { ...base, candidate: { ...base.candidate, adoptedLift: base.candidate.adoptedLift - 0.1 } };
+	assert.deepEqual(gateRegressions(compareMetrics(base, worse)).map((f) => f.key), ["candidate.adoptedLift"]);
+	assert.ok(
+		GATED_METRICS.every((g) => g.key !== "candidate.judgeLift"),
+		"the gate must watch what a session adopts, not what the judge would have picked",
+	);
+});
+
+test("no candidate policy is allowed to read the oracle's skill numbers", () => {
+	const raw = JSON.parse(readFileSync(FLEET, "utf8")) as Fleet;
+	const base = loadFleet(FLEET);
+	// perturbFleet moves skill and nothing else, so a policy that peeked at skill would
+	// return a different set. Every policy must be blind to it.
+	const jittered = buildFleet(perturbFleet(raw, 30, "peek"));
+	const current = base.models.find((m) => modelKey(m) === "faux-plan-anthropic/claude-opus-5");
+	for (const [name, policy] of Object.entries(CANDIDATE_POLICIES)) {
+		for (const n of [2, 3, 4]) {
+			const before = policy(policyArgsFor(base, current, n)).map((m) => m.key);
+			const after = policy(policyArgsFor(jittered, current, n)).map((m) => m.key);
+			assert.deepEqual(after, before, `policy "${name}" (n=${n}) changed when only hidden skill changed: it is cheating`);
+		}
+	}
+});
+
+test("the shipped candidate set is the only one whose flashiest member is not its strongest", () => {
+	const loaded = loadFleet(FLEET);
+	const current = loaded.models.find((m) => modelKey(m) === "faux-plan-anthropic/claude-opus-5");
+	const opposed: string[] = [];
+	for (const [name, policy] of Object.entries(CANDIDATE_POLICIES)) {
+		const set = policy(policyArgsFor(loaded, current, 3));
+		const flashiest = [...set].sort((a, b) => b.cost.output - a.cost.output)[0]!;
+		const strongest = [...set].sort((a, b) => b.skill - a.skill)[0]!;
+		if (flashiest.key !== strongest.key) opposed.push(name);
+	}
+	// This is why the shipped set collapses under judge bias while the others do not, and
+	// it follows from the tier price inversion --validate already warns about: the policy
+	// takes tiers.standard[0], which is pricier and weaker than the heavy tier's pick.
+	assert.deepEqual(opposed, ["shipped"]);
+});
+
+test("an alternative candidate set is both cheaper and more robust than the shipped one", async () => {
+	const cells = await runPolicySweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		policies: ["shipped", "tier-top"],
+		biases: [0, 20],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const find = (policy: string, bias: number) => cells.find((c) => c.policy === policy && c.bias === bias)!;
+	const shipped = find("shipped", 0);
+	const alt = find("tier-top", 0);
+
+	assert.ok(alt.adoptedLift > shipped.adoptedLift, "tier-top should deliver more lift");
+	assert.ok(alt.fanoutListEquivalentUsd < shipped.fanoutListEquivalentUsd / 2, "...for less than half the fan-out bill");
+	assert.ok(alt.listUsdPerExtraSolve < shipped.listUsdPerExtraSolve);
+
+	// ...and a biased judge still moves the shipped set while tier-top does not notice,
+	// because tier-top's flashiest candidate is also its strongest. The billing merge
+	// narrowed this gap rather than closing it: ranking fan-out slots by billing basis
+	// dropped the strongest per-token model out of the shipped set, so there is less
+	// headroom for a length bias to misdirect the judge into. The durable claim is the
+	// direction and the asymmetry, not the size of the loss.
+	const shippedBiased = find("shipped", 20);
+	const altBiased = find("tier-top", 20);
+	assert.ok(shippedBiased.adoptedLift < shipped.adoptedLift, "bias should still cost the shipped set lift");
+	assert.ok(shippedBiased.judgeRegressions > shipped.judgeRegressions * 4, "...by making the judge pick wrongly");
+	assert.equal(altBiased.adoptedLift, alt.adoptedLift, "tier-top should be unmoved by this bias");
+	assert.equal(altBiased.judgeRegressions, 0);
+	// The asymmetry is the finding: bias reaches one set and not the other at all.
+	assert.ok(
+		shipped.adoptedLift - shippedBiased.adoptedLift > Math.abs(alt.adoptedLift - altBiased.adoptedLift),
+		"the shipped set must remain the more bias-exposed of the two",
+	);
+});
+
+test("the confidence gate is the shipped auto-adopt rule, and a zero bar disables it", async () => {
+	const open = computeMetrics(...unpack(await run({ candidateN: 3, judgeMinConfidence: 0 }))).candidate!;
+	assert.equal(open.gatedTurns, 0);
+	assert.equal(open.adoptedSuccessRate, open.judgeSuccessRate, "with no bar, what is adopted is the raw pick");
+	assert.equal(open.adoptedLift, open.judgeLift);
+
+	const shut = computeMetrics(...unpack(await run({ candidateN: 3, judgeMinConfidence: 1.01 }))).candidate!;
+	assert.equal(shut.gatedTurns, shut.turns, "an unreachable bar gates every turn");
+	assert.equal(shut.adoptedSuccessRate, shut.baselineSuccessRate, "...so every turn keeps the routed answer");
+	assert.equal(shut.adoptedLift, 0);
+
+	// The default bar is the one src/parallel.ts auto-adopts above.
+	const src = readFileSync(join(ROOT, "src", "parallel.ts"), "utf8");
+	assert.match(src, /entry\.judge!\.confidence >= cfg\.switching\.minConfidence/, "src/parallel.ts's auto-adopt bar moved; update the harness default");
+	const dflt = computeMetrics(...unpack(await run({ candidateN: 3 }))).candidate!;
+	const explicit = computeMetrics(...unpack(await run({ candidateN: 3, judgeMinConfidence: DEFAULT_CONFIG.switching.minConfidence }))).candidate!;
+	assert.equal(dflt.adoptedSuccessRate, explicit.adoptedSuccessRate);
+});
+
+test("a biased judge is confidently wrong, so the confidence gate cannot see it coming", async () => {
+	// The long pack: enough candidate turns for the wrong ones to be a sample rather than a handful.
+	const confidenceWhenWrong = async (bias: number) => {
+		const outcome = await run({
+			pack: pack(LONG_PACK),
+			candidateN: 3,
+			judgeMinConfidence: 0,
+			judge: new NoisyJudge({ noise: 10, seed: "g", bias }),
+		});
+		const wrong = outcome.turns
+			.filter((t) => t.candidate && !t.candidate.judgeSolved && t.candidate.candidates.some((c) => c.solved))
+			.map((t) => t.candidate!.judgeConfidence);
+		return { n: wrong.length, mean: wrong.reduce((a, b) => a + b, 0) / Math.max(1, wrong.length) };
+	};
+	const clean = await confidenceWhenWrong(0);
+	const biased = await confidenceWhenWrong(40);
+
+	assert.ok(biased.n > clean.n, "more bias must produce more wrong picks");
+	assert.ok(
+		biased.mean > clean.mean + 0.3,
+		`an unbiased judge is unsure when it errs (${clean.mean.toFixed(2)}); a biased one is not (${biased.mean.toFixed(2)}) - ` +
+			"this is why gating on confidence does not defend against bias",
+	);
+	assert.ok(biased.mean > 0.8, "a strongly biased judge errs at high confidence");
+});
+
+test("jittering the declared fleet skills is deterministic and bounded", () => {
+	const raw = JSON.parse(readFileSync(FLEET, "utf8")) as Fleet;
+	const a = perturbFleet(raw, 20, "s1");
+	assert.deepEqual(a, perturbFleet(raw, 20, "s1"));
+	assert.notDeepEqual(a, perturbFleet(raw, 20, "s2"));
+	assert.deepEqual(perturbFleet(raw, 0, "s1").models.map((m) => m.skill), raw.models.map((m) => m.skill));
+	for (const [i, model] of a.models.entries()) {
+		assert.ok(Math.abs(model.skill - raw.models[i]!.skill) <= 20);
+		assert.ok(model.skill >= 1 && model.skill <= 100);
+		assert.equal(model.cost.input, raw.models[i]!.cost.input, "jitter must move competence, not prices");
+	}
+});
+
+test("the switching-cost finding survives being wrong about the fleet; the quality finding does not", async () => {
+	const cells = await runOracleSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		jitters: [0, 20],
+	});
+	const [exact, jittered] = cells as [OracleCell, OracleCell];
+
+	assert.equal(exact.scriptedSpread, 0, "an unjittered fleet must be identical across seeds");
+	assert.ok(jittered.scriptedSpread > exact.scriptedSpread, "jitter must move the quality numbers");
+
+	// Cost. Two claims were conflated for several rounds and round 27 separated them.
+	//
+	// The load-bearing one is the *cold-start premium's share of routed-turn spend*: about
+	// half of what a long session costs buys nothing but re-reading context. That is cache
+	// economics, so being wrong about the fleet cannot touch it.
+	const longRun = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	assert.ok(longRun.coldPremiumShare > 0.4, `cold starts were only ${(longRun.coldPremiumShare * 100).toFixed(0)}% of routed spend`);
+
+	// The secondary one - whether routing spends more *in total* than never routing - is
+	// condition-dependent, because it depends on which models routing still has. With the
+	// plan exhausted it spends less, and pays for it in quality (see the next test).
+	assert.ok(exact.oracleCostsMore === 1 || exact.oracleCostsMore === 0, "the comparison is a per-fleet fact either way");
+	assert.equal(jittered.oracleCostsMore, exact.oracleCostsMore, "...and jittering the fleet should not flip it; the pack's quota state does");
+
+	// Quality: whether never-switching also *wins* is a fact about the fixture, not about
+	// routing. It has flipped three times across rounds 4, 15 and 27 - which is why it is
+	// never quoted alone. Demonstrated by flipping it deliberately: take the plan 429 out
+	// of the pack and the comparison reverses, because routing gets back the model it
+	// was relying on.
+	const stripped = pack(LONG_PACK);
+	for (const task of stripped.tasks) for (const turn of task.turns) turn.providerEvent = undefined;
+	const noQuotaLimit = await runOracleSweep({ pack: stripped, loaded: loadFleet(FLEET), classifier: "scripted", jitters: [0], seeds: ["s1"] });
+	assert.notEqual(
+		noQuotaLimit[0]!.heuristicBeatsOracle,
+		exact.heuristicBeatsOracle,
+		"one fixture detail should still be able to flip the quality comparison; if it cannot, re-check the claim",
+	);
+});
+
+test("the judge probe recovers a bias it was not told about", async () => {
+	const probe = loadProbePack(PROBE_PACK);
+	const recovered: [number, number][] = [];
+	for (const injected of [0, 15, 30, 60]) {
+		const report = await runProbe(new NoisyJudge({ noise: 10, seed: "probe-test", bias: injected }), probe);
+		recovered.push([injected, report.estimatedBiasPoints]);
+	}
+	for (const [injected, estimated] of recovered) {
+		assert.ok(
+			Math.abs(estimated - injected) <= 8,
+			`probe estimated ${estimated} points for an injected ${injected}; the probe has lost its calibration`,
+		);
+	}
+	// ...and it has to be monotone, or the estimate means nothing.
+	for (let i = 1; i < recovered.length; i++) assert.ok(recovered[i]![1] >= recovered[i - 1]![1]);
+});
+
+test("the probe measures presentation, not a distrust of formatting", async () => {
+	const probe = loadProbePack(PROBE_PACK);
+	const clean = await runProbe(new NoisyJudge({ noise: 10, seed: "p", bias: 0 }), probe);
+	const biased = await runProbe(new NoisyJudge({ noise: 10, seed: "p", bias: 40 }), probe);
+
+	assert.ok(biased.styleTrapRate > clean.styleTrapRate, "bias must show up in the traps");
+	// The control: on aligned items the flashy answer is also the better one, so a judge
+	// that merely prefers flash still scores full marks there.
+	assert.equal(clean.alignedAccuracy, 1);
+	assert.equal(biased.alignedAccuracy, 1);
+	assert.ok(biased.accuracy < clean.accuracy);
+	// Every item is shown both ways round, so position cannot masquerade as presentation.
+	assert.ok(clean.positionBias <= 0.2, `position bias ${clean.positionBias} is too high to read the trap rate cleanly`);
+	assert.equal(clean.calls, probe.items.length * 2);
+});
+
+test("the probe pack has resolution across the band of bias that actually matters", () => {
+	const probe = loadProbePack(PROBE_PACK);
+	const gaps = probe.items
+		.filter((i) => i.kind === "trap")
+		.map((i) => Math.abs(i.responses[0].trueSkill - i.responses[1].trueSkill))
+		.sort((a, b) => a - b);
+	assert.ok(gaps.length >= 10, "too few trap items to read a rate from");
+	assert.ok(gaps[0]! <= 12, `the narrowest trap gap is ${gaps[0]}; the probe cannot see small biases`);
+	assert.ok(gaps[gaps.length - 1]! >= 40, "the probe needs obvious traps too, as an upper anchor");
+	for (const item of probe.items) {
+		const [a, b] = item.responses;
+		const flashier = a.flashiness > b.flashiness ? a : b;
+		const better = a.trueSkill > b.trueSkill ? a : b;
+		if (item.kind === "trap") assert.notEqual(flashier.key, better.key, `${item.id}: a trap's flashier answer must be the worse one`);
+		if (item.kind === "aligned") assert.equal(flashier.key, better.key, `${item.id}: an aligned item's flashier answer must be the better one`);
+	}
+});
+
+test("the cold-start bill does not depend on the traffic constants; only its share of spend does", async () => {
+	const cells = await runTrafficSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		profiles: [{ callsPerTurn: 2 }, { callsPerTurn: 5 }, { callsPerTurn: 20 }],
+		candidateN: 3,
+	});
+	const [few, measured, many] = cells as [TrafficCell, TrafficCell, TrafficCell];
+
+	// A cold start writes the prefix once, whatever happens afterwards in the turn.
+	assert.equal(few.coldPremiumUsd, measured.coldPremiumUsd);
+	assert.equal(many.coldPremiumUsd, measured.coldPremiumUsd);
+	// ...so more calls per turn only dilute it.
+	assert.ok(few.coldPremiumShare > measured.coldPremiumShare);
+	assert.ok(measured.coldPremiumShare > many.coldPremiumShare);
+	assert.ok(few.listEquivalentUsd < many.listEquivalentUsd);
+});
+
+test("the candidate-selection verdict does not rest on the traffic constants at all", async () => {
+	const cells = await runTrafficSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		profiles: [{ callsPerTurn: 2 }, { callsPerTurn: 20 }, { cacheGrowthTokensPerCall: 3000 }, { outputTokensPerCall: 2000 }],
+		candidateN: 3,
+	});
+	// src/parallel.ts makes one uncached call per candidate and runs no tools, so the
+	// fan-out bill is a function of context alone.
+	for (const cell of cells as TrafficCell[]) {
+		assert.equal(cell.fanoutListEquivalentUsd, (cells[0] as TrafficCell).fanoutListEquivalentUsd);
+		assert.equal(cell.listUsdPerExtraSolve, (cells[0] as TrafficCell).listUsdPerExtraSolve);
+	}
+});
+
+test("the shipped pack's ground truth is consistent with the shipped fleet", () => {
+	const problems = validatePack(pack(), loadFleet(FLEET));
+	const errors = problems.filter((p) => p.level === "error");
+	assert.deepEqual(errors, [], `the pack must stay consistent:\n${errors.map((e) => `${e.where}: ${e.message}`).join("\n")}`);
+});
+
+test("the validator catches the ground-truth defects round 1 shipped", () => {
+	const loaded = loadFleet(FLEET);
+	const broken = pack();
+	// A turn labelled light whose requiredSkill only a heavy model reaches.
+	broken.tasks[0]!.turns[0]!.goldTier = "light";
+	broken.tasks[0]!.turns[0]!.requiredSkill = 95;
+	// Stakes outside the 0..2 the three criteria in src/state.ts can produce.
+	broken.tasks[1]!.turns[0]!.jev = { ...broken.tasks[1]!.turns[0]!.jev!, stakes: 2.5 };
+	broken.tasks[2]!.turns[0]!.manualPin = "anthropic/claude-opus-5";
+	const problems = validatePack(broken, loaded);
+	assert.ok(problems.some((p) => p.level === "warning" && /can never be solved/.test(p.message)));
+	assert.ok(problems.some((p) => p.level === "error" && /jev.stakes 2.5 is outside/.test(p.message)));
+	assert.ok(problems.some((p) => p.level === "error" && /manualPin .* is not in the fleet/.test(p.message)));
+
+	broken.tasks[0]!.turns[0]!.requiredSkill = 80;
+	assert.ok(
+		validatePack(broken, loaded).some((p) => p.level === "error" && /goldTier says "light" but requiredSkill 80/.test(p.message)),
+	);
+});
+
+test("goldTier is derived from the fleet, not read from the fixture", async () => {
+	const loaded = loadFleet(FLEET);
+	const turn = pack().tasks.find((t) => t.id === "django__django-11039")!.turns[0]!;
+	assert.equal(cheapestCapableTier(loaded, "bugfix", turn.requiredSkill ?? 60), "standard");
+
+	// Give the light tier a model that can do standard work and the same turn becomes light.
+	const raw = JSON.parse(readFileSync(FLEET, "utf8")) as Fleet;
+	raw.models.find((m) => m.key === "faux-or/glm-5.3-flash")!.skill = 95;
+	const stronger = buildFleet(raw);
+	assert.equal(cheapestCapableTier(stronger, "bugfix", 60), "light");
+
+	const outcome = await runEval({ pack: pack(), loaded: stronger, classifier: "scripted", ledgerFile: tmpLedger() });
+	const moved = outcome.turns.find((t) => t.taskId === "django__django-11039" && t.turn === 1)!;
+	assert.equal(moved.goldTier, "light", "a stronger light tier must move the gold label, not just the score");
+});
+
+test("the tier price inversion in the shipped defaults is reported, not hidden", () => {
+	const problems = checkTierPricing(loadFleet(FLEET));
+	assert.equal(problems.length, 1);
+	assert.equal(problems[0]!.level, "warning", "an inversion must not block a run");
+	assert.match(problems[0]!.message, /tier price inversion/);
+	assert.match(problems[0]!.message, /heavy/);
+});
+
+test("plan spend is also reported in weekly plan points", async () => {
+	const outcome = await run();
+	const m = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.ok(m.planPointsUsed > 0);
+	assert.equal(Math.round((m.planHiddenUsd / PLAN_POINT_USD) * 1e3) / 1e3, m.planPointsUsed);
+});
+
+function unpack(outcome: Awaited<ReturnType<typeof run>>): [typeof outcome.turns, number[]] {
+	return [outcome.turns, outcome.stateChars];
+}
+
+test("a config whose tiers collapse onto one model is reported as such", () => {
+	const collapsed = mergeConfig(DEFAULT_CONFIG, {
+		tiers: { light: ["anthropic/claude-opus-5"], standard: ["anthropic/claude-opus-5"], heavy: ["anthropic/claude-opus-5"] },
+	});
+	const audit = auditConfig(collapsed, DOCS, "collapsed");
+	assert.match(audit.collapsedTiers ?? "", /routing can only change the thinking level/);
+	// The shipped defaults do not have this shape.
+	assert.equal(auditConfig(DEFAULT_CONFIG, DOCS).collapsedTiers, undefined);
+});
+
+test("tier accuracy measures where the router landed, not what the classifier asked for", async () => {
+	const bar = async (minConfidence: number) => {
+		const base = loadFleet(FLEET);
+		const loaded = { ...base, config: mergeConfig(base.config, { switching: { ...base.config.switching, minConfidence } }) };
+		const outcome = await runEval({ pack: pack(LONG_PACK), loaded, classifier: "scripted", ledgerFile: tmpLedger() });
+		return { metrics: computeMetrics(outcome.turns, outcome.stateChars), turns: outcome.turns };
+	};
+	const open = await bar(0);
+	const high = await bar(0.9);
+
+	// src/router.ts reports the *requested* tier even when low confidence makes it keep
+	// the current model, so the two must be measured separately.
+	assert.equal(open.metrics.classifierAccuracy, high.metrics.classifierAccuracy, "the bar cannot change what the classifier said");
+	assert.ok(high.metrics.tierAccuracy < open.metrics.tierAccuracy, "...but it very much changes where the router ends up");
+
+	// The divergence happens only on turns the bar suppressed.
+	for (const turn of high.turns) {
+		if (turn.pinned) continue;
+		if (turn.effectiveTier !== turn.chosenTier) assert.ok(turn.confidence < 0.9, `${turn.taskId} t${turn.turn} diverged above the bar`);
+	}
+});
+
+test("the routing confidence bar is a stickiness mechanism, not a safety one", async () => {
+	const cells = await runConfidenceSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		bars: [0.5, 0.6, 0.8, 1.01],
+	});
+	const [shipped, slightly, high, never] = cells as [ConfidenceCell, ConfidenceCell, ConfidenceCell, ConfidenceCell];
+
+	// Round 12 measured this bar as "nearly inert" against hand-written confidences that
+	// sat almost entirely above it. Against Jev's own - which are systematically low and
+	// systematically *under*-confident - it suppresses a large share of routed turns, many
+	// of which were classified correctly. It is a blunt instrument, not an idle one.
+	assert.ok(shipped.suppressed / shipped.turns > 0.2, `the 0.5 bar suppressed only ${shipped.suppressed}/${shipped.turns} turns`);
+	assert.ok(shipped.suppressedCorrect / shipped.suppressed > 0.4, "most of what it suppresses should be good routes it is throwing away");
+	// Raising it only ever reduces switching.
+	assert.ok(slightly.switches < shipped.switches);
+	assert.ok(high.switches < slightly.switches);
+	assert.ok(never.switches < high.switches);
+
+	// With an unreachable bar the router never routes, so every remaining model change
+	// is the operator's own /model pin rather than a routing decision.
+	const base = loadFleet(FLEET);
+	const frozen = await runEval({
+		pack: pack(LONG_PACK),
+		loaded: { ...base, config: mergeConfig(base.config, { switching: { ...base.config.switching, minConfidence: 1.01 } }) },
+		classifier: "scripted",
+		ledgerFile: tmpLedger(),
+	});
+	for (const turn of frozen.turns.filter((t) => t.switched)) {
+		assert.equal(turn.pinned, true, `${turn.taskId} t${turn.turn} switched with routing switched off`);
+	}
+	// And it increasingly discards classifications that were correct.
+	assert.ok(high.suppressedCorrect > slightly.suppressedCorrect);
+	// A higher bar freezes the session on whatever model it happened to be on, so the
+	// router lands in the right tier less and less often. Measured on landed accuracy
+	// rather than outcome: outcome is confounded by the starting model (round 19), which
+	// is a strong one here, so freezing can flatter it.
+	assert.ok(high.tierAccuracy < shipped.tierAccuracy, "a higher bar should land in the right tier less often");
+	assert.ok(never.tierAccuracy < high.tierAccuracy, "...and never routing at all, least often of all");
+});
+
+test("calibration reads the classifier's own claims and ignores pinned turns", async () => {
+	const outcome = await run();
+	const report = computeCalibration(outcome.turns, DEFAULT_CONFIG.switching.minConfidence);
+	assert.equal(report.turns, outcome.turns.filter((t) => !t.pinned).length, "a pinned turn never consulted the classifier");
+	assert.equal(
+		report.buckets.reduce((a, b) => a + b.turns, 0),
+		report.turns,
+		"every routed turn lands in exactly one bucket",
+	);
+	assert.ok(report.ece >= 0 && report.ece <= 1);
+	for (const b of report.buckets) {
+		assert.ok(b.meanConfidence >= b.lower && b.meanConfidence <= b.upper);
+		assert.ok(b.accuracy >= 0 && b.accuracy <= 1);
+		assert.equal(b.belowBar, b.upper <= DEFAULT_CONFIG.switching.minConfidence);
+	}
+	// This fixture was written with low confidence on the turns it gets wrong, so
+	// confidence must carry signal here; on live Jev that is the open question.
+	assert.ok(report.discrimination > 0, "confidence should predict correctness in this pack");
+
+	// An oracle classifier is perfectly accurate at confidence 1: no calibration error.
+	const perfect = computeCalibration((await run({ classifier: "oracle" })).turns, 0.5);
+	assert.equal(perfect.ece, 0);
+});
+
+test("session success and turn success are the same number until fan-out adopts something", async () => {
+	const plain = computeMetrics(...unpack(await run()));
+	assert.equal(plain.sessionSuccessRate, plain.turnSuccessRate, "with no fan-out there is nothing to adopt");
+
+	const fanned = computeMetrics(...unpack(await run({ candidateN: 3, judgeMinConfidence: 0 })));
+	assert.ok(fanned.sessionSuccessRate > fanned.turnSuccessRate, "a helpful judge must move the session number, not the routed one");
+	assert.equal(fanned.turnSuccessRate, plain.turnSuccessRate, "...and must not move the routed one at all");
+});
+
+test("exploration commits the rest of the session to one model", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3, exploreTurns: 2, judgeMinConfidence: 0 });
+	const byTask = new Map<string, typeof outcome.turns>();
+	for (const t of outcome.turns) byTask.set(t.taskId, [...(byTask.get(t.taskId) ?? []), t]);
+
+	for (const [taskId, turns] of byTask) {
+		const explore = turns.filter((t) => t.turn <= 2);
+		const exploit = turns.filter((t) => t.turn > 2);
+		for (const t of explore) assert.ok(t.candidate, `${taskId} t${t.turn} should have fanned out`);
+		for (const t of exploit) {
+			assert.equal(t.candidate, undefined, `${taskId} t${t.turn} should not pay for a fan-out`);
+			assert.equal(t.committed, true);
+			assert.match(t.reason, /committed to .* after 2 exploration turn\(s\)/);
+		}
+		if (exploit.length > 0) {
+			assert.equal(new Set(exploit.map((t) => t.model)).size, 1, `${taskId} kept switching after committing`);
+			// ...and only the first exploit turn can be cold, because nothing moves after it.
+			assert.deepEqual(exploit.slice(1).filter((t) => t.cold), []);
+		}
+	}
+});
+
+test("exploring beats fanning out every turn when the judge is good, and is worse than neither when it is not", async () => {
+	const cells = await runStrategySweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		candidateN: 3,
+		exploreDepths: [3],
+		biases: [0, 20],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const at = (strategy: string, bias: number) => cells.find((c) => c.strategy === strategy && c.bias === bias)!;
+
+	const route = at("route", 0);
+	const always = at("fanout-always", 0);
+	const explore = at("explore-3", 0);
+
+	assert.ok(always.turnSuccessRate > route.turnSuccessRate, "a good judge should help");
+	assert.ok(explore.turnSuccessRate >= always.turnSuccessRate, "committing beats re-rolling the judge every turn");
+	assert.ok(explore.listEquivalentUsd < always.listEquivalentUsd / 1.5, "...for a fraction of the spend");
+	assert.ok(explore.listUsdPerExtraSolve < always.listUsdPerExtraSolve / 2);
+	assert.ok(explore.fanoutTurns < always.fanoutTurns);
+
+	// Commitment amplifies bias: one bad verdict becomes permanent for the whole session,
+	// so most of the advantage disappears. (It does not always go below the baseline,
+	// because committing also stops the router routing into an avoidable compaction.)
+	assert.equal(at("route", 20).turnSuccessRate, route.turnSuccessRate, "the baseline cannot see the judge at all");
+	// Measured against the headroom that exists, not in raw points: how much room a judge
+	// has to help depends on how often the routed model was going to fail anyway, which
+	// is a property of the pack rather than of the idea.
+	const gain = explore.turnSuccessRate - route.turnSuccessRate;
+	const biasedGain = at("explore-3", 20).turnSuccessRate - route.turnSuccessRate;
+	assert.ok(gain > 0, "a clean judge should help");
+	// Bias still takes a large share of it. The share shrank when the billing merge made
+	// fan-out rank its slots by billing basis: the strongest per-token model left the
+	// shipped set, so there is less headroom for a length bias to misdirect the judge
+	// into. The durable claim is that commitment amplifies bias, not the exact fraction.
+	assert.ok(biasedGain < gain, `bias should cost exploration some of its advantage (${gain} -> ${biasedGain})`);
+	assert.ok((gain - biasedGain) / gain > 0.25, `bias should take a large share of it, took ${(((gain - biasedGain) / gain) * 100).toFixed(1)}%`);
+});
+
+test("a pinned turn cannot change the thinking level, so it is never charged a cache flush for one", async () => {
+	// src/index.ts returns from before_agent_start on a pinned turn, before the line that
+	// calls pi.setThinkingLevel. The harness must model that early return exactly.
+	const src = readFileSync(join(ROOT, "src", "index.ts"), "utf8");
+	const early = src.indexOf("if (turn <= pinnedUntilTurn)");
+	const setLevel = src.indexOf("pi.setThinkingLevel");
+	assert.ok(early > 0 && setLevel > early, "src/index.ts's pinned early-return moved; re-check the harness");
+	assert.match(src.slice(early, src.indexOf("\n", src.indexOf("return;", early))), /return;/);
+
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3, exploreTurns: 2, judgeMinConfidence: 0 });
+	let previous: (typeof outcome.turns)[number] | undefined;
+	for (const turn of outcome.turns) {
+		if (previous && previous.taskId === turn.taskId && turn.pinned) {
+			assert.equal(turn.thinkingLevel, previous.thinkingLevel, `${turn.taskId} t${turn.turn}: a pinned turn changed the thinking level`);
+			assert.notEqual(turn.coldCause, "thinking-change");
+		}
+		previous = turn;
+	}
+});
+
+test("rebilling a fleet changes its billing and nothing else", () => {
+	const raw = JSON.parse(readFileSync(FLEET, "utf8")) as Fleet;
+	const rebilled = rebill(raw, "all-on-demand");
+	assert.deepEqual(rebilled.tiers, raw.tiers);
+	assert.equal(rebilled.models.length, raw.models.length);
+	for (const [i, model] of rebilled.models.entries()) {
+		const before = raw.models[i]!;
+		assert.equal(model.billing, "on-demand");
+		assert.equal(model.oauth, false);
+		assert.deepEqual({ ...model, billing: before.billing, oauth: before.oauth }, before, `${model.key}: rebilling touched something else`);
+	}
+	assert.deepEqual(rebill(raw, "as-configured"), raw);
+});
+
+test("without a subscription the ledger finally sees what the router spends", async () => {
+	const onDemand = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), unauthed: [], billing: "all-on-demand" })));
+	assert.equal(onDemand.planHiddenUsd, 0, "nothing is hidden when nothing is on a plan");
+	assert.equal(onDemand.ledgerCostUsd, onDemand.listEquivalentUsd);
+	assert.equal(onDemand.planPointsUsed, 0);
+
+	const asShipped = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	assert.ok(asShipped.planHiddenUsd > asShipped.ledgerCostUsd, "on a plan, most of what is spent is not what is billed");
+	assert.ok(
+		asShipped.planHiddenUsd / asShipped.listEquivalentUsd > 0.5,
+		`only ${((asShipped.planHiddenUsd / asShipped.listEquivalentUsd) * 100).toFixed(0)}% of spend was hidden`,
+	);
+});
+
+test("the router's quality depends on the billing arrangement, not on the work", async () => {
+	// Identical config, identical tasks, a perfect classifier. The only thing that
+	// changes is whether the models are free at the margin.
+	const onPlan = await run({ pack: pack(LONG_PACK), classifier: "oracle" });
+	const onDemand = await run({ pack: pack(LONG_PACK), classifier: "oracle", billing: "all-on-demand" });
+	const a = computeMetrics(onPlan.turns, onPlan.stateChars);
+	const b = computeMetrics(onDemand.turns, onDemand.stateChars);
+
+	assert.equal(a.tierAccuracy, b.tierAccuracy, "the router lands in the same tiers either way");
+	assert.ok(b.sessionSuccessRate < a.sessionSuccessRate, "...and yet does worse work");
+	assert.ok(b.listEquivalentUsd < a.listEquivalentUsd, "it is buying that with a real cost saving");
+
+	// The difference is which model the standard tier prefers: cheapest-in-tier picks the
+	// strong one while a subscription makes it free, and the weak one otherwise. (On a
+	// plan it uses both, because the pack 429s the plan partway through - which is the
+	// same mechanism arriving by a different route.)
+	// Routed turns only: a pinned turn is the operator's choice, not the router's.
+	const standardPick = (turns: typeof onPlan.turns) =>
+		new Set(turns.filter((t) => !t.pinned && t.effectiveTier === "standard").map((t) => t.model));
+	assert.ok(standardPick(onPlan.turns).has("faux-plan-codex/gpt-6-astra"), "a live subscription should buy the stronger standard model");
+	assert.deepEqual([...standardPick(onDemand.turns)], ["faux-or/glm-5.3"], "without one, only the cheap model is ever chosen");
+});
+
+test("recording rewrites the classifier answers and nothing else", async () => {
+	const original = pack();
+	// Stand in for a live run: give every routed turn a recorded answer.
+	const outcome = await run();
+	const turns = outcome.turns.map((t) => ({
+		...t,
+		classifierSource: t.pinned ? t.classifierSource : ("jev" as const),
+		classifierAnswer: t.pinned ? undefined : { tier: "heavy" as const, confidence: 0.99, needsTools: 0.5, stakes: 1.25 },
+	}));
+	const result = recordAnswers(original, turns);
+
+	assert.ok(result.recorded > 20);
+	for (const [i, task] of result.pack.tasks.entries()) {
+		const before = original.tasks[i]!;
+		assert.equal(task.id, before.id);
+		assert.equal(task.requiredSkill, before.requiredSkill, "recording must not touch the declared ground truth");
+		for (const [j, turn] of task.turns.entries()) {
+			const was = before.turns[j]!;
+			assert.equal(turn.prompt, was.prompt);
+			assert.equal(turn.goldTier, was.goldTier);
+			assert.equal(turn.requiredSkill, was.requiredSkill);
+			assert.equal(turn.manualPin, was.manualPin);
+			// A fixture that models a Jev outage keeps modelling one.
+			if (was.jev?.fail) assert.equal(turn.jev?.fail, true, "an outage fixture must survive recording");
+		}
+	}
+
+	// A pinned turn never called the classifier, so there is nothing to record for it.
+	const pinnedTask = original.tasks.find((t) => t.turns.some((x) => x.manualPin))!;
+	assert.ok(result.skipped.some((s) => s.startsWith(pinnedTask.id) && s.includes("pinned")));
+	const pinnedBefore = pinnedTask.turns[1]!;
+	const pinnedAfter = result.pack.tasks.find((t) => t.id === pinnedTask.id)!.turns[1]!;
+	assert.deepEqual(pinnedAfter.jev, pinnedBefore.jev);
+
+	// Recording the fixture's own answers back is a no-op.
+	const identity = recordAnswers(original, outcome.turns.map((t) => ({ ...t, classifierAnswer: t.classifierAnswer })));
+	assert.deepEqual(identity.changes, [], identity.changes.join("; "));
+});
+
+test("a /model pin that outlives its question is measurable, and the shipped length is not cheap", async () => {
+	const cells = await runPinSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		pinTurns: [0, 1, DEFAULT_CONFIG.switching.manualPinTurns, 10],
+	});
+	const [none, one, shipped, long] = cells as [PinCell, PinCell, PinCell, PinCell];
+
+	assert.equal(none.pinnedTurns, 0);
+	assert.equal(none.pinnedWrongTier, 0);
+	// A longer pin holds more turns, and more of them are in the wrong tier for the work.
+	assert.ok(one.pinnedTurns < shipped.pinnedTurns && shipped.pinnedTurns < long.pinnedTurns);
+	assert.ok(one.pinnedWrongTier < shipped.pinnedWrongTier && shipped.pinnedWrongTier < long.pinnedWrongTier);
+
+	// The shipped 3-turn pin is a real trade, not a free convenience.
+	assert.ok(shipped.pinnedWrongTier >= 5, `only ${shipped.pinnedWrongTier} pinned turns landed wrong; the pack no longer exercises this`);
+	assert.ok(shipped.tierAccuracy < none.tierAccuracy, "a pin that outlives its question lands in the wrong tier");
+	assert.ok(shipped.sessionSuccessRate < none.sessionSuccessRate, "it costs quality");
+	assert.ok(shipped.listEquivalentUsd < none.listEquivalentUsd, "...and buys real spend back, by not switching");
+});
+
+test("compaction uses pi's own trigger, not the harness's idea of one", () => {
+	const model: FleetModel = {
+		key: "x/y",
+		name: "y",
+		tier: "light",
+		billing: "on-demand",
+		oauth: false,
+		cost: { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 1 },
+		skill: 50,
+		contextWindow: 200_000,
+	};
+	const trigger = 200_000 - DEFAULT_COMPACTION_SETTINGS.reserveTokens;
+	assert.equal(planCompaction(model, trigger), undefined, "at the threshold pi does not compact");
+	const event = planCompaction(model, trigger + 1);
+	assert.ok(event, "one token over, it does");
+	assert.equal(event.tokensBefore, trigger + 1);
+	assert.equal(event.tokensAfter, DEFAULT_COMPACTION_SETTINGS.keepRecentTokens + COMPACTION_SUMMARY_TOKENS);
+	assert.ok(event.listEquivalentUsd > 0);
+
+	// The same conversation, a roomier model, no compaction: this is the routing consequence.
+	assert.equal(planCompaction({ ...model, contextWindow: 400_000 }, trigger + 1), undefined);
+	// A plan route still compacts; it just does not bill the ledger for it.
+	assert.equal(planCompaction({ ...model, billing: "plan" }, trigger + 1)!.ledgerCostUsd, 0);
+});
+
+test("a compaction is a cache flush, shrinks the context, and is charged", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const compacted = outcome.turns.filter((t) => t.compaction);
+	assert.ok(compacted.length > 0, "the long pack must reach a context that compacts");
+
+	for (const turn of compacted) {
+		assert.equal(turn.cold, true, "a compaction rewrites the prefix, so nothing after it can be read from cache");
+		assert.equal(turn.coldCause, "compaction");
+		assert.equal(turn.contextTokens, turn.compaction!.tokensBefore);
+		assert.ok(turn.compaction!.tokensAfter < turn.compaction!.tokensBefore / 5, "compaction must actually shrink the context");
+		// Only a small-window model gets here; the fleet has 400k models available.
+		assert.equal(turn.compaction!.avoidable, true);
+	}
+
+	const m = computeMetrics(outcome.turns, outcome.stateChars);
+	assert.equal(m.compactions, compacted.length);
+	assert.equal(m.avoidableCompactions, compacted.length);
+	assert.ok(m.compactionCostUsd > 0);
+	assert.ok(m.listEquivalentUsd > m.compactionCostUsd, "compaction cost is part of the total, not the whole of it");
+});
+
+test("an avoidable compaction costs turns, and the conclusion does not hinge on the penalty", async () => {
+	const at = async (compactionPenalty: number) => computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), compactionPenalty })));
+	const none = await at(0);
+	const shipped = await at(COMPACTION_SKILL_PENALTY);
+	const harsh = await at(40);
+
+	assert.equal(none.turnsLostToCompaction, 0, "with no penalty a compaction costs money and cache but no quality");
+	assert.ok(shipped.turnsLostToCompaction >= 4, "...and with one it costs turns");
+	assert.ok(shipped.sessionSuccessRate < none.sessionSuccessRate);
+
+	// The size of the penalty barely matters: its effect saturates, because a turn either
+	// needed the discarded detail or it did not.
+	assert.ok(Math.abs(harsh.sessionSuccessRate - shipped.sessionSuccessRate) < 0.05, "the finding must not hinge on the declared penalty");
+	// Money and cache are untouched by it, as they must be.
+	assert.equal(harsh.compactionCostUsd, none.compactionCostUsd);
+	assert.equal(harsh.compactions, none.compactions);
+});
+
+test("losing context only hurts turns that needed it", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const maxPenalty = COMPACTION_SKILL_PENALTY; // contextSensitivity is capped at 1
+	let cutFrom: number | undefined;
+	let previousPenalty = 0;
+	let previousTask = "";
+	for (const turn of outcome.turns) {
+		if (turn.taskId !== previousTask) {
+			cutFrom = undefined;
+			previousPenalty = 0;
+			previousTask = turn.taskId;
+		}
+		assert.ok(turn.compactionPenalty >= 0 && turn.compactionPenalty <= maxPenalty, `penalty ${turn.compactionPenalty} out of range`);
+		assert.ok(turn.requiredSkill >= turn.compactionPenalty);
+
+		// The effective context on a compaction turn is the summary, not what was discarded.
+		const effective = turn.compaction ? turn.compaction.tokensAfter : turn.contextTokens;
+		if (turn.compactionPenalty > 0) {
+			assert.ok(cutFrom !== undefined || turn.compaction, `${turn.taskId} t${turn.turn} penalised with nothing to forget`);
+			assert.ok(effective < (turn.compaction?.tokensBefore ?? cutFrom!), "a penalty implies the context has not been rebuilt yet");
+		} else if (cutFrom !== undefined) {
+			assert.ok(effective >= cutFrom, "the penalty only reaches zero once the lost context is back");
+		}
+		// Between compactions the penalty decays; it never grows on its own.
+		if (!turn.compaction && cutFrom !== undefined) assert.ok(turn.compactionPenalty <= previousPenalty + 1e-9);
+		if (turn.compaction) cutFrom = turn.compaction.tokensBefore;
+		previousPenalty = turn.compactionPenalty;
+	}
+	// A task declared insensitive to context is unaffected however much is discarded.
+	const insensitive = pack(LONG_PACK);
+	for (const task of insensitive.tasks) task.contextSensitivity = 0;
+	const unaffected = await run({ pack: insensitive });
+	assert.deepEqual(
+		unaffected.turns.filter((t) => t.compactionPenalty > 0),
+		[],
+		"context-insensitive work must not be penalised for forgetting",
+	);
+	assert.ok(unaffected.turns.some((t) => t.compaction), "...even though it still compacts");
+});
+
+test("a /model pin to a small-context model can cost the session its memory", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const compacted = outcome.turns.filter((t) => t.compaction);
+	const pinInduced = compacted.filter((t) => t.pinned);
+	assert.ok(
+		pinInduced.length >= 2,
+		`only ${pinInduced.length} compactions were pin-induced; the pack no longer exercises the case where an operator's ` +
+			"pin to a cheap model forces the conversation to be summarised away",
+	);
+	for (const turn of pinInduced) {
+		assert.equal(turn.compaction!.avoidable, true, "the router would not have compacted here; the pin did");
+		assert.ok(turn.contextTokens > 150_000, "the conversation that gets discarded is a large one");
+	}
+});
+
+test("the trace renders what the run recorded, not a re-simulation", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3 });
+	const taskId = "django__django-16379-session";
+	const turns = outcome.turns.filter((t) => t.taskId === taskId);
+	const text = explainTask(outcome.turns, taskId);
+
+	assert.match(text, new RegExp(`${taskId}\\s+—\\s+${turns.length} turns, ${turns.filter((t) => t.solved).length} solved`));
+	for (const turn of turns) {
+		assert.match(text, new RegExp(`turn ${turn.turn}  ${turn.solved ? "SOLVED" : "FAILED"}`), `turn ${turn.turn} missing its verdict`);
+		assert.ok(text.includes(turn.model), `turn ${turn.turn} does not name its model`);
+		// Costs are printed from the record, so they must match it exactly.
+		assert.ok(text.includes(`$${turn.listEquivalentUsd.toFixed(4)} at list`), `turn ${turn.turn}'s cost was not rendered from the record`);
+		if (turn.cold) assert.ok(text.includes(`cold (${turn.coldCause})`));
+		if (turn.compaction) assert.ok(text.includes(`${turn.compaction.tokensBefore.toLocaleString("en-US")} →`));
+		if (turn.pinned) assert.match(text, /pinned|committed/);
+	}
+	// The totals are the turns' own numbers added up.
+	const totalList = turns.reduce((a, t) => a + t.listEquivalentUsd + (t.compaction?.listEquivalentUsd ?? 0), 0);
+	assert.ok(text.includes(`total: $${totalList.toFixed(4)} at list`));
+});
+
+test("asking to explain a task that is not in the run says which ones are", async () => {
+	const outcome = await run();
+	const text = explainTask(outcome.turns, "nope__nope-1");
+	assert.match(text, /no task "nope__nope-1" in this run/);
+	for (const id of new Set(outcome.turns.map((t) => t.taskId))) assert.ok(text.includes(id), `${id} not offered as an alternative`);
+});
+
+test("routing is insensitive to where the session started; not routing is entirely determined by it", async () => {
+	const loaded = loadFleet(FLEET);
+	const cells = await runStartSweep({ pack: pack(LONG_PACK), loaded, classifier: "scripted" });
+	const of = (classifier: string) => cells.filter((c) => c.classifier === classifier).map((c) => c.sessionSuccessRate);
+	const spread = (values: number[]) => Math.max(...values) - Math.min(...values);
+	const mean = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
+
+	const routed = of("oracle");
+	const never = of("heuristic");
+	assert.equal(routed.length, loaded.byKey.size, "every fleet model should be tried as a starting point");
+
+	// This is what a router is *for*: it corrects a bad starting point.
+	assert.ok(spread(routed) < 0.1, `routing varied by ${(spread(routed) * 100).toFixed(1)}pp across starting models`);
+	assert.ok(spread(of("scripted")) < 0.1);
+	// Never switching cannot correct anything, so it inherits whatever it started on.
+	assert.ok(spread(never) > 0.35, `never-switching varied by only ${(spread(never) * 100).toFixed(1)}pp; the sweep is not biting`);
+
+	// ...and its ranking follows the starting model's competence, not the work.
+	const byStart = new Map(cells.filter((c) => c.classifier === "heuristic").map((c) => [c.startModel, c.sessionSuccessRate]));
+	const weakest = loaded.byKey.get("faux-or/glm-5.3-flash")!;
+	const strongest = loaded.byKey.get("faux-gw/claude-fable-5-1")!;
+	assert.ok(weakest.skill < strongest.skill);
+	assert.ok(byStart.get(weakest.key)! < byStart.get(strongest.key)!);
+
+	// Averaged over starting points - i.e. not assuming the user is already on the best
+	// model - routing wins, which is the opposite of what a single start model showed.
+	assert.ok(mean(routed) > mean(never), `routing ${mean(routed)} vs never-switching ${mean(never)}`);
+	// The point is not the gap in the mean but that one number is a fact about the router
+	// and the other is a fact about wherever the user happened to be.
+	assert.ok(spread(never) > spread(routed) * 5);
+});
+
+test("the assumption audit ranks what the answer rests on, and separates cost from quality", async () => {
+	const rows = await auditAssumptions({ pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted", candidateN: 0 });
+	const at = (name: string) => rows.find((r) => r.assumption === name)!;
+
+	// Loudest first, so a reader knows what has to be quoted alongside any number.
+	for (let i = 1; i < rows.length; i++) assert.ok(rows[i]!.sessionSuccess.spread <= rows[i - 1]!.sessionSuccess.spread);
+	for (const row of rows) {
+		assert.ok(row.values.length >= 2, `${row.assumption} was not actually varied`);
+		assert.ok(row.sessionSuccess.spread >= 0 && row.sessionSuccess.max <= 1);
+	}
+
+	// With no fan-out, nothing about the judge can touch the outcome.
+	for (const name of ["judge error (noise)", "judge bias", "judge temperature", "judge confidence gate"]) {
+		assert.equal(at(name).sessionSuccess.spread, 0, `${name} moved the outcome with fan-out off`);
+	}
+	// The traffic profile is a cost assumption and must not leak into quality.
+	const calls = at("calls per turn");
+	assert.equal(calls.sessionSuccess.spread, 0);
+	assert.equal(calls.tierAccuracy.spread, 0);
+	assert.ok(calls.listEquivalentUsd.spread > 0, "...but it must move the money");
+	assert.ok(calls.coldPremiumShare.spread > 0.2);
+});
+
+test("turning on fan-out moves the answer's dependency from the router to the judge", async () => {
+	const args = { pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted" as const };
+	const routingOnly = await auditAssumptions({ ...args, candidateN: 0 });
+	const withFanout = await auditAssumptions({ ...args, candidateN: 3 });
+	const spread = (rows: typeof routingOnly, name: string) => rows.find((r) => r.assumption === name)!.sessionSuccess.spread;
+
+	// Router-side assumptions dominate when the routed model is what answers; which one
+	// leads depends on the pack and the classifier, so only the contrast is asserted.
+	assert.equal(spread(routingOnly, "judge bias"), 0, "with no fan-out, nothing about the judge can matter");
+	assert.ok(spread(routingOnly, "fleet skill (\u00b1jitter)") > 0.05, "...while the declared fleet very much does");
+
+	// Once a judge chooses the answer, its quality dominates instead - and it is the one
+	// assumption this harness cannot measure offline.
+	assert.ok(spread(withFanout, "judge bias") > 0, "judge bias should matter once fan-out is on");
+	assert.ok(
+		spread(withFanout, "judge bias") > spread(withFanout, "starting model") * 3,
+		"...and should dominate the router-side assumptions it displaces",
+	);
+	assert.ok(spread(withFanout, "starting model") < spread(routingOnly, "starting model"), "fan-out absorbs a bad starting point");
+});
+
+test("a run compared against itself shows no difference, and the comparison is deterministic", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const self = bootstrapDifference(outcome.turns, outcome.turns);
+	for (const r of self) {
+		assert.equal(r.point, 0);
+		assert.equal(r.low, 0);
+		assert.equal(r.high, 0);
+		assert.equal(r.significant, false, "a run cannot significantly differ from itself");
+	}
+	assert.deepEqual(bootstrapDifference(outcome.turns, outcome.turns), self);
+
+	const other = await run({ pack: pack(LONG_PACK), classifier: "heuristic" });
+	assert.deepEqual(bootstrapDifference(outcome.turns, other.turns), bootstrapDifference(outcome.turns, other.turns));
+	assert.throws(() => bootstrapDifference(outcome.turns, []), /share no tasks/);
+});
+
+test("the pack resolves cost differences and cannot resolve most quality differences", async () => {
+	const comparisons = await runPairedComparisons({ pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted" });
+	const of = (metric: string) => comparisons.flatMap((c) => c.results.filter((r) => r.metric === metric));
+	const cost = of("listEquivalentUsd");
+	const quality = of("sessionSuccessRate");
+
+	const time = of("wallClockSeconds");
+	assert.ok(cost.length >= 5 && quality.length === cost.length && time.length === cost.length);
+	// The durable claim is the contrast, not a particular count: this harness resolves
+	// resource differences far more often than outcome differences.
+	const resolved = (rs: typeof cost) => rs.filter((r) => r.significant).length;
+	assert.ok(resolved(cost) >= cost.length - 1, `only ${resolved(cost)}/${cost.length} cost differences resolved`);
+	// Wall-clock resolves less reliably than cost and always has; it moved from 4/5 to 3/5
+	// when the billing merge changed what the shipped fan-out set contains. The claim the
+	// brief rests on is the contrast below, not a particular count.
+	assert.ok(resolved(time) >= 3, `only ${resolved(time)}/${time.length} wall-clock differences resolved`);
+	assert.ok(resolved(quality) < resolved(cost), "quality must resolve less often than cost, or the pack is bigger than it is");
+	assert.ok(resolved(quality) < resolved(time), "...and less often than wall-clock");
+	assert.ok(resolved(quality) <= quality.length / 2, "most quality differences should not resolve");
+
+	// Fan-out is the largest quality effect in the set, even where the pack cannot
+	// resolve it: it is the claim worth spending more tasks on.
+	const fanout = comparisons.find((c) => c.label.startsWith("fan-out every turn"))!;
+	const fanoutQuality = fanout.results.find((r) => r.metric === "sessionSuccessRate")!;
+	assert.ok(fanoutQuality.point > 0, "running several candidates and adopting should help");
+	assert.ok(fanoutQuality.point >= Math.max(...quality.map((r) => r.point)) - 1e-9, "...by more than any other change measured here");
+});
+
+test("the sample-size estimate scales the way an interval does", () => {
+	// Half-width shrinks as 1/sqrt(n), so the tasks needed grow as 1/target².
+	assert.equal(tasksNeededFor(0.1, 0.2, 6), 24);
+	assert.equal(tasksNeededFor(0.05, 0.2, 6), 96);
+	assert.equal(tasksNeededFor(0.2, 0.2, 6), 6, "a target equal to the current half-width needs no more tasks");
+	assert.equal(tasksNeededFor(0, 0.2, 6), Number.POSITIVE_INFINITY);
+});
+
+test("the judge's raw lift depends on how much room there is; the share it captures does not", async () => {
+	// Same pack, same judge, same everything except where the session starts - which
+	// changes how often the routed model was going to fail anyway, and therefore how
+	// much room a judge has to help at all.
+	const at = async (startModel: string) =>
+		computeMetrics(
+			...unpack(await run({ pack: pack(LONG_PACK), classifier: "heuristic", candidateN: 3, judgeMinConfidence: 0, startModel })),
+		).candidate!;
+	const weak = await at("faux-or/glm-5.3-flash");
+	const strong = await at("faux-gw/claude-fable-5-1");
+
+	const headroom = (m: typeof weak) => m.oracleSuccessRate - m.baselineSuccessRate;
+	assert.ok(headroom(weak) > headroom(strong) * 3, "starting weak must leave far more room than starting strong");
+	assert.ok(weak.adoptedLift > strong.adoptedLift * 3, "...so the raw lift moves with it, several-fold");
+
+	// The fraction is the property of the judge, and it is stable across that range.
+	// This is why a lift quoted in points is only meaningful beside its baseline.
+	for (const m of [weak, strong]) assert.ok(m.judgeHeadroomCaptured > 0.7 && m.judgeHeadroomCaptured <= 1);
+	assert.ok(
+		Math.abs(weak.judgeHeadroomCaptured - strong.judgeHeadroomCaptured) < 0.2,
+		`headroom captured moved from ${weak.judgeHeadroomCaptured} to ${strong.judgeHeadroomCaptured} across a 6x change in headroom`,
+	);
+});
+
+test("the findings brief still agrees with what the harness measures", async () => {
+	// A decision document full of numbers that silently goes stale is worse than none.
+	// This re-measures the load-bearing ones and requires the brief to quote them.
+	const brief = readFileSync(join(ROOT, "docs", "research", "router-eval-findings.md"), "utf8");
+	const quotes = (needle: string, why: string) => assert.ok(brief.includes(needle), `the brief no longer says "${needle}" — ${why}`);
+
+	// §1: the shipped tier table, priced from docs/data. Nothing simulated.
+	const audit = auditConfig(DEFAULT_CONFIG, DOCS);
+	assert.equal(audit.dominatedTiers.length, 1);
+	const [light, standard, heavy] = audit.tiers.map((t) => t.preferred!);
+	quotes(`$${standard!.warmTurnUsd!.toFixed(4)}`, "the standard tier's price changed");
+	quotes(`$${heavy!.warmTurnUsd!.toFixed(4)}`, "the heavy tier's price changed");
+	quotes(String(light!.intelligence), "the light tier's capability score changed");
+	assert.ok(brief.includes("standard` tier is dominated") || brief.includes("standard tier is dominated"));
+
+	// §3: the load-bearing cost figures.
+	const long = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK) })));
+	quotes(`$${long.coldPremiumUsd.toFixed(2)}`, "the cold-start premium changed");
+	quotes(`${long.switches} switches`, "the switch count changed");
+
+	// §5: the shipped fan-out set against the alternative, and the durable framing.
+	const shipped = computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), candidateN: 3, judgeMinConfidence: 0 }))).candidate!;
+	assert.ok(shipped.judgeHeadroomCaptured > 0.7);
+	quotes("fraction of available headroom", "the brief must not quote quality effects in bare points");
+
+	// The honest limits, which are the first thing a reader must see.
+	quotes("0 of 5 quality differences do", "the resolution claim changed");
+	quotes("5 of 5 cost differences resolve", "the resolution claim changed");
+});
+
+test("the router's own overhead is inside the totals, and booked the way src/ledger.ts books it", async () => {
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3 });
+	const m = computeMetrics(outcome.turns, outcome.stateChars);
+
+	// src/index.ts calls ledger.recordJev on every answered classifier call, under a
+	// synthetic jev:<transport> provider, so the router's overhead lands in its own ledger.
+	const src = readFileSync(join(ROOT, "src", "index.ts"), "utf8");
+	assert.match(src, /ledger\.recordJev\(/, "src/index.ts stopped booking Jev calls; the harness mirrors that");
+	const answered = outcome.turns.filter((t) => t.classifierSource === "jev").length;
+	assert.ok(answered > 0);
+	assert.ok(outcome.ledger.summaryLines().some((l) => l.includes("jev:")), "the run's ledger should carry a jev entry");
+
+	// It is real spend, so it is in the totals - and broken out, because the interesting
+	// question is whether it ever stops being negligible.
+	assert.ok(m.classifierCostUsd > 0);
+	assert.ok(m.classifierCostUsd < m.listEquivalentUsd / 100, "routing overhead should be a rounding error next to inference");
+	const turnsOnly = outcome.turns.reduce(
+		(a, t) => a + t.listEquivalentUsd + (t.candidate?.fanoutListEquivalentUsd ?? 0) + (t.compaction?.listEquivalentUsd ?? 0),
+		0,
+	);
+	assert.ok(Math.abs(m.listEquivalentUsd - (turnsOnly + m.classifierCostUsd)) < 1e-3, "the totals must include the overhead");
+
+	// And the two cost columns stay exactly consistent with the gap reported between them.
+	assert.equal(round4(m.listEquivalentUsd - m.ledgerCostUsd), round4(m.planHiddenUsd));
+	function round4(n: number) {
+		return Math.round(n * 1e4) / 1e4;
+	}
+});
+
+test("wall-clock comes from published throughput, and a fan-out waits on its slowest member", async () => {
+	const loaded = loadFleet(FLEET);
+	// Every fleet model carries published figures; a missing one would silently fall back.
+	for (const spec of loaded.byKey.values()) {
+		assert.ok(spec.ttftMs && spec.ttftMs > 0, `${spec.key} has no published TTFT`);
+		assert.ok(spec.throughputTps && spec.throughputTps > 0, `${spec.key} has no published throughput`);
+	}
+	const slow = loaded.byKey.get("faux-plan-codex/gpt-6-astra")!;
+	const quick = loaded.byKey.get("faux-or/glm-5.3")!;
+	assert.ok(callLatencyMs(slow, 1500) > callLatencyMs(quick, 1500) * 3, "the fleet must actually span a latency range");
+	// ttft + output/throughput, in ms.
+	assert.equal(Math.round(callLatencyMs(slow, 1500)), Math.round(slow.ttftMs! + (1500 / slow.throughputTps!) * 1000));
+
+	const outcome = await run({ pack: pack(LONG_PACK), candidateN: 3, judgeMinConfidence: 0 });
+	for (const turn of outcome.turns) {
+		assert.ok(turn.wallClockMs > 0);
+		if (!turn.candidate) continue;
+		// src/parallel.ts uses Promise.allSettled, so the fan-out waits on the slowest
+		// candidate, not on all of them.
+		const each = turn.candidate.candidates.length;
+		const sumOfParts = turn.candidate.fanoutWallClockMs * each;
+		assert.ok(turn.candidate.fanoutWallClockMs > 0 && turn.candidate.fanoutWallClockMs < sumOfParts);
+	}
+	const src = readFileSync(join(ROOT, "src", "parallel.ts"), "utf8");
+	assert.match(src, /Promise\.allSettled\(models\.map\(runOne\)\)/, "src/parallel.ts stopped running candidates in parallel");
+});
+
+test("the shipped candidate set is also the slowest, and headroom captured cannot exceed what exists", async () => {
+	const at = async (candidatePolicy: string) =>
+		computeMetrics(...unpack(await run({ pack: pack(LONG_PACK), candidateN: 3, candidatePolicy, judgeMinConfidence: 0 })));
+	const shipped = await at("shipped");
+	const alt = await at("tier-top");
+	const cheapest = await at("cheapest");
+
+	// Time is a third axis on round 9's result, and it points the same way.
+	assert.ok(alt.fanoutWallClockSeconds < shipped.fanoutWallClockSeconds / 2, "tier-top should add far less wall-clock");
+	assert.ok(alt.candidate!.fanoutListEquivalentUsd < shipped.candidate!.fanoutListEquivalentUsd / 2);
+	assert.ok(alt.candidate!.adoptedLift >= shipped.candidate!.adoptedLift);
+
+	// A candidate set with nothing better than the routed model has no headroom, and the
+	// captured fraction must read 0 rather than a sign error.
+	assert.ok(cheapest.candidate!.oracleSuccessRate < cheapest.candidate!.baselineSuccessRate);
+	assert.equal(cheapest.candidate!.judgeHeadroomCaptured, 0);
+	assert.ok(cheapest.candidate!.adoptedLift < 0, "...and the fan-out should be recorded as harmful");
+});
+
+test("the router no longer keeps a model the billing gate refused, however low the confidence", async () => {
+	// Round 26 found the opposite: chooseModel's low-confidence early return handed back
+	// `current` without asking whether it was usable, so a Jev outage on a 429'd provider
+	// pinned the session to it. The billing merge fixed it, exactly as §9A predicted.
+	// This test now guards the fix; the history is in §0 of the findings brief.
+	const outcome = await run({ startModel: "faux-plan-codex/gpt-6-astra" });
+	const ineligible = outcome.turns.filter((t) => !t.eligible);
+	assert.deepEqual(
+		ineligible.map((t) => `${t.taskId}#${t.turn} ${t.model} (${t.ineligibleReason})`),
+		[],
+		"a turn was routed to a model the gate refused",
+	);
+
+	// The mechanism, read from src/ rather than from the fixture: the low-confidence
+	// branch now evaluates the held route first and only keeps it when it survives.
+	const router = readFileSync(join(ROOT, "src", "router.ts"), "utf8");
+	const earlyReturn = router.slice(router.indexOf("if (confidence < cfg.switching.minConfidence"), router.indexOf("// Try the requested tier"));
+	assert.ok(earlyReturn.includes("evaluateCandidate"), "the low-confidence branch no longer evaluates the route it keeps");
+	assert.match(earlyReturn, /if \(!held\.skipped\)/, "the branch must only keep a held route the gate passed");
+	assert.ok(earlyReturn.includes("model: current"), "src/router.ts's low-confidence branch changed shape");
+
+	// The reason it mattered is unchanged and still worth guarding: every confidence
+	// heuristicTier can return is below the default bar, so a Jev outage always takes
+	// that branch. It is now safe to take, rather than never taken.
+	const confidences = [...router.matchAll(/confidence: (0\.\d+)/g)].map((m) => Number(m[1]));
+	assert.ok(confidences.length >= 3, "could not read heuristicTier's confidences");
+	for (const c of confidences) {
+		assert.ok(c < DEFAULT_CONFIG.switching.minConfidence, `heuristicTier can return ${c}, which would clear the ${DEFAULT_CONFIG.switching.minConfidence} bar`);
+	}
+	for (const prompt of ["ls", "why does this deadlock under load?", "implement the described function in two files"]) {
+		assert.ok(heuristicTier(prompt).confidence < DEFAULT_CONFIG.switching.minConfidence);
+	}
+});
+
+test("the invariant sweep visits many configurations and the structural invariants hold in all of them", async () => {
+	const report = await runCoverage({
+		pack: pack(),
+		loaded: loadFleet(FLEET),
+		minConfidences: [0, 0.5],
+		pinTurns: [0, 3],
+		unauthedSets: [[]],
+	});
+	assert.ok(report.configurations >= 60, `only ${report.configurations} configurations visited`);
+
+	// Everything structural must hold everywhere: these would be harness bugs.
+	for (const invariant of ["tier-partition", "no-nan", "non-negative-cost", "rate-in-range", "compaction-is-cold", "cold-costs-more", "pinned-costs-nothing"]) {
+		assert.equal(report.byInvariant[invariant] ?? 0, 0, `${invariant} broke somewhere: ${JSON.stringify(report.violations.slice(0, 1))}`);
+	}
+
+	// `eligible-route` is the router's own, and it is the one that used to break: round 26
+	// found 32 of 396 configurations sending a turn to a refused provider. The billing
+	// merge fixed it, so every invariant now holds everywhere.
+	assert.equal(report.byInvariant["eligible-route"] ?? 0, 0, `eligible-route broke again: ${JSON.stringify(report.violations.slice(0, 1))}`);
+	assert.deepEqual(report.violations, [], "the sweep found a violation the assertions above do not name");
+
+	// A clean sweep is now the expected result, and a detector that had quietly stopped
+	// detecting would look identical from outside. So drive the invariants directly with a
+	// turn built to break the one this sweep exists for.
+	const outcome = await run();
+	const metrics = computeMetrics(...unpack(outcome));
+	const configuration = { startModel: "faux-plan-codex/gpt-6-astra", classifier: "scripted" as const, billing: "as-configured" as const, minConfidence: 0.5, manualPinTurns: 0, unauthed: [] };
+	assert.deepEqual(checkInvariants(outcome.turns, metrics, configuration), [], "the unmodified run should be clean");
+
+	const sabotaged = outcome.turns.map((t, i) => (i === 0 ? { ...t, eligible: false, ineligibleReason: "synthetic: rate limited (429)" } : t));
+	const caught = checkInvariants(sabotaged, metrics, configuration);
+	assert.deepEqual(caught.map((v) => v.invariant), ["eligible-route"], "the detector no longer catches an ineligible route");
+	assert.match(caught[0]!.detail, /synthetic: rate limited/, "the violation must name what went wrong");
+	assert.match(caught[0]!.reproduce, /^npm run eval -- /, "a violation must come with a way to reproduce it");
+});
+
+test("the routing confidence bar no longer interacts with the billing gate at any setting", async () => {
+	// Round 26's companion finding: a higher bar caught more turns in the early return and
+	// so sent more of them to a refused provider. With the branch gated, the interaction is
+	// gone - which is the part of the fix a confidence-bar change could quietly undo.
+	const at = async (minConfidence: number) =>
+		runCoverage({
+			pack: pack(),
+			loaded: loadFleet(FLEET),
+			startModels: ["faux-plan-codex/gpt-6-astra"],
+			classifiers: ["scripted"],
+			billings: ["as-configured"],
+			minConfidences: [minConfidence],
+			pinTurns: [0],
+			unauthedSets: [[]],
+		});
+	for (const bar of [0, 0.5, 0.8, 1]) {
+		const report = await at(bar);
+		assert.deepEqual(report.violations, [], `minConfidence ${bar} reintroduced an ineligible route`);
+	}
+});
+
+test("whether routing spends more than not routing depends on which models it still has", async () => {
+	// Round 27. With the full fleet available, routing costs more than never routing -
+	// the round-4 result. Exhaust the plan and it costs *less*, because it is forced onto
+	// a cheap on-demand model - and it pays for that in quality, so it is not a saving.
+	const stripped = pack(LONG_PACK);
+	for (const task of stripped.tasks) for (const turn of task.turns) turn.providerEvent = undefined;
+
+	const measure = async (p: TaskPack, classifier: "oracle" | "heuristic") => computeMetrics(...unpack(await run({ pack: p, classifier })));
+	const [routedFull, neverFull] = [await measure(stripped, "oracle"), await measure(stripped, "heuristic")];
+	const [routedOut, neverOut] = [await measure(pack(LONG_PACK), "oracle"), await measure(pack(LONG_PACK), "heuristic")];
+
+	// Never switching cannot see the 429 at all: it never asks for another model.
+	assert.equal(neverFull.listEquivalentUsd, neverOut.listEquivalentUsd);
+	assert.equal(neverFull.sessionSuccessRate, neverOut.sessionSuccessRate);
+
+	assert.ok(routedFull.listEquivalentUsd > neverFull.listEquivalentUsd, "with its fleet intact, routing costs more");
+	assert.ok(routedOut.listEquivalentUsd < neverOut.listEquivalentUsd, "with the plan exhausted, routing costs less");
+	assert.ok(routedOut.sessionSuccessRate < routedFull.sessionSuccessRate, "...and that is a downgrade, not a saving");
+
+	// What does survive both: the cold-start premium is about half of routed-turn spend.
+	for (const m of [routedFull, routedOut]) assert.ok(m.coldPremiumShare > 0.4 && m.coldPremiumShare < 0.6);
+});
+
+test("every flag the CLI documents is one it parses, and vice versa", () => {
+	// Twenty-seven rounds of rapid change invites drift between --help and the parser.
+	const cli = readFileSync(join(ROOT, "eval", "cli.ts"), "utf8");
+	const help = cli.slice(cli.indexOf("const HELP ="), cli.indexOf("async function main"));
+	const documented = new Set([...help.matchAll(/^\s+(--[a-z-]+)/gm)].map((m) => m[1]!));
+	const parsed = new Set([...cli.matchAll(/case "(--[a-z-]+)":/g)].map((m) => m[1]!));
+
+	// --sweep takes a named mode, so its modes are documented as separate lines.
+	const sweepModes = new Set([...help.matchAll(/^\s+--sweep (\w+)/gm)].map((m) => m[1]!));
+	const sweepCases = new Set([...cli.matchAll(/args\.sweep === "(\w+)"/g)].map((m) => m[1]!));
+	const known = new Set([...(/const KNOWN_SWEEPS = \[([\s\S]*?)\]/.exec(cli)?.[1] ?? "").matchAll(/"(\w+)"/g)].map((m) => m[1]!));
+	assert.deepEqual([...known].sort(), [...sweepModes].sort(), "KNOWN_SWEEPS and --help disagree");
+	for (const mode of sweepModes) assert.ok(sweepCases.has(mode), `--help documents --sweep ${mode} but nothing dispatches it`);
+	assert.ok(sweepModes.size >= 12);
+
+	for (const flag of documented) {
+		if (flag === "--sweep") continue;
+		assert.ok(parsed.has(flag), `--help documents ${flag} but the parser does not accept it`);
+	}
+	for (const flag of parsed) {
+		if (flag === "--help") continue;
+		assert.ok(documented.has(flag), `the parser accepts ${flag} but --help does not mention it`);
+	}
+	// An unknown flag must be rejected rather than silently ignored.
+	assert.match(cli, /unknown argument/);
+});
+
+test("the exit codes eval/README documents are the ones the code returns", () => {
+	const readme = readFileSync(join(ROOT, "eval", "README.md"), "utf8");
+	const cli = readFileSync(join(ROOT, "eval", "cli.ts"), "utf8");
+	const table = readme.slice(readme.indexOf("### Exit codes"), readme.indexOf("### Exit codes") + 1200);
+	const documented = new Set([...table.matchAll(/^\| `(\d)` \|/gm)].map((m) => Number(m[1])));
+	assert.deepEqual([...documented].sort(), [0, 1, 2, 3, 4, 5], "eval/README's exit-code table changed");
+
+	// Each non-zero code must actually be reachable from the CLI.
+	for (const code of [1, 2, 3, 4, 5]) {
+		assert.match(cli, new RegExp(`return (problems > 0 \\? )?${code}[;:]|\\? ${code} :`), `eval/README documents exit ${code} but nothing returns it`);
+	}
+});
+
+test("the docs do not quote a pack size the packs no longer have", () => {
+	const short = pack();
+	const long = pack(LONG_PACK);
+	const counts = (p: typeof short) => ({ tasks: p.tasks.length, turns: p.tasks.reduce((a, t) => a + t.turns.length, 0) });
+	const s = counts(short);
+	const l = counts(long);
+
+	for (const file of ["README.md", join("eval", "README.md"), join("docs", "research", "router-eval-findings.md")]) {
+		const text = readFileSync(join(ROOT, file), "utf8");
+		// Only check files that actually quote a size, so adding prose cannot fail this.
+		if (text.includes(`${s.tasks} tasks`)) assert.ok(text.includes(`${s.turns} turns`), `${file} quotes the short pack's tasks but stale turns`);
+		if (text.includes(`${l.tasks} tasks`)) assert.ok(text.includes(`${l.turns} turns`), `${file} quotes the long pack's tasks but stale turns`);
+		for (const stale of ["6 tasks, 60 turns", "6 tasks, 60 turns, 8–12 turns"]) {
+			assert.ok(!text.includes(stale), `${file} still quotes a pack size that no longer exists: "${stale}"`);
+		}
+	}
+});
+
+test("a candidate set's bias-immunity does not survive a bias on another axis", async () => {
+	// Round 9 found tier-top unmoved by judge bias because its flashiest member is also
+	// its strongest, and flagged that the immunity might be axis-specific. It is.
+	const cells = await runAxisSweep({
+		pack: pack(LONG_PACK),
+		loaded: loadFleet(FLEET),
+		classifier: "scripted",
+		policies: ["tier-top", "strongest"],
+		axes: ["price", "length"],
+		biases: [0, 40],
+		seeds: ["s1", "s2", "s3"],
+	});
+	const at = (policy: string, axis: string, bias: number) => cells.find((c) => c.policy === policy && c.axis === axis && c.bias === bias)!;
+
+	// On the axis round 9 measured, tier-top is exactly as immune as it reported.
+	assert.equal(at("tier-top", "price", 40).adoptedLift, at("tier-top", "price", 0).adoptedLift);
+	assert.ok(at("tier-top", "price", 40).favouredIsStrongest, "that immunity is the alignment round 9 identified");
+
+	// On the other axis the alignment is gone, and so is the immunity.
+	assert.ok(!at("tier-top", "length", 40).favouredIsStrongest);
+	assert.ok(at("tier-top", "length", 40).adoptedLift < 0, "a length-biased judge should make tier-top actively harmful");
+	assert.ok(at("tier-top", "length", 40).judgeRegressions > at("tier-top", "price", 40).judgeRegressions * 5);
+});
+
+test("what makes a fan-out bias-robust is the floor of its candidate set, not an alignment", async () => {
+	const loaded = loadFleet(FLEET);
+	const current = loaded.models.find((m) => modelKey(m) === "faux-plan-anthropic/claude-opus-5");
+	const floorOf = (policy: string) =>
+		Math.min(...CANDIDATE_POLICIES[policy]!(policyArgsFor(loaded, current, 3)).map((m) => m.skill));
+
+	const cells = await runAxisSweep({
+		pack: pack(LONG_PACK),
+		loaded,
+		classifier: "scripted",
+		policies: ["strongest", "tier-top", "shipped"],
+		axes: ["price", "length"],
+		biases: [40],
+		seeds: ["s1", "s2", "s3"],
+	});
+	// `strongest` is the only set whose weakest member is still a capable model.
+	assert.ok(floorOf("strongest") > floorOf("tier-top") + 20);
+	assert.ok(floorOf("strongest") > floorOf("shipped") + 20);
+
+	// ...and the only one that stays strongly positive on both axes, without ever being
+	// aligned with the bias on one of them. If every candidate is good enough, it does
+	// not matter which one a biased judge picks.
+	for (const axis of ["price", "length"]) {
+		const strongest = cells.find((c) => c.policy === "strongest" && c.axis === axis)!;
+		assert.ok(strongest.adoptedLift > 0.2, `strongest fell to ${strongest.adoptedLift} on the ${axis} axis`);
+		for (const policy of ["tier-top", "shipped"]) {
+			assert.ok(cells.find((c) => c.policy === policy && c.axis === axis)!.adoptedLift < strongest.adoptedLift);
+		}
+	}
+	assert.ok(!cells.find((c) => c.policy === "strongest" && c.axis === "length")!.favouredIsStrongest, "robustness here is not alignment");
+});
+
+test("the probe says which axis a judge's bias runs on, not just how big it is", async () => {
+	// Round 29 made the axis the actionable half: a candidate set can be robust to a
+	// presentation bias and actively harmful under a length one.
+	const probe = loadProbePack(PROBE_PACK);
+	const at = async (biasAxis: "price" | "length", bias: number) =>
+		runProbe(new NoisyJudge({ noise: 10, seed: "axis-test", bias, biasAxis }), probe);
+
+	const clean = await at("price", 0);
+	assert.equal(clean.dominantAxis, "none", "an unbiased judge has no axis to place");
+	// Not zero: an unbiased judge still has noise, and the pack has narrow-gap traps it
+	// can lose. What matters is that neither axis carries a signal.
+	for (const axis of ["presentation", "length"] as const) {
+		assert.ok(clean.byAxis[axis].trapRate < 0.1, `an unbiased judge fell for ${clean.byAxis[axis].trapRate} of the ${axis} traps`);
+		assert.equal(clean.byAxis[axis].estimatedBiasPoints, 0);
+	}
+
+	for (const bias of [40, 60]) {
+		const byPresentation = await at("price", bias);
+		const byLength = await at("length", bias);
+		assert.equal(byPresentation.dominantAxis, "presentation", `a presentation-biased judge at ${bias} was mis-attributed`);
+		assert.equal(byLength.dominantAxis, "length", `a length-biased judge at ${bias} was mis-attributed`);
+		// The diagonal must beat the off-diagonal, which is what attribution means.
+		assert.ok(byPresentation.byAxis.presentation.estimatedBiasPoints > byPresentation.byAxis.length.estimatedBiasPoints);
+		assert.ok(byLength.byAxis.length.estimatedBiasPoints > byLength.byAxis.presentation.estimatedBiasPoints);
+		// Magnitude is still recovered on whichever axis is real.
+		assert.ok(Math.abs(byPresentation.byAxis.presentation.estimatedBiasPoints - bias) <= 10);
+		assert.ok(Math.abs(byLength.byAxis.length.estimatedBiasPoints - bias) <= 10);
+	}
+});
+
+test("the probe pack sets length against presentation, because otherwise they cannot be told apart", () => {
+	const probe = loadProbePack(PROBE_PACK);
+	const splits = probe.items.filter((i) => i.kind === "axis-split");
+	assert.ok(splits.length >= 6, "too few axis-split items to separate the axes");
+
+	for (const item of splits) {
+		const [a, b] = item.responses;
+		const better = a.trueSkill > b.trueSkill ? a : b;
+		const flashier = a.flashiness > b.flashiness ? a : b;
+		const longer = a.text.length > b.text.length ? a : b;
+		// The point of a split item: exactly one of the two axes points at the worse answer.
+		assert.notEqual(flashier.key === better.key, longer.key === better.key, `${item.id} does not actually split the axes`);
+		assert.ok(Math.abs(a.text.length - b.text.length) > 200, `${item.id}'s responses are too similar in length to signal on that axis`);
+	}
+	// Both directions must be present, or the probe can only see one kind of mistake.
+	const lengthTraps = splits.filter((i) => {
+		const [a, b] = i.responses;
+		const better = a.trueSkill > b.trueSkill ? a : b;
+		return (a.text.length > b.text.length ? a : b).key !== better.key;
+	});
+	assert.ok(lengthTraps.length >= 3 && splits.length - lengthTraps.length >= 3, "both directions of split are needed");
+
+	// And in the rest of the pack the two axes coincide, which is exactly why the splits
+	// had to be added rather than the existing traps reused.
+	const conflated = probe.items.filter((i) => i.kind !== "axis-split").filter((i) => {
+		const [a, b] = i.responses;
+		return (a.flashiness > b.flashiness ? a : b).key === (a.text.length > b.text.length ? a : b).key;
+	});
+	assert.ok(conflated.length / (probe.items.length - splits.length) > 0.8);
+});
+
+test("a run that changes nothing leaves the baseline alone", async () => {
+	const outcome = await run();
+	const metrics = computeMetrics(outcome.turns, outcome.stateChars);
+	const root = mkdtempSync(join(tmpdir(), "router-eval-churn-"));
+	const record: RunRecord = {
+		version: 1,
+		runId: "2026-01-01T00-00-00-churn-aaa1111",
+		at: "2026-01-01T00:00:00.000Z",
+		profile: "churn",
+		pack: "swe-router-v1",
+		fleet: "eval/tasks/fleet.json",
+		classifier: "scripted",
+		candidateN: 0,
+		judge: "none",
+		seed: "s",
+		startModel: outcome.startModel,
+		live: false,
+		metrics,
+		turns: outcome.turns,
+	};
+	writeRun(root, record);
+	const first = readFileSync(latestPath(root, "churn"), "utf8");
+
+	// Same numbers, different run: the baseline must not churn its runId and timestamp.
+	// A working tree that is dirty after running the eval should mean a result changed.
+	writeRun(root, { ...record, runId: "2026-01-02T00-00-00-churn-bbb2222", at: "2026-01-02T00:00:00.000Z" });
+	assert.equal(readFileSync(latestPath(root, "churn"), "utf8"), first, "an identical run rewrote the baseline");
+
+	// A moved number must still update it, or the gate compares against the wrong thing.
+	const moved = { ...metrics, listEquivalentUsd: metrics.listEquivalentUsd * 2 };
+	writeRun(root, { ...record, runId: "2026-01-03T00-00-00-churn-ccc3333", metrics: moved });
+	assert.equal(readRun(latestPath(root, "churn"))?.metrics.listEquivalentUsd, moved.listEquivalentUsd);
+});
+
+test("the phrasing probe detects a tier gap between wordings, and reports none when there is none", async () => {
+	const pack = loadPhrasingPack(PHRASING_PACK);
+
+	// A classifier that ignores phrasing must produce no gap, or the probe is inventing one.
+	const byDifficulty: Classify = async (prompt) => {
+		const pair = pack.pairs.find((p) => p.question === prompt || p.instruction === prompt)!;
+		return { tier: pair.difficulty, confidence: 0.9, needsTools: 0.5, stakes: 1, costUsd: 0 };
+	};
+	const flat = await runPhrasingProbe(byDifficulty, pack);
+	assert.equal(flat.meanTierGap, 0);
+	assert.equal(flat.agreement, 1);
+	assert.equal(flat.instructionHeavier, 0);
+	assert.equal(flat.questionHeavier, 0);
+	assert.equal(flat.questionAccuracy, 1);
+	assert.equal(flat.instructionAccuracy, 1);
+
+	// A classifier that keys on "does this need tools" reproduces round 35's hypothesis,
+	// which is what the probe exists to detect.
+	const byTools: Classify = async (prompt) => {
+		const isQuestion = prompt.trim().endsWith("?");
+		return { tier: isQuestion ? "light" : "heavy", confidence: 0.9, needsTools: isQuestion ? 0.05 : 0.9, stakes: 1, costUsd: 0 };
+	};
+	const gapped = await runPhrasingProbe(byTools, pack);
+	assert.equal(gapped.instructionHeavier, pack.pairs.length);
+	assert.equal(gapped.questionHeavier, 0);
+	assert.ok(gapped.meanTierGap >= 2);
+	assert.ok(gapped.meanToolsInstruction > gapped.meanToolsQuestion);
+	assert.equal(gapped.calls, pack.pairs.length * 2);
+
+	assert.match(renderPhrasing(gapped, "x"), /systematically rated heavier/);
+	assert.match(renderPhrasing(flat, "x"), /no systematic gap/);
+});
+
+test("each phrasing pair really is two wordings of one job", () => {
+	const pack = loadPhrasingPack(PHRASING_PACK);
+	assert.ok(pack.pairs.length >= 10, "too few pairs to read a direction from");
+	const ids = new Set<string>();
+	for (const pair of pack.pairs) {
+		assert.ok(!ids.has(pair.id), `duplicate pair id ${pair.id}`);
+		ids.add(pair.id);
+		assert.ok(TIERS.includes(pair.difficulty), `${pair.id}: ${pair.difficulty} is not a tier`);
+		assert.ok(pair.question.trim().endsWith("?"), `${pair.id}: the question is not phrased as one`);
+		assert.ok(!pair.instruction.trim().endsWith("?"), `${pair.id}: the instruction is phrased as a question`);
+		assert.notEqual(pair.question, pair.instruction);
+		// Both phrasings must name the same subject, or they are not the same job. Code
+		// spans count: a pair can share its subject as a snippet rather than as prose.
+		const tokens = (text: string) =>
+			new Set([...(text.toLowerCase().match(/[a-z_]{5,}/g) ?? []), ...(text.match(/`[^`]+`/g) ?? [])]);
+		const shared = [...tokens(pair.question)].filter((t) => tokens(pair.instruction).has(t));
+		assert.ok(shared.length >= 2, `${pair.id}: the two phrasings share only ${shared.length} significant tokens`);
+	}
+	// Every tier represented, so the result cannot be an artefact of one difficulty band.
+	for (const tier of TIERS) assert.ok(pack.pairs.some((p) => p.difficulty === tier), `no ${tier} pair`);
+});
+
+test("the stakes override cannot reach the turns round 36 is about", async () => {
+	// Round 37's negative result, pinned. The router's only lever over the classifier is
+	// the stakes override; it fails here because when Jev calls hard work light it rates
+	// the stakes low too - it is coherently wrong on both axes, not conflicted.
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const rank = { light: 0, standard: 1, heavy: 2 } as const;
+	const routed = outcome.turns.filter((t) => !t.pinned && t.classifierAnswer);
+	const underLight = routed.filter((t) => rank[t.requestedTier] < rank[t.goldTier] && t.classifierAnswer!.tier === "light");
+	assert.ok(underLight.length >= 10, `only ${underLight.length} under-routed light turns; the pack no longer exercises this`);
+
+	// At the shipped threshold the override reaches none of them.
+	const caught = underLight.filter((t) => (t.classifierAnswer!.stakes ?? 0) >= STAKES_OVERRIDE_THRESHOLD);
+	assert.equal(caught.length, 0, "the shipped stakes threshold should reach none of the under-routed light turns");
+
+	// And lowering it does not separate them either: the two populations overlap.
+	const mean = (ts: typeof underLight) => ts.reduce((a, t) => a + (t.classifierAnswer!.stakes ?? 0), 0) / Math.max(1, ts.length);
+	const correctLight = routed.filter((t) => t.requestedTier === t.goldTier && t.classifierAnswer!.tier === "light");
+	assert.ok(mean(underLight) - mean(correctLight) < 0.5, "if stakes separated these cleanly, the override would be worth widening");
+});
+
+test("widening the stakes override buys nothing measurable", async () => {
+	const cells = await runOverrideSweep({ pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted" });
+	const at = (variant: string) => cells.find((c) => c.variant === variant)!;
+	assert.ok(cells.length >= 5);
+
+	// The shipped setting is src/index.ts's, and must stay pinned to it.
+	assert.equal(at("shipped").toStandard, STAKES_OVERRIDE_THRESHOLD);
+	assert.equal(at("shipped").toHeavy, Number.POSITIVE_INFINITY);
+
+	// Every variant lands within a point or so of every other on both axes: there is no
+	// setting of this knob that addresses round 36.
+	const spread = (get: (c: (typeof cells)[number]) => number) => Math.max(...cells.map(get)) - Math.min(...cells.map(get));
+	assert.ok(spread((c) => c.tierAccuracy) < 0.02, `tier accuracy moved ${spread((c) => c.tierAccuracy)} across the variants`);
+	assert.ok(spread((c) => c.sessionSuccessRate) < 0.02);
+	assert.ok(Math.abs(at("off").sessionSuccessRate - at("shipped").sessionSuccessRate) < 0.02);
+});
+
+test("the harness applies src/index.ts's stakes override unless told otherwise", () => {
+	assert.equal(applyStakesOverride("light", 1.6), "standard", "the default must be the shipped behaviour");
+	assert.equal(applyStakesOverride("light", 1.4), "light");
+	assert.equal(applyStakesOverride("heavy", 2), "heavy", "the override only ever lifts light");
+	assert.equal(applyStakesOverride("light", undefined), "light");
+	// A two-step variant lifts two tiers, which the shipped one never does.
+	assert.equal(applyStakesOverride("light", 1.9, STAKES_OVERRIDES["two-step"]), "heavy");
+	assert.equal(applyStakesOverride("light", 1.6, STAKES_OVERRIDES["two-step"]), "standard");
+	assert.equal(applyStakesOverride("light", 2, STAKES_OVERRIDES.off), "light");
+});
+
+test("section 9A's prediction came true: the fix removes every ineligible route, on both packs", async () => {
+	// Written in round 38 as a prediction against an unlanded change, and checked here
+	// against the landed one. Both packs, starting on the provider the fixture 429s.
+	for (const p of [pack(), pack(LONG_PACK)]) {
+		const onBlocked = computeMetrics(...unpack(await run({ pack: p, startModel: "faux-plan-codex/gpt-6-astra" })));
+		assert.equal(onBlocked.ineligibleChoices, 0, `${p.id}: predicted 0 ineligible choices after the fix`);
+
+		// The other half of the prediction: the change is not supposed to be free, it is
+		// supposed to route away from a refused plan model - which costs less, not more.
+		const elsewhere = computeMetrics(...unpack(await run({ pack: p, startModel: "faux-plan-anthropic/claude-opus-5" })));
+		assert.equal(elsewhere.ineligibleChoices, 0, `${p.id}: a session starting elsewhere should never see one either`);
+	}
+});
+
+test("section 9A's prediction came true: the invariant sweep the bug was found by is clean", async () => {
+	// 32 of 396 configurations broke `eligible-route` before the fix. The prediction was 0.
+	const report = await runCoverage({ pack: pack(), loaded: loadFleet(FLEET), minConfidences: [0, 0.5], pinTurns: [0], unauthedSets: [[]] });
+	assert.ok(report.configurations >= 60, `only ${report.configurations} configurations visited`);
+	assert.equal(report.byInvariant["eligible-route"] ?? 0, 0, "the invariant that found the bug is broken again");
+	assert.deepEqual(report.violations, [], "the fix must not have traded one invariant for another");
+});
+
+test("prediction B: the proposed criteria change the tier question and nothing else", () => {
+	const shipped = routingQuestions();
+	const proposed = proposedRoutingQuestions();
+
+	assert.deepEqual(Object.keys(proposed).sort(), Object.keys(shipped).sort(), "the proposal must not add or drop questions");
+	for (const key of ["needs_tools", "stakes"]) {
+		assert.deepEqual(proposed[key], shipped[key], `the proposal changed ${key}, which it has no business touching`);
+	}
+
+	const tier = (qs: typeof shipped) => qs.tier as unknown as { criteria: Record<string, string>; instructions: Record<string, string> };
+	assert.deepEqual(Object.keys(tier(proposed).criteria).sort(), ["heavy", "light", "standard"]);
+	assert.equal(tier(proposed).criteria.standard, tier(shipped).criteria.standard, "only light and heavy needed changing");
+
+	// The specific defect: the light band described as output shape rather than difficulty.
+	assert.match(tier(shipped).criteria.light!, /answer a factual question, explain a snippet/);
+	assert.doesNotMatch(tier(proposed).criteria.light!, /answer a factual question|explain a snippet/);
+	// And the specific addition: heavy work stays heavy when asked about.
+	assert.match(tier(proposed).criteria.heavy!, /asks \*about\* such work|explaining why a race condition/);
+	assert.match(tier(proposed).instructions.note!, /text or as an edit/);
+});
+
+test("the phrasing pack carries light controls, which are what make the finding an argument", () => {
+	// Round 39. Without a band of genuinely trivial work in the pack, "questions are rated
+	// lighter" cannot be distinguished from "this model treats questions as chatter". The
+	// controls are load-bearing, so their presence and their shape are pinned here.
+	const pack = loadPhrasingPack(PHRASING_PACK);
+	assert.ok(pack.pairs.length >= 30, `${pack.pairs.length} pairs; the round-39 reading needs at least 30`);
+	const byTier = (t: string) => pack.pairs.filter((p) => p.difficulty === t);
+	assert.ok(byTier("light").length >= 8, "too few light controls to read a null from");
+	assert.ok(byTier("heavy").length >= 10 && byTier("standard").length >= 10, "the hard bands must outnumber a single control run");
+
+	// A control is only a control if it is genuinely light: a well-known one-line defect,
+	// not a disguised investigation. Nothing here may smuggle in the heavy vocabulary.
+	const heavyWords = /concurren|deadlock|race|architect|security|migrat|thundering|reconcil/i;
+	for (const p of byTier("light")) {
+		assert.doesNotMatch(p.question, heavyWords, `${p.id}: light control reads as heavy work`);
+		assert.doesNotMatch(p.instruction, heavyWords, `${p.id}: light control reads as heavy work`);
+	}
+});
+
+test("a phrasing-blind classifier shows no gap on any band, controls included", async () => {
+	// The probe must report a null when there is nothing to find, or its non-null readings
+	// mean nothing. Same work, both wordings, a classifier that grades difficulty honestly.
+	const pack = loadPhrasingPack(PHRASING_PACK);
+	// Blind by construction rather than by keyword: look the prompt up in the pack and
+	// answer with its declared difficulty, whichever of the two wordings it arrived as.
+	const declared = new Map<string, PhrasingPack["pairs"][number]["difficulty"]>();
+	for (const p of pack.pairs) {
+		declared.set(p.question, p.difficulty);
+		declared.set(p.instruction, p.difficulty);
+	}
+	const blind: Classify = async (prompt) => {
+		const tier = declared.get(prompt);
+		assert.ok(tier, `the probe sent a prompt that is not in the pack: ${prompt}`);
+		return { tier, confidence: 0.9, costUsd: 0 };
+	};
+	const out = await runPhrasingProbe(blind, pack);
+	assert.equal(out.meanTierGap, 0, "a phrasing-blind classifier must produce no gap at all");
+	assert.equal(out.instructionHeavier, 0);
+	assert.equal(out.questionHeavier, 0);
+	assert.equal(out.questionAccuracy, out.instructionAccuracy, "and must score both wordings identically");
+});
+
+test("proposed-v2 differs from v1 only by giving `standard` the clause `heavy` already had", () => {
+	const v1 = proposedRoutingQuestions("v1");
+	const v2 = proposedRoutingQuestions("v2");
+	const tier = (qs: typeof v1) => qs.tier as unknown as { criteria: Record<string, string> };
+	for (const band of ["light", "heavy"]) {
+		assert.equal(tier(v2).criteria[band], tier(v1).criteria[band], `v2 changed ${band}; it should only change standard`);
+	}
+	assert.notEqual(tier(v2).criteria.standard, tier(v1).criteria.standard);
+	assert.ok(tier(v2).criteria.standard!.startsWith(tier(v1).criteria.standard!), "v2 should extend the shipped standard text, not replace it");
+	// The asymmetry v2 exists to remove: every non-light band claims the question form.
+	for (const band of ["standard", "heavy"]) {
+		assert.match(tier(v2).criteria[band]!, /asks \*about\* such work/, `${band} must claim the question form in v2`);
+	}
+	assert.doesNotMatch(tier(v1).criteria.standard!, /asks \*about\* such work/, "v1's standard is the gap v2 closes");
+});
+
+test("the predictions in section 9 are the numbers the harness actually produces", async () => {
+	// Round 40. Section 9 exists so a downstream task can check a fix against a number
+	// instead of an argument. A prediction that drifts from the harness is worse than no
+	// prediction at all, so the load-bearing ones are re-measured here.
+	const brief = readFileSync(join(ROOT, "docs", "research", "router-eval-findings.md"), "utf8");
+	const quotes = (needle: string, why: string) => assert.ok(brief.includes(needle), `the brief no longer says "${needle}" — ${why}`);
+
+	// §9C: the acceptance intervals a fan-out change is checked against. Seeded, so exact.
+	const paired = await runPairedComparisons({ pack: pack(LONG_PACK), loaded: loadFleet(FLEET), classifier: "scripted" });
+	const fanOut = paired.find((c) => c.label.startsWith("fan-out every turn"));
+	assert.ok(fanOut, "the paired sweep no longer reports the fan-out comparison §9C is built on");
+	const quality = fanOut.results.find((r) => r.metric === "sessionSuccessRate")!;
+	assert.ok(quality.significant, "§9C states fan-out's quality gain as resolvable; it no longer is");
+	quotes(`+${(quality.low * 100).toFixed(1)}pp`, "§9C's quality acceptance floor moved");
+
+	// §9B/§0b: under-routing is the expensive error, and worse for standard than heavy.
+	// The whole v2-over-v1 recommendation rests on this ordering, so pin the ordering.
+	const outcome = await run({ pack: pack(LONG_PACK) });
+	const rank = { light: 0, standard: 1, heavy: 2 } as const;
+	const solvedRate = (gold: string, dir: "under" | "over" | "exact") => {
+		const ts = outcome.turns.filter((t) => {
+			if (t.pinned || t.goldTier !== gold) return false;
+			const d = rank[t.requestedTier] - rank[t.goldTier];
+			return dir === "under" ? d < 0 : dir === "over" ? d > 0 : d === 0;
+		});
+		return ts.length ? (ts.filter((t) => t.solved).length / ts.length) * 100 : Number.NaN;
+	};
+	const penalty = (gold: string) => solvedRate(gold, "exact") - solvedRate(gold, "under");
+	const standardPenalty = penalty("standard");
+	const heavyPenalty = penalty("heavy");
+	assert.ok(standardPenalty > heavyPenalty, `under-routing standard (${standardPenalty.toFixed(1)}pp) is no longer worse than heavy (${heavyPenalty.toFixed(1)}pp) — §9B's recommendation of v2 over v1 turns on this ordering`);
+	quotes(`−${standardPenalty.toFixed(1)}pp`, "the standard under-routing penalty moved");
+	quotes(`−${heavyPenalty.toFixed(1)}pp`, "the heavy under-routing penalty moved");
+
+	// And over-routing light must stay nearly free, or "under-routing is the expensive
+	// error" stops being the right summary of the table.
+	assert.ok(solvedRate("light", "exact") - solvedRate("light", "over") < 10, "over-routing light is no longer close to free; §9B's framing needs revisiting");
+});
+
+test("the phrasing defect shows up in the routing packs, not only in the probe built for it", async () => {
+	// Round 40, and the answer to the fair challenge that a probe pack finds what it was
+	// written to find. These two packs were authored for routing, carry Jev's real
+	// recorded answers, and are split here on nothing but a trailing question mark.
+	const rank = { light: 0, standard: 1, heavy: 2 } as const;
+	let qTotal = 0;
+	let qUnder = 0;
+	let iTotal = 0;
+	let iUnder = 0;
+	for (const p of [pack(), pack(LONG_PACK)]) {
+		for (const t of (await run({ pack: p })).turns) {
+			if (t.pinned || !t.goldTier || !t.classifierAnswer || !t.prompt) continue;
+			const under = rank[t.classifierAnswer.tier] < rank[t.goldTier];
+			if (t.prompt.trim().endsWith("?")) {
+				qTotal++;
+				if (under) qUnder++;
+			} else {
+				iTotal++;
+				if (under) iUnder++;
+			}
+		}
+	}
+	assert.ok(qTotal >= 30 && iTotal >= 100, `${qTotal} questions / ${iTotal} instructions; the packs no longer carry both phrasings in quantity`);
+	const qRate = qUnder / qTotal;
+	const iRate = iUnder / iTotal;
+	// The brief claims a multiple, not a couple of points. Hold it to that shape.
+	assert.ok(qRate > iRate * 3, `questions are under-classified ${(qRate * 100).toFixed(1)}% against instructions' ${(iRate * 100).toFixed(1)}% — the brief claims roughly 6x`);
+	assert.ok(qRate > 0.25, `only ${(qRate * 100).toFixed(1)}% of question turns are under-classified; the brief says ~39%`);
+	assert.ok(iRate < 0.15, `${(iRate * 100).toFixed(1)}% of instruction turns are under-classified; the brief says ~6%`);
+});

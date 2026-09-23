@@ -1,0 +1,8 @@
+# Per-run records are history; the round log is the history that matters and the
+# latest-<profile>.json pointers are what the next run compares against.
+# Everything else here (sweeps, audits, calibration snapshots) is committed on purpose.
+20*-*.json
+# Older timestamped sweep and probe snapshots. One stable snapshot per kind is
+# committed; the round log carries the history.
+sweep-*-20*.json
+probe-*-20*.json

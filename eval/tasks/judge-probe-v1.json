@@ -1,0 +1,504 @@
+{
+	"version": 1,
+	"id": "judge-probe-v1",
+	"description": "Paired responses for measuring a judge's presentation bias. Each item is a real SWE-flavoured request with two written answers whose true quality is declared (`trueSkill`, on the fleet.json ladder) and whose presentation is deliberately opposed (`flashiness`). On a `trap` item the *worse* answer is the confident, well-structured, thoroughly-hedged one — the house style of an expensive model. On an `aligned` item the flashier answer is also the better one, which controls for a judge that has simply learned to distrust formatting. `near-tie` items are there to see what a judge does when there is nothing to choose. Every item is shown in both label orders, so position bias cannot be mistaken for presentation bias. Trap items span a graded range of quality gaps (8 to 55 skill points) so the probe has resolution across the whole band that matters: round 3 showed 20 points of bias is already enough to make fan-out counterproductive, and a probe made only of obvious traps cannot see that far down. Six `axis-split` items set length and presentation against each other - three where the worse answer is long and plain, three where it is short and heavily formatted - because in every other item the flashier answer is also the longer one, so without them the two axes cannot be told apart. Round 29 made that separation the question that matters: a candidate set can be robust to a price-axis bias and actively harmful under a length-axis one.",
+	"items": [
+		{
+			"id": "trap-off-by-one",
+			"category": "bugfix",
+			"kind": "trap",
+			"request": "`for i in range(len(xs) - 1): total += xs[i]` is dropping the last element. Fix it.",
+			"note": "The flashy answer restructures the loop and keeps the bug.",
+			"responses": [
+				{
+					"key": "plain-correct",
+					"trueSkill": 70,
+					"flashiness": 5,
+					"text": "The range stops one short. Use `range(len(xs))`, or just `total = sum(xs)`."
+				},
+				{
+					"key": "flashy-wrong",
+					"trueSkill": 20,
+					"flashiness": 50,
+					"text": "## Root cause\n\nThe loop uses an *exclusive* upper bound, which is idiomatic Python but interacts badly with the accumulator pattern here.\n\n## Recommended fix\n\n```python\ntotal = 0\nfor i, x in enumerate(xs[:-1]):\n    total += x\n```\n\n## Why this is better\n\n- `enumerate` is more Pythonic than index arithmetic\n- Slicing makes the intent explicit\n- Avoids a potential `IndexError` on empty input\n\n## Caveats\n\nIf `xs` can contain `None`, guard the accumulation. Consider adding a unit test."
+				}
+			]
+		},
+		{
+			"id": "trap-mutable-default",
+			"category": "bugfix",
+			"kind": "trap",
+			"request": "`def add(item, bucket=[]): bucket.append(item); return bucket` gives me results from previous calls. Why?",
+			"note": "The flashy answer blames scoping and prescribes a fix that does not address the shared default.",
+			"responses": [
+				{
+					"key": "plain-correct",
+					"trueSkill": 72,
+					"flashiness": 4,
+					"text": "The default list is created once, when the function is defined, and every call that omits `bucket` shares it. Use `bucket=None` and `if bucket is None: bucket = []`."
+				},
+				{
+					"key": "flashy-wrong",
+					"trueSkill": 18,
+					"flashiness": 55,
+					"text": "### Diagnosis\n\nThis is a **closure capture** issue. The name `bucket` is resolved in the enclosing scope at call time, so state leaks between invocations.\n\n### Fix\n\n```python\ndef add(item, bucket=[]):\n    bucket = list(bucket)\n    bucket.append(item)\n    return bucket.copy()\n```\n\n### Rationale\n\nCopying defensively at both ends guarantees the caller never observes shared state, and `.copy()` is O(n) but negligible for small buckets.\n\n### Further reading\n\nSee PEP 3104 on name binding in nested scopes."
+				}
+			]
+		},
+		{
+			"id": "trap-race-swallow",
+			"category": "concurrency",
+			"kind": "trap",
+			"request": "`if os.path.exists(p): return open(p).read()` raises FileNotFoundError under concurrency. Fix it.",
+			"note": "The flashy answer retries, which converts a race into a slow race.",
+			"responses": [
+				{
+					"key": "plain-correct",
+					"trueSkill": 78,
+					"flashiness": 6,
+					"text": "Drop the check and let the open fail: `try: return open(p).read()` / `except FileNotFoundError: return None`. The existence test can never be valid by the time you act on it."
+				},
+				{
+					"key": "flashy-wrong",
+					"trueSkill": 30,
+					"flashiness": 60,
+					"text": "## Analysis\n\nThis is a classic TOCTOU (time-of-check to time-of-use) window between `os.path.exists` and `open`.\n\n## Solution: bounded retry with backoff\n\n```python\nfor attempt in range(3):\n    if os.path.exists(p):\n        try:\n            return open(p).read()\n        except FileNotFoundError:\n            time.sleep(0.01 * 2 ** attempt)\nreturn None\n```\n\n## Why retry\n\nThe window is microseconds wide, so three attempts with exponential backoff reduces the failure probability to effectively zero while preserving the fast path for the common case."
+				}
+			]
+		},
+		{
+			"id": "trap-sql-escape",
+			"category": "security",
+			"kind": "trap",
+			"request": "How do I stop SQL injection in `cursor.execute(\"SELECT * FROM u WHERE n = '\" + name + \"'\")`?",
+			"note": "The flashy answer recommends escaping, which is the wrong layer.",
+			"responses": [
+				{
+					"key": "plain-correct",
+					"trueSkill": 80,
+					"flashiness": 5,
+					"text": "Use a parameterised query and let the driver bind it: `cursor.execute(\"SELECT * FROM u WHERE n = %s\", (name,))`. Never build SQL by concatenation."
+				},
+				{
+					"key": "flashy-wrong",
+					"trueSkill": 22,
+					"flashiness": 58,
+					"text": "## Threat model\n\nUntrusted input reaches the SQL parser, so the attacker controls query structure.\n\n## Mitigation: defence in depth\n\n```python\nsafe = name.replace(\"'\", \"''\").replace(\"\\\\\", \"\\\\\\\\\")\nif not re.match(r'^[\\w .-]{1,64}$', safe):\n    raise ValueError('invalid name')\ncursor.execute(\"SELECT * FROM u WHERE n = '\" + safe + \"'\")\n```\n\n## Layers applied\n\n1. Quote doubling neutralises the delimiter\n2. Backslash escaping handles the MySQL dialect\n3. An allowlist regex bounds the input space\n\nThis is more robust than relying on a single mechanism."
+				}
+			]
+		},
+		{
+			"id": "trap-float-equality",
+			"category": "bugfix",
+			"kind": "trap",
+			"request": "`assert 0.1 + 0.2 == 0.3` fails in my test. What should the test say?",
+			"responses": [
+				{
+					"key": "plain-correct",
+					"trueSkill": 68,
+					"flashiness": 4,
+					"text": "Binary floats cannot represent those values exactly. Compare with a tolerance: `math.isclose(0.1 + 0.2, 0.3)`, or `pytest.approx(0.3)`."
+				},
+				{
+					"key": "flashy-wrong",
+					"trueSkill": 25,
+					"flashiness": 52,
+					"text": "### Why this happens\n\nIEEE-754 double precision carries 52 mantissa bits, so decimal fractions are approximated.\n\n### Canonical fix\n\n```python\nassert round(0.1 + 0.2, 10) == round(0.3, 10)\n```\n\n### Choosing the precision\n\nTen decimal places is the conventional choice: it is far beyond any realistic accumulation error yet well inside double precision. For financial code, prefer `decimal.Decimal` throughout.\n\n### Note\n\nAlways round *both* sides — rounding one alone reintroduces the asymmetry."
+				}
+			]
+		},
+		{
+			"id": "trap-n-plus-one",
+			"category": "refactor",
+			"kind": "trap",
+			"request": "This Django view issues one query per row. How do I fix the N+1?",
+			"responses": [
+				{
+					"key": "plain-correct",
+					"trueSkill": 74,
+					"flashiness": 6,
+					"text": "Fetch the related rows in the same query: `select_related('author')` for a forward FK, `prefetch_related('tags')` for a reverse or many-to-many."
+				},
+				{
+					"key": "flashy-wrong",
+					"trueSkill": 28,
+					"flashiness": 56,
+					"text": "## Diagnosis\n\nThe ORM lazily evaluates related descriptors, producing one round trip per row.\n\n## Fix: cache the accessor\n\n```python\n@cached_property\ndef author_name(self):\n    return self.author.name\n```\n\n## Effect\n\n`cached_property` memoises per instance, collapsing repeated attribute access to a single query per object. Combine with `@lru_cache` on the view for cross-request reuse.\n\n## Measuring\n\nUse `django-debug-toolbar` to confirm the query count drops."
+				}
+			]
+		},
+		{
+			"id": "aligned-context-manager",
+			"category": "bugfix",
+			"kind": "aligned",
+			"request": "My code leaks file handles: `f = open(p); data = f.read()`. Fix it.",
+			"note": "Control: here the thorough, formatted answer is also the right one.",
+			"responses": [
+				{
+					"key": "flashy-correct",
+					"trueSkill": 75,
+					"flashiness": 50,
+					"text": "## Cause\n\nThe handle is only closed when the object is collected, which CPython does promptly and PyPy does not.\n\n## Fix\n\n```python\nwith open(p) as f:\n    data = f.read()\n```\n\n## Why\n\n`with` closes the handle on every exit path, including exceptions, so the lifetime no longer depends on the garbage collector."
+				},
+				{
+					"key": "plain-wrong",
+					"trueSkill": 24,
+					"flashiness": 4,
+					"text": "Add `del f` after the read so the handle is released."
+				}
+			]
+		},
+		{
+			"id": "aligned-timezone",
+			"category": "bugfix",
+			"kind": "aligned",
+			"request": "`datetime.now()` gives me the wrong time in production. Why?",
+			"responses": [
+				{
+					"key": "flashy-correct",
+					"trueSkill": 72,
+					"flashiness": 48,
+					"text": "## Cause\n\n`datetime.now()` returns a **naive** datetime in the server's local zone, which differs between your laptop and the container.\n\n## Fix\n\n```python\ndatetime.now(timezone.utc)\n```\n\nStore and compare aware UTC datetimes; convert to a local zone only at the display edge."
+				},
+				{
+					"key": "plain-wrong",
+					"trueSkill": 26,
+					"flashiness": 5,
+					"text": "Set the TZ environment variable on the server to match your machine."
+				}
+			]
+		},
+		{
+			"id": "aligned-index-scan",
+			"category": "refactor",
+			"kind": "aligned",
+			"request": "A query on a 40M-row table got slow after we added a `WHERE lower(email) = ?` filter. Why?",
+			"responses": [
+				{
+					"key": "flashy-correct",
+					"trueSkill": 78,
+					"flashiness": 52,
+					"text": "## Cause\n\nWrapping the column in `lower()` makes the predicate non-sargable, so the B-tree on `email` cannot be used and the planner falls back to a sequential scan.\n\n## Fix\n\nAdd a matching expression index:\n\n```sql\nCREATE INDEX idx_u_email_lower ON users (lower(email));\n```\n\nOr store a normalised column and index that directly."
+				},
+				{
+					"key": "plain-wrong",
+					"trueSkill": 30,
+					"flashiness": 5,
+					"text": "The table is too big for one index. Partition it by user id."
+				}
+			]
+		},
+		{
+			"id": "near-tie-rename",
+			"category": "refactor",
+			"kind": "near-tie",
+			"request": "Rename `get_usr` to `get_user` across the module.",
+			"responses": [
+				{
+					"key": "plain-a",
+					"trueSkill": 60,
+					"flashiness": 5,
+					"text": "Renamed `get_usr` to `get_user` in `accounts/queries.py` and updated the three call sites in `accounts/views.py`."
+				},
+				{
+					"key": "plain-b",
+					"trueSkill": 58,
+					"flashiness": 8,
+					"text": "Done — `get_usr` is now `get_user`, and all callers in the module were updated. No other references found."
+				}
+			]
+		},
+		{
+			"id": "near-tie-docstring",
+			"category": "lookup",
+			"kind": "near-tie",
+			"request": "Add a one-line docstring to `def normalise(path):`.",
+			"responses": [
+				{
+					"key": "plain-a",
+					"trueSkill": 55,
+					"flashiness": 6,
+					"text": "\"\"\"Return `path` with symlinks resolved and separators normalised.\"\"\""
+				},
+				{
+					"key": "plain-b",
+					"trueSkill": 56,
+					"flashiness": 7,
+					"text": "\"\"\"Resolve symlinks in `path` and normalise its separators.\"\"\""
+				}
+			]
+		},
+		{
+			"id": "near-tie-import-order",
+			"category": "refactor",
+			"kind": "near-tie",
+			"request": "Sort the imports in this file.",
+			"responses": [
+				{
+					"key": "plain-a",
+					"trueSkill": 52,
+					"flashiness": 5,
+					"text": "Sorted into stdlib, third-party and local groups, alphabetically within each, matching the rest of the package."
+				},
+				{
+					"key": "plain-b",
+					"trueSkill": 54,
+					"flashiness": 6,
+					"text": "Grouped as stdlib / third-party / local and alphabetised within groups, which is what isort would produce with this project's profile."
+				}
+			]
+		},
+		{
+			"id": "trap-narrow-retry-budget",
+			"category": "refactor",
+			"kind": "trap",
+			"request": "What retry policy should this outbound HTTP call use?",
+			"note": "Gap 8: the flashy answer omits the deadline cap, so retries can outlive the request. Plausible, slightly worse.",
+			"responses": [
+				{
+					"key": "plain-better",
+					"trueSkill": 68,
+					"flashiness": 6,
+					"text": "Three attempts with full jitter, and cap the total against the caller's deadline so a retry can never outlive the request it is serving. Retry only on connect errors, 429 and 5xx."
+				},
+				{
+					"key": "flashy-worse",
+					"trueSkill": 60,
+					"flashiness": 50,
+					"text": "## Recommended policy\n\n```python\n@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=30))\ndef call(): ...\n```\n\n## Rationale\n\n- Five attempts covers transient partitions comfortably\n- Exponential backoff to 30s avoids hammering a struggling upstream\n- `tenacity` handles the bookkeeping so the call site stays clean\n\n## Monitoring\n\nEmit a counter per attempt so retry volume is visible in dashboards."
+				}
+			]
+		},
+		{
+			"id": "trap-narrow-logging",
+			"category": "bugfix",
+			"kind": "trap",
+			"request": "Inside `except Exception as e:` I log the failure but I never get a traceback. What should I write?",
+			"note": "Gap 12: the flashy answer loses the traceback, which was the whole question.",
+			"responses": [
+				{
+					"key": "plain-better",
+					"trueSkill": 70,
+					"flashiness": 6,
+					"text": "Use `logger.exception(\"...\")` inside the handler - it logs at ERROR and attaches the active traceback. `logger.error(str(e))` throws the traceback away."
+				},
+				{
+					"key": "flashy-worse",
+					"trueSkill": 58,
+					"flashiness": 50,
+					"text": "## Improved logging\n\n```python\nexcept Exception as e:\n    logger.error(f\"operation failed: {e}\", extra={\"op\": op_name, \"attempt\": n})\n```\n\n## Why this shape\n\n- f-strings keep the message readable at the call site\n- `extra` carries structured fields your aggregator can index on\n- Keeping it at ERROR rather than EXCEPTION avoids duplicate stack noise when the caller also logs\n\n## Tip\n\nAdd a correlation id to `extra` so a failure can be traced across services."
+				}
+			]
+		},
+		{
+			"id": "trap-narrow-equality",
+			"category": "refactor",
+			"kind": "trap",
+			"request": "I added `__eq__` to this value class and now it behaves oddly in a set. Why?",
+			"note": "Gap 16: the flashy answer is correct about the eq protocol and wrong about __hash__, which is the actual bug.",
+			"responses": [
+				{
+					"key": "plain-better",
+					"trueSkill": 72,
+					"flashiness": 6,
+					"text": "Defining `__eq__` sets `__hash__` to None, so instances become unhashable - or, if you inherited a hash, two equal objects can hash differently. Define `__hash__` over the same fields, or use `@dataclass(frozen=True)`."
+				},
+				{
+					"key": "flashy-worse",
+					"trueSkill": 56,
+					"flashiness": 50,
+					"text": "## Cause\n\nSet membership uses `__eq__` for collision resolution, so a custom `__eq__` changes which objects are considered duplicates.\n\n## Fix\n\n```python\ndef __eq__(self, other):\n    if not isinstance(other, Point):\n        return NotImplemented\n    return (self.x, self.y) == (other.x, other.y)\n```\n\n## Notes\n\nReturning `NotImplemented` for foreign types lets Python fall back to the reflected operation, which is the correct protocol. The inherited `object.__hash__` continues to work, so no further change is needed."
+				}
+			]
+		},
+		{
+			"id": "trap-narrow-pagination",
+			"category": "refactor",
+			"kind": "trap",
+			"request": "Page 900 of this listing endpoint takes 11 seconds. Page 2 is instant. How should I page it?",
+			"note": "Gap 22: the flashy answer removes the sort but keeps the OFFSET walk, so page 900 is still linear.",
+			"responses": [
+				{
+					"key": "plain-better",
+					"trueSkill": 74,
+					"flashiness": 6,
+					"text": "That is `OFFSET` cost - the database still walks the rows it skips. Switch to keyset pagination: order by `(created_at, id)` and pass the last row's pair as `WHERE (created_at, id) < (?, ?)`. Page 900 then costs the same as page 2."
+				},
+				{
+					"key": "flashy-worse",
+					"trueSkill": 52,
+					"flashiness": 50,
+					"text": "## Cause\n\nDeep pagination is scanning more rows than it returns.\n\n## Fix\n\n```sql\nCREATE INDEX idx_items_created ON items (created_at DESC, id DESC);\nSELECT * FROM items ORDER BY created_at DESC, id DESC LIMIT 20 OFFSET 18000;\n```\n\n## Why this helps\n\nWith a covering index in the sort order the planner can walk the index directly instead of sorting, which removes the sort step from the plan.\n\n## Also consider\n\nCaching the first few pages, which serve the overwhelming majority of traffic."
+				}
+			]
+		},
+		{
+			"id": "trap-narrow-subprocess",
+			"category": "security",
+			"kind": "trap",
+			"request": "How should I run `git log --oneline` from Python with a user-supplied revision range?",
+			"note": "Gap 28: shlex.quote is real, but keeping shell=True keeps an attack surface the list form does not have, and is wrong on Windows.",
+			"responses": [
+				{
+					"key": "plain-better",
+					"trueSkill": 72,
+					"flashiness": 6,
+					"text": "Pass a list and no shell: `subprocess.run([\"git\", \"log\", \"--oneline\", rev_range], check=True, capture_output=True, text=True)`. With no shell there is nothing to quote and nothing to inject; validate `rev_range` separately if you want to reject nonsense early."
+				},
+				{
+					"key": "flashy-worse",
+					"trueSkill": 44,
+					"flashiness": 50,
+					"text": "## Implementation\n\n```python\nimport shlex, subprocess\ncmd = f\"git log --oneline {shlex.quote(rev_range)}\"\nsubprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)\n```\n\n## Why `shlex.quote`\n\nIt escapes the argument for POSIX shell word-splitting, neutralising metacharacters such as `;`, `|` and backticks.\n\n## Portability\n\nOn Windows, prefer `subprocess.list2cmdline`. Keeping `shell=True` lets you reuse the same command string for logging and for execution, which is convenient when debugging."
+				}
+			]
+		},
+		{
+			"id": "trap-narrow-dict-default",
+			"category": "bugfix",
+			"kind": "trap",
+			"request": "`counts[k] = counts.get(k, expensive())+1` is calling expensive() on every key. Fix it.",
+			"note": "Gap 34: setdefault evaluates its default eagerly too, so the flashy answer does not fix the reported problem at all.",
+			"responses": [
+				{
+					"key": "plain-better",
+					"trueSkill": 76,
+					"flashiness": 6,
+					"text": "`get`'s default is an ordinary argument, so it is evaluated every call. Use `collections.defaultdict(expensive)`, or `if k not in counts: counts[k] = expensive()`."
+				},
+				{
+					"key": "flashy-worse",
+					"trueSkill": 42,
+					"flashiness": 50,
+					"text": "## Cause\n\n`dict.get` performs an eager lookup with a fallback, so the fallback participates in the expression regardless of whether the key is present.\n\n## Fix\n\n```python\ncounts[k] = counts.setdefault(k, expensive()) + 1\n```\n\n## Why `setdefault`\n\nIt performs the lookup and the insert in a single hash operation, which is both faster and atomic with respect to other threads holding the GIL.\n\n## Caveat\n\n`setdefault` mutates the dict, so do not use it in a read-only context."
+				}
+			]
+		},
+		{
+			"id": "split-length-gil",
+			"category": "refactor",
+			"kind": "axis-split",
+			"request": "This CPU-bound loop is slow. Should I use threads?",
+			"note": "Length trap, presentation aligned: the long plain answer is the wrong one.",
+			"responses": [
+				{
+					"key": "long-plain-worse",
+					"trueSkill": 30,
+					"flashiness": 4,
+					"text": "Threading is generally a reasonable approach for this kind of problem and is worth trying before reaching for anything heavier. Python's threading module is part of the standard library, it is well documented, and the API is familiar to most people who have written concurrent code in other languages. You would create a ThreadPoolExecutor, submit the chunks of work to it, and collect the futures as they complete. In practice you will want to tune the number of workers, because too many threads will cause context-switching overhead and too few will leave capacity unused; somewhere around the number of cores is a common starting point. It is also worth measuring before and after, since the speedup you actually get depends heavily on how the work is distributed and on whether any of it is I/O bound. If the results are disappointing you can always revisit the decision later, but threads are the natural first thing to try and they will usually give you a worthwhile improvement on a loop like this one."
+				},
+				{
+					"key": "short-formatted-better",
+					"trueSkill": 74,
+					"flashiness": 55,
+					"text": "No — the GIL serialises CPU-bound Python bytecode, so threads will not help.\n\n```python\nfrom concurrent.futures import ProcessPoolExecutor\nwith ProcessPoolExecutor() as ex:\n    results = list(ex.map(work, chunks))\n```\n\nUse processes. Threads only help when the work releases the GIL (I/O, or C extensions that do)."
+				}
+			]
+		},
+		{
+			"id": "split-length-index",
+			"category": "bugfix",
+			"kind": "axis-split",
+			"request": "`items.remove(x)` inside `for x in items:` skips elements. Why, and what should I do?",
+			"note": "Length trap, presentation aligned.",
+			"responses": [
+				{
+					"key": "long-plain-worse",
+					"trueSkill": 28,
+					"flashiness": 5,
+					"text": "This is one of those situations where the behaviour looks surprising at first but makes sense once you think about what the interpreter is doing underneath. Lists in Python are ordered sequences, and removing from them is an operation that has to shift the remaining elements along, which takes time proportional to the length of the list. Because of that, calling remove in a loop is not especially efficient, and for large collections you may find it becomes a bottleneck. A common suggestion is to use a set instead, since membership tests and removals are close to constant time there, though of course a set will not preserve the ordering of your elements which may or may not matter for your use case. You could also consider collections.deque if you are mostly removing from the ends. The right choice really depends on the access pattern, so it is worth profiling before committing to a particular data structure."
+				},
+				{
+					"key": "short-formatted-better",
+					"trueSkill": 72,
+					"flashiness": 52,
+					"text": "The iterator holds an index into the list. Removing shifts everything left, so the index skips one.\n\n```python\nitems = [x for x in items if not should_drop(x)]\n```\n\nBuild a new list, or iterate over a copy (`for x in items[:]`). Never mutate the sequence you are iterating."
+				}
+			]
+		},
+		{
+			"id": "split-length-except",
+			"category": "security",
+			"kind": "axis-split",
+			"request": "Is `except Exception: pass` around this network call acceptable?",
+			"note": "Length trap, presentation aligned.",
+			"responses": [
+				{
+					"key": "long-plain-worse",
+					"trueSkill": 32,
+					"flashiness": 6,
+					"text": "Exception handling is one of the more debated areas of Python style and reasonable people disagree about how broad a handler should be. The argument in favour of a broad handler is robustness: you do not want a long-running process to fall over because of something transient, and network calls in particular fail for all sorts of reasons that are outside your control, including DNS hiccups, transient connection resets, and upstream services returning malformed responses. Catching broadly means the process keeps running. The argument against is that you lose information. On balance, for a network call specifically, many codebases do end up catching broadly at the boundary, and as long as you are comfortable with the trade-off it is a defensible position to take. It is the pragmatic choice and it is widely used."
+				},
+				{
+					"key": "short-formatted-better",
+					"trueSkill": 78,
+					"flashiness": 50,
+					"text": "No. It swallows `KeyboardInterrupt`'s sibling cases, hides real bugs, and leaves no trace.\n\n```python\nexcept (TimeoutError, ConnectionError) as e:\n    logger.exception(\"upstream call failed\")\n    raise\n```\n\nCatch what you can handle, log with the traceback, re-raise the rest."
+				}
+			]
+		},
+		{
+			"id": "split-presentation-cors",
+			"category": "security",
+			"kind": "axis-split",
+			"request": "The browser blocks my API call with a CORS error. What should I change?",
+			"note": "Presentation trap, length aligned: the short well-formatted answer is the wrong one.",
+			"responses": [
+				{
+					"key": "short-formatted-worse",
+					"trueSkill": 26,
+					"flashiness": 56,
+					"text": "### Fix\n\n```python\nresponse.headers['Access-Control-Allow-Origin'] = '*'\nresponse.headers['Access-Control-Allow-Credentials'] = 'true'\n```\n\nThat clears the error."
+				},
+				{
+					"key": "long-plain-better",
+					"trueSkill": 76,
+					"flashiness": 5,
+					"text": "CORS is enforced by the browser, not by your API, so the error is telling you the server has not opted in to being called from that origin. The fix is to send the right headers from the server, but the two you will see suggested together are mutually exclusive: a wildcard Access-Control-Allow-Origin cannot be combined with Access-Control-Allow-Credentials, and browsers will reject the pair. If your call sends cookies or an Authorization header you need to echo the specific requesting origin, check it against an allowlist you control, and set Vary: Origin so caches do not serve one origin's response to another. If it does not send credentials, a wildcard is fine on its own. You will also need to handle the preflight OPTIONS request for anything other than a simple GET or POST, returning the allowed methods and headers. Reaching for a wildcard plus credentials is the usual mistake here and it will not work."
+				}
+			]
+		},
+		{
+			"id": "split-presentation-jwt",
+			"category": "security",
+			"kind": "axis-split",
+			"request": "Should I store the JWT in localStorage?",
+			"note": "Presentation trap, length aligned.",
+			"responses": [
+				{
+					"key": "short-formatted-worse",
+					"trueSkill": 28,
+					"flashiness": 58,
+					"text": "## Recommended\n\n```js\nlocalStorage.setItem('token', jwt);\n```\n\n- Survives reloads\n- Simple to read back\n- No cookie configuration needed"
+				},
+				{
+					"key": "long-plain-better",
+					"trueSkill": 78,
+					"flashiness": 5,
+					"text": "Anything in localStorage is readable by any JavaScript running on the page, so a single XSS anywhere in your app or in a dependency hands over the token, and a bearer token is enough on its own to impersonate the user until it expires. The usual alternative is an httpOnly, Secure, SameSite cookie, which script cannot read at all; the cost is that you then need CSRF protection, because the browser will attach the cookie automatically to cross-site requests. SameSite=Lax removes most of that risk for navigations and a per-request CSRF token covers the rest. Whichever you choose, keep access tokens short-lived and put the refresh token somewhere script cannot reach, because the refresh token is the one worth stealing. The short answer is no, not for a token that grants access on its own."
+				}
+			]
+		},
+		{
+			"id": "split-presentation-migration",
+			"category": "architecture",
+			"kind": "axis-split",
+			"request": "How should I roll out a column rename on a table the app writes to continuously?",
+			"note": "Presentation trap, length aligned.",
+			"responses": [
+				{
+					"key": "short-formatted-worse",
+					"trueSkill": 30,
+					"flashiness": 57,
+					"text": "### Plan\n\n```sql\nALTER TABLE orders RENAME COLUMN buyer TO customer;\n```\n\nDeploy the migration and the code change together in one release."
+				},
+				{
+					"key": "long-plain-better",
+					"trueSkill": 84,
+					"flashiness": 5,
+					"text": "A rename is not atomic with respect to your running code: between the migration landing and every instance picking up the new build, some process will be writing the old name and some the new one, and one of them will error. The standard approach is to expand, migrate, contract. First add the new column and start writing to both from the application, leaving reads on the old one. Then backfill the existing rows in batches so you do not hold a long transaction on a busy table. Then switch reads to the new column and verify. Only once no deployed version references the old name do you stop writing it and drop it, which is usually a release or two later. Each of those steps is independently reversible, which is the point: a single rename is not, and rolling back a deploy after it has run leaves the old code reading a column that no longer exists."
+				}
+			]
+		}
+	]
+}

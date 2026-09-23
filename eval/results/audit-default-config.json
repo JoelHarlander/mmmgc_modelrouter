@@ -1,0 +1,242 @@
+{
+	"label": "shipped DEFAULT_CONFIG tiers",
+	"referenceTokens": 100000,
+	"tiers": [
+		{
+			"tier": "light",
+			"models": [
+				{
+					"key": "openrouter/z-ai/glm-5.3-flash",
+					"billing": "on-demand",
+					"catalogue": {
+						"model": "GLM 5.3 Flash",
+						"gatewayId": "zai/glm-5.3-flash",
+						"openrouterId": "z-ai/glm-5.3-flash",
+						"inputUsd": 0.075,
+						"outputUsd": 0.25,
+						"cacheReadUsd": 0.01,
+						"contextWindow": 1048576
+					},
+					"intelligence": 41.81,
+					"warmTurnUsd": 0.0056875,
+					"marginalTurnUsd": 0.0056875
+				},
+				{
+					"key": "vercel-ai-gateway/deepseek/deepseek-v4.1-flash",
+					"billing": "on-demand",
+					"catalogue": {
+						"model": "DeepSeek V4.1 Flash",
+						"gatewayId": "deepseek/deepseek-v4.1-flash",
+						"openrouterId": "deepseek/deepseek-v4.1-flash",
+						"inputUsd": 0.15,
+						"outputUsd": 0.6,
+						"cacheReadUsd": 0.003,
+						"contextWindow": 1048576
+					},
+					"intelligence": 39.46,
+					"warmTurnUsd": 0.00315,
+					"marginalTurnUsd": 0.00315
+				},
+				{
+					"key": "ds4/deepseek-v4-flash",
+					"billing": "free",
+					"catalogue": {
+						"model": "DeepSeek V4 Flash",
+						"gatewayId": "deepseek/deepseek-v4-flash",
+						"openrouterId": "deepseek/deepseek-v4-flash",
+						"inputUsd": 0.06,
+						"outputUsd": 0.18,
+						"cacheReadUsd": 0.007,
+						"contextWindow": 1048576
+					},
+					"intelligence": 34.33,
+					"warmTurnUsd": 0.003995,
+					"marginalTurnUsd": 0
+				}
+			],
+			"preferred": {
+				"key": "ds4/deepseek-v4-flash",
+				"billing": "free",
+				"catalogue": {
+					"model": "DeepSeek V4 Flash",
+					"gatewayId": "deepseek/deepseek-v4-flash",
+					"openrouterId": "deepseek/deepseek-v4-flash",
+					"inputUsd": 0.06,
+					"outputUsd": 0.18,
+					"cacheReadUsd": 0.007,
+					"contextWindow": 1048576
+				},
+				"intelligence": 34.33,
+				"warmTurnUsd": 0.003995,
+				"marginalTurnUsd": 0
+			}
+		},
+		{
+			"tier": "standard",
+			"models": [
+				{
+					"key": "openai-codex/gpt-6-astra",
+					"billing": "plan",
+					"catalogue": {
+						"model": "GPT-6 Astra",
+						"gatewayId": "openai/gpt-6-astra",
+						"openrouterId": "openai/gpt-6-astra",
+						"inputUsd": 10,
+						"outputUsd": 50,
+						"cacheReadUsd": 1,
+						"contextWindow": 1050000
+					},
+					"intelligence": 52.67,
+					"warmTurnUsd": 0.6375,
+					"marginalTurnUsd": 0
+				},
+				{
+					"key": "openrouter/z-ai/glm-5.3",
+					"billing": "on-demand",
+					"catalogue": {
+						"model": "GLM 5.3",
+						"gatewayId": "zai/glm-5.3",
+						"openrouterId": "z-ai/glm-5.3",
+						"inputUsd": 0.7,
+						"outputUsd": 2.2,
+						"cacheReadUsd": 0.12,
+						"contextWindow": 1048576
+					},
+					"intelligence": 44.78,
+					"warmTurnUsd": 0.06605,
+					"marginalTurnUsd": 0.06605
+				},
+				{
+					"key": "xai/grok-4.6",
+					"billing": "plan",
+					"catalogue": {
+						"model": "Grok 4.6",
+						"gatewayId": "spacexai/grok-4.6",
+						"openrouterId": "x-ai/grok-4.6",
+						"inputUsd": 2,
+						"outputUsd": 6,
+						"cacheReadUsd": 0.5,
+						"contextWindow": 500000
+					},
+					"intelligence": 44.31,
+					"warmTurnUsd": 0.2665,
+					"marginalTurnUsd": 0
+				}
+			],
+			"preferred": {
+				"key": "openai-codex/gpt-6-astra",
+				"billing": "plan",
+				"catalogue": {
+					"model": "GPT-6 Astra",
+					"gatewayId": "openai/gpt-6-astra",
+					"openrouterId": "openai/gpt-6-astra",
+					"inputUsd": 10,
+					"outputUsd": 50,
+					"cacheReadUsd": 1,
+					"contextWindow": 1050000
+				},
+				"intelligence": 52.67,
+				"warmTurnUsd": 0.6375,
+				"marginalTurnUsd": 0
+			}
+		},
+		{
+			"tier": "heavy",
+			"models": [
+				{
+					"key": "claude-bridge/claude-fable-5-1",
+					"billing": "plan",
+					"catalogue": {
+						"model": "Claude Fable 5.1",
+						"gatewayId": "anthropic/claude-fable-5.1",
+						"openrouterId": "anthropic/claude-fable-5.1",
+						"inputUsd": 10,
+						"outputUsd": 50,
+						"cacheReadUsd": 0.25,
+						"contextWindow": 1000000
+					},
+					"intelligence": 53.35,
+					"warmTurnUsd": 0.2625,
+					"marginalTurnUsd": 0
+				},
+				{
+					"key": "anthropic/claude-opus-5",
+					"billing": "plan",
+					"catalogue": {
+						"model": "Claude Opus 5",
+						"gatewayId": "anthropic/claude-opus-5",
+						"openrouterId": "anthropic/claude-opus-5",
+						"inputUsd": 5,
+						"outputUsd": 25,
+						"cacheReadUsd": 0.5,
+						"contextWindow": 1000000
+					},
+					"intelligence": 50.78,
+					"warmTurnUsd": 0.31875,
+					"marginalTurnUsd": 0
+				},
+				{
+					"key": "claude-bridge/claude-opus-5",
+					"billing": "plan",
+					"catalogue": {
+						"model": "Claude Opus 5",
+						"gatewayId": "anthropic/claude-opus-5",
+						"openrouterId": "anthropic/claude-opus-5",
+						"inputUsd": 5,
+						"outputUsd": 25,
+						"cacheReadUsd": 0.5,
+						"contextWindow": 1000000
+					},
+					"intelligence": 50.78,
+					"warmTurnUsd": 0.31875,
+					"marginalTurnUsd": 0
+				},
+				{
+					"key": "openai-codex/gpt-6-astra",
+					"billing": "plan",
+					"catalogue": {
+						"model": "GPT-6 Astra",
+						"gatewayId": "openai/gpt-6-astra",
+						"openrouterId": "openai/gpt-6-astra",
+						"inputUsd": 10,
+						"outputUsd": 50,
+						"cacheReadUsd": 1,
+						"contextWindow": 1050000
+					},
+					"intelligence": 52.67,
+					"warmTurnUsd": 0.6375,
+					"marginalTurnUsd": 0
+				}
+			],
+			"preferred": {
+				"key": "claude-bridge/claude-fable-5-1",
+				"billing": "plan",
+				"catalogue": {
+					"model": "Claude Fable 5.1",
+					"gatewayId": "anthropic/claude-fable-5.1",
+					"openrouterId": "anthropic/claude-fable-5.1",
+					"inputUsd": 10,
+					"outputUsd": 50,
+					"cacheReadUsd": 0.25,
+					"contextWindow": 1000000
+				},
+				"intelligence": 53.35,
+				"warmTurnUsd": 0.2625,
+				"marginalTurnUsd": 0
+			}
+		}
+	],
+	"priceInversions": [
+		"heavy's preferred claude-bridge/claude-fable-5-1 ($0.2625/warm turn) is cheaper at list than standard's openai-codex/gpt-6-astra ($0.6375)"
+	],
+	"capabilityInversions": [],
+	"dominatedTiers": [
+		"standard is dominated by heavy: claude-bridge/claude-fable-5-1 costs $0.2625 per warm turn against openai-codex/gpt-6-astra's $0.6375 and scores 53.35 against 52.67, so no request exists for which the lighter tier is the right choice"
+	],
+	"unresolved": [],
+	"source": {
+		"prices": "docs/data/operational-stats.json",
+		"benchmarks": "docs/data/benchmarks.json",
+		"benchmark": "AA Intelligence Index"
+	}
+}

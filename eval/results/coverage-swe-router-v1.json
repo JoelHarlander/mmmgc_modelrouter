@@ -1,0 +1,585 @@
+{
+	"title": "invariant coverage — pack swe-router-v1",
+	"configurations": 396,
+	"violations": [
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "as-configured",
+				"minConfidence": 0.5,
+				"manualPinTurns": 0,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "2 turn(s), first mwaskom__seaborn-3010 t1: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --judge-min-confidence 0.5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "as-configured",
+				"minConfidence": 0.5,
+				"manualPinTurns": 0,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "2 turn(s), first mwaskom__seaborn-3010 t1: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --judge-min-confidence 0.5 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "as-configured",
+				"minConfidence": 0.5,
+				"manualPinTurns": 3,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "2 turn(s), first mwaskom__seaborn-3010 t1: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --judge-min-confidence 0.5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "as-configured",
+				"minConfidence": 0.5,
+				"manualPinTurns": 3,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "2 turn(s), first mwaskom__seaborn-3010 t1: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --judge-min-confidence 0.5 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "as-configured",
+				"minConfidence": 0.8,
+				"manualPinTurns": 0,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "3 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.57 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --judge-min-confidence 0.8"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "as-configured",
+				"minConfidence": 0.8,
+				"manualPinTurns": 0,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "3 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.57 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --judge-min-confidence 0.8 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "as-configured",
+				"minConfidence": 0.8,
+				"manualPinTurns": 3,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "3 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.57 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --judge-min-confidence 0.8"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "as-configured",
+				"minConfidence": 0.8,
+				"manualPinTurns": 3,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "3 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.57 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --judge-min-confidence 0.8 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "all-on-demand",
+				"minConfidence": 0.5,
+				"manualPinTurns": 0,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "2 turn(s), first mwaskom__seaborn-3010 t1: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --billing all-on-demand --judge-min-confidence 0.5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "all-on-demand",
+				"minConfidence": 0.5,
+				"manualPinTurns": 0,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "2 turn(s), first mwaskom__seaborn-3010 t1: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --billing all-on-demand --judge-min-confidence 0.5 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "all-on-demand",
+				"minConfidence": 0.5,
+				"manualPinTurns": 3,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "2 turn(s), first mwaskom__seaborn-3010 t1: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --billing all-on-demand --judge-min-confidence 0.5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "all-on-demand",
+				"minConfidence": 0.5,
+				"manualPinTurns": 3,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "2 turn(s), first mwaskom__seaborn-3010 t1: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --billing all-on-demand --judge-min-confidence 0.5 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "all-on-demand",
+				"minConfidence": 0.8,
+				"manualPinTurns": 0,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "3 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.57 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --billing all-on-demand --judge-min-confidence 0.8"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "all-on-demand",
+				"minConfidence": 0.8,
+				"manualPinTurns": 0,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "3 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.57 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --billing all-on-demand --judge-min-confidence 0.8 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "all-on-demand",
+				"minConfidence": 0.8,
+				"manualPinTurns": 3,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "3 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.57 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --billing all-on-demand --judge-min-confidence 0.8"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "scripted",
+				"billing": "all-on-demand",
+				"minConfidence": 0.8,
+				"manualPinTurns": 3,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "3 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.57 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier scripted --billing all-on-demand --judge-min-confidence 0.8 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "as-configured",
+				"minConfidence": 0.5,
+				"manualPinTurns": 0,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --judge-min-confidence 0.5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "as-configured",
+				"minConfidence": 0.5,
+				"manualPinTurns": 0,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --judge-min-confidence 0.5 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "as-configured",
+				"minConfidence": 0.5,
+				"manualPinTurns": 3,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --judge-min-confidence 0.5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "as-configured",
+				"minConfidence": 0.5,
+				"manualPinTurns": 3,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --judge-min-confidence 0.5 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "as-configured",
+				"minConfidence": 0.8,
+				"manualPinTurns": 0,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --judge-min-confidence 0.8"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "as-configured",
+				"minConfidence": 0.8,
+				"manualPinTurns": 0,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --judge-min-confidence 0.8 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "as-configured",
+				"minConfidence": 0.8,
+				"manualPinTurns": 3,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --judge-min-confidence 0.8"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "as-configured",
+				"minConfidence": 0.8,
+				"manualPinTurns": 3,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --judge-min-confidence 0.8 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "all-on-demand",
+				"minConfidence": 0.5,
+				"manualPinTurns": 0,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --billing all-on-demand --judge-min-confidence 0.5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "all-on-demand",
+				"minConfidence": 0.5,
+				"manualPinTurns": 0,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --billing all-on-demand --judge-min-confidence 0.5 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "all-on-demand",
+				"minConfidence": 0.5,
+				"manualPinTurns": 3,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --billing all-on-demand --judge-min-confidence 0.5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "all-on-demand",
+				"minConfidence": 0.5,
+				"manualPinTurns": 3,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.5; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --billing all-on-demand --judge-min-confidence 0.5 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "all-on-demand",
+				"minConfidence": 0.8,
+				"manualPinTurns": 0,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --billing all-on-demand --judge-min-confidence 0.8"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "all-on-demand",
+				"minConfidence": 0.8,
+				"manualPinTurns": 0,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --billing all-on-demand --judge-min-confidence 0.8 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "all-on-demand",
+				"minConfidence": 0.8,
+				"manualPinTurns": 3,
+				"unauthed": []
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --billing all-on-demand --judge-min-confidence 0.8"
+				}
+			]
+		},
+		{
+			"configuration": {
+				"startModel": "faux-plan-codex/gpt-6-astra",
+				"classifier": "heuristic",
+				"billing": "all-on-demand",
+				"minConfidence": 0.8,
+				"manualPinTurns": 3,
+				"unauthed": [
+					"faux-plan-anthropic/claude-opus-5"
+				]
+			},
+			"violations": [
+				{
+					"invariant": "eligible-route",
+					"detail": "4 turn(s), first django__django-14672 t2: rate limited (429) until 02:12:15 — \"confidence 0.34 < 0.8; keeping faux-plan-codex/gpt-6-astra\"",
+					"reproduce": "npm run eval -- --start-model faux-plan-codex/gpt-6-astra --classifier heuristic --billing all-on-demand --judge-min-confidence 0.8 --no-auth faux-plan-anthropic/claude-opus-5"
+				}
+			]
+		}
+	],
+	"byInvariant": {
+		"eligible-route": 32
+	}
+}

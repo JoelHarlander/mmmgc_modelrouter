@@ -266,9 +266,11 @@ harvested like any other turn: quota headers and a 429 seen during `/duo`, `/tri
 ```bash
 npm install
 npm run check          # tsc
-npm test               # node --test (router, billing, entitlement, ledger, parallel, config, models, release)
+npm test               # node --test (router, billing, entitlement, ledger, parallel, config, models, release, eval harness)
 npm run smoke          # end-to-end on pi's faux provider: no tokens spent
 npm run smoke:billing  # same, with a spend gate that must keep the router off the cheap model
+npm run eval           # SWE-bench-style router eval: offline, deterministic, no tokens spent
+npm run eval:all -- --gate   # every eval profile, failing on a regression
 ```
 
 `npm run smoke` routes a light prompt to the billed `faux/b`, which its global fixture names in `allowPayPerToken`;
@@ -287,3 +289,29 @@ commands as the release gate before it stamps a version and tags the commit:
 [docs/RELEASING.md](docs/RELEASING.md).
 
 Research behind the defaults lives in `docs/research/` (benchmarks, operational stats, plan quotas, preference data).
+
+## Eval
+
+`npm run eval` scores the switcher on a SWE-bench-style task pack and writes a results file the next run
+compares against, so a change can be called better or worse rather than described. It is offline and
+deterministic by default — no network, no credential, no spend — and reports quality and cost side by side:
+tier accuracy, task resolve rate, ledger cost vs list-equivalent cost (subscription routes bill the ledger
+$0 but still consume a plan), and the cache consequence of every switch.
+
+```bash
+npm run eval:all -- --gate              # every profile, failing on a regression
+npm run eval                            # scripted classifier, single routed model per turn
+npm run eval -- --classifier heuristic  # score the no-credential fallback
+npm run eval -- --candidates 3          # 2+ responses per turn, judge picks the best
+npm run eval -- --sweep paired          # 95% intervals on the comparisons the findings rest on
+npm run eval -- --audit-config          # price the shipped tiers from docs/data; no simulation
+npm run eval -- --classifier live       # real Jev; also needs ROUTER_EVAL_LIVE=1
+```
+
+**What it found, distilled into a decision brief:** [`docs/research/router-eval-findings.md`](docs/research/router-eval-findings.md)
+— what the eval establishes about the tier table, cheapest-in-tier, switching cost, the two mis-set knobs and the
+fan-out, what each claim rests on, and the one measurement that has not been taken. It is input to a decision, not
+a decision: the harness measures the shipped router and does not change how it routes or how `/duo` adopts an answer.
+What it declares rather than measures, how the cost model is derived, and how to read each metric are in
+[`eval/README.md`](eval/README.md). Every finding so far, with what each one rests on, is in the findings index
+at the top of [`eval/results/log.md`](eval/results/log.md).

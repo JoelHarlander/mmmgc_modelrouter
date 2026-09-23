@@ -1,0 +1,618 @@
+{
+	"pack": "phrasing-probe-v1",
+	"at": "2026-09-22T16:40:12.016Z",
+	"git": "bf21cc1",
+	"pairs": 30,
+	"calls": 60,
+	"agreement": 0.4,
+	"instructionHeavier": 16,
+	"questionHeavier": 2,
+	"meanTierGap": 0.7667,
+	"meanToolsQuestion": 0.1227,
+	"meanToolsInstruction": 0.548,
+	"questionAccuracy": 0.3667,
+	"instructionAccuracy": 0.7667,
+	"costUsd": 0,
+	"results": [
+		{
+			"id": "race-condition",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.78,
+				"needsTools": 0.1,
+				"stakes": 1.13,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.46,
+				"needsTools": 0.78,
+				"stakes": 1.42,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.68
+		},
+		{
+			"id": "rewrite-hook",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.78,
+				"needsTools": 0.06,
+				"stakes": 1.26,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.62,
+				"needsTools": 0.91,
+				"stakes": 1.72,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.8500000000000001
+		},
+		{
+			"id": "smuggling",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.73,
+				"needsTools": 0.05,
+				"stakes": 1.88,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.97,
+				"needsTools": 0.6,
+				"stakes": 1.97,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.5499999999999999
+		},
+		{
+			"id": "column-rename",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.71,
+				"needsTools": 0.04,
+				"stakes": 1.8,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.94,
+				"needsTools": 0.33,
+				"stakes": 1.98,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.29000000000000004
+		},
+		{
+			"id": "swap-dims-alias",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.99,
+				"needsTools": 0.05,
+				"stakes": 0.84,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.67,
+				"needsTools": 0.68,
+				"stakes": 1.14,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0.63
+		},
+		{
+			"id": "token-storage",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.98,
+				"needsTools": 0.02,
+				"stakes": 1.68,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.97,
+				"needsTools": 0.76,
+				"stakes": 1.97,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.74
+		},
+		{
+			"id": "callers-of-check-scalar",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.18,
+				"needsTools": 0.42,
+				"stakes": 0.7,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.45,
+				"needsTools": 0.8,
+				"stakes": 1.66,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.38000000000000006
+		},
+		{
+			"id": "deprecation-shim",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.95,
+				"needsTools": 0.63,
+				"stakes": 0.57,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.56,
+				"needsTools": 0.87,
+				"stakes": 1.43,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.24
+		},
+		{
+			"id": "offset-pagination",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.24,
+				"needsTools": 0.18,
+				"stakes": 0.88,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.62,
+				"needsTools": 0.66,
+				"stakes": 1.11,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.48000000000000004
+		},
+		{
+			"id": "n-plus-one",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.55,
+				"needsTools": 0.13,
+				"stakes": 1,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.59,
+				"needsTools": 0.63,
+				"stakes": 1.24,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0.5
+		},
+		{
+			"id": "mutable-default",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 0.99,
+				"needsTools": 0.03,
+				"stakes": 0.65,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.7,
+				"needsTools": 0.32,
+				"stakes": 0.81,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.29000000000000004
+		},
+		{
+			"id": "float-equality",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"needsTools": 0.04,
+				"stakes": 0.46,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.82,
+				"needsTools": 0.1,
+				"stakes": 0.57,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.060000000000000005
+		},
+		{
+			"id": "gil-deadlock",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.87,
+				"needsTools": 0.08,
+				"stakes": 1.18,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.99,
+				"needsTools": 0.6,
+				"stakes": 1.62,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.52
+		},
+		{
+			"id": "cache-stampede",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.75,
+				"needsTools": 0.04,
+				"stakes": 0.78,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.89,
+				"needsTools": 0.69,
+				"stakes": 1.79,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.6499999999999999
+		},
+		{
+			"id": "float-accumulation",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.74,
+				"needsTools": 0.1,
+				"stakes": 1.42,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.38,
+				"needsTools": 0.36,
+				"stakes": 1.53,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0.26
+		},
+		{
+			"id": "tz-dst-window",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.95,
+				"needsTools": 0.06,
+				"stakes": 0.82,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.23,
+				"needsTools": 0.72,
+				"stakes": 1.37,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0.6599999999999999
+		},
+		{
+			"id": "index-lock",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.68,
+				"needsTools": 0.06,
+				"stakes": 1.54,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.33,
+				"needsTools": 0.59,
+				"stakes": 1.79,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.53
+		},
+		{
+			"id": "retry-idempotency",
+			"difficulty": "heavy",
+			"question": {
+				"tier": "light",
+				"confidence": 0.32,
+				"needsTools": 0.05,
+				"stakes": 1.89,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.97,
+				"needsTools": 0.55,
+				"stakes": 1.99,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.5
+		},
+		{
+			"id": "flaky-order",
+			"difficulty": "standard",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.86,
+				"needsTools": 0.52,
+				"stakes": 0.99,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.31,
+				"needsTools": 0.84,
+				"stakes": 1.09,
+				"costUsd": 0
+			},
+			"tierGap": -1,
+			"toolsGap": 0.31999999999999995
+		},
+		{
+			"id": "env-precedence",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.85,
+				"needsTools": 0.11,
+				"stakes": 1.05,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.41,
+				"needsTools": 0.62,
+				"stakes": 1.33,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0.51
+		},
+		{
+			"id": "json-roundtrip",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.43,
+				"needsTools": 0.16,
+				"stakes": 1.2,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.44,
+				"needsTools": 0.56,
+				"stakes": 1.6,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": 0.4
+		},
+		{
+			"id": "import-cycle",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.23,
+				"needsTools": 0.22,
+				"stakes": 0.97,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "heavy",
+				"confidence": 0.74,
+				"needsTools": 0.79,
+				"stakes": 1.49,
+				"costUsd": 0
+			},
+			"tierGap": 2,
+			"toolsGap": 0.5700000000000001
+		},
+		{
+			"id": "regex-catastrophic",
+			"difficulty": "standard",
+			"question": {
+				"tier": "light",
+				"confidence": 0.53,
+				"needsTools": 0.09,
+				"stakes": 1.05,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.58,
+				"needsTools": 0.08,
+				"stakes": 1.48,
+				"costUsd": 0
+			},
+			"tierGap": 1,
+			"toolsGap": -0.009999999999999995
+		},
+		{
+			"id": "logging-duplicate",
+			"difficulty": "standard",
+			"question": {
+				"tier": "heavy",
+				"confidence": 0.13,
+				"needsTools": 0.25,
+				"stakes": 0.9,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "standard",
+				"confidence": 0.38,
+				"needsTools": 0.67,
+				"stakes": 0.93,
+				"costUsd": 0
+			},
+			"tierGap": -1,
+			"toolsGap": 0.42000000000000004
+		},
+		{
+			"id": "assign-in-if",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"needsTools": 0.03,
+				"stakes": 0.28,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.94,
+				"needsTools": 0.3,
+				"stakes": 0.46,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.27
+		},
+		{
+			"id": "str-int-concat",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"needsTools": 0.03,
+				"stakes": 0.35,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.96,
+				"needsTools": 0.37,
+				"stakes": 0.45,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.33999999999999997
+		},
+		{
+			"id": "sort-returns-none",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"needsTools": 0.04,
+				"stakes": 0.69,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.96,
+				"needsTools": 0.46,
+				"stakes": 0.79,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.42000000000000004
+		},
+		{
+			"id": "unclosed-handle",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"needsTools": 0.04,
+				"stakes": 0.74,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.93,
+				"needsTools": 0.53,
+				"stakes": 0.97,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.49000000000000005
+		},
+		{
+			"id": "range-off-by-one",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"needsTools": 0.02,
+				"stakes": 0.28,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.98,
+				"needsTools": 0.12,
+				"stakes": 0.43,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.09999999999999999
+		},
+		{
+			"id": "int-parse-error",
+			"difficulty": "light",
+			"question": {
+				"tier": "light",
+				"confidence": 1,
+				"needsTools": 0.03,
+				"stakes": 0.11,
+				"costUsd": 0
+			},
+			"instruction": {
+				"tier": "light",
+				"confidence": 0.58,
+				"needsTools": 0.15,
+				"stakes": 0.87,
+				"costUsd": 0
+			},
+			"tierGap": 0,
+			"toolsGap": 0.12
+		}
+	]
+}

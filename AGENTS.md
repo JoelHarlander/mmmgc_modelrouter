@@ -6,7 +6,8 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 
 ## Build, test, verify
 
-`npm run check` (tsc), `npm test` (node --test over `test/*.test.ts`), then both smokes. `npm run smoke` and
+`npm run check` (tsc), `npm test` (node --test over `test/*.test.ts`), then both smokes, then
+`npm run eval` and `npm run eval:all -- --gate` (the router eval; offline, deterministic, spends nothing). `npm run smoke` and
 `npm run smoke:billing` drive real pi against the zero-cost faux provider and must answer from `faux/b` and
 `faux/a` respectively; that difference is the billing gate working end to end, so a change that makes them agree
 is a regression, not a wash. The smoke scripts exit 0 whichever model answers; `.github/workflows/ci.yml` asserts
@@ -24,6 +25,15 @@ branch: pi resets its clone with `git reset --hard FETCH_HEAD`, so the branch la
 branch the tree no longer holds. `src/release.ts` is read-only about pi's install — it may read the
 clone and `settings.json` and run `git ls-remote`, and must never write settings, fetch, or reach
 the network outside the explicitly invoked `/router update`.
+
+## Layout
+
+`src/` is the shipped pi extension; `eval/` is the measurement harness. It imports from `src/` and is never
+imported by it, so it can be read as an observer of the router rather than a part of it. `eval/README.md`
+explains what the harness *declares* versus what it *measures* — read it before trusting any number it prints.
+`eval/results/log.md` opens with a findings index: every claim made about the router, which round established
+it, and what it rests on. `docs/research/router-eval-findings.md` is the distilled brief, and its §9 states
+what the harness predicts each queued fix will do, with the command that checks it.
 
 ## Where the rules live
 
@@ -80,6 +90,23 @@ the network outside the explicitly invoked `/router update`.
   session on the old version will erase the new one's data.
 - `after_provider_response` carries only `{status, headers}`. Model-scoped attribution has to come from
   `ctx.model` at the time of the call.
+- **A model switch is not the only thing that discards the prompt cache.** A thinking-level change does too, and
+  `src/index.ts` re-applies `cfg.thinking[tier]` every turn — so a tier flip costs a full context re-write even
+  when the model does not change. The eval reports this as `coldByCause: thinking-change`.
+- **`ledger.costUsd` is not the cost of a run.** A subscription route bills $0 while still consuming a plan, so
+  the eval reports `listEquivalentUsd` and `planHiddenUsd` beside it; on the default config the hidden half is
+  the large majority of spend.
+- **The default tiers are not a cost ladder.** On published prices the `standard` tier's preferred model costs
+  more per warm turn than `heavy`'s and scores no better, so escalating a tier can make a turn cheaper.
+  `npm run eval -- --audit-config` re-derives this from `docs/data/` and names it; several findings trace back
+  to it.
+- **The eval's `goldTier` is derived, never hand-written** — it is the cheapest tier holding a model that meets
+  the turn's `requiredSkill`. Editing a task pack means editing `requiredSkill`; `--validate` fails if a written
+  `goldTier` disagrees.
+- `test/eval.test.ts` pins several things against `src/` **source text** (the fan-out candidate policy, the judge
+  question, the stakes-override threshold, the auto-adopt confidence bar, and whether the low-confidence early
+  return consults `isBlocked`). Changing those in `src/` will fail tests in `test/` — that is deliberate, so the
+  harness cannot silently drift from what ships, and the failure message says what to update.
 
 ## Maintaining this file
 

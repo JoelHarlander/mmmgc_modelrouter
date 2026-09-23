@@ -1,0 +1,40 @@
+{
+	"tasks": 20,
+	"resamples": 2000,
+	"sessionSuccessRate": {
+		"point": 0.6457,
+		"low": 0.3878,
+		"high": 0.8953,
+		"halfWidth": 0.2538
+	},
+	"turnSuccessRate": {
+		"point": 0.6457,
+		"low": 0.3878,
+		"high": 0.8953,
+		"halfWidth": 0.2538
+	},
+	"tierAccuracy": {
+		"point": 0.6571,
+		"low": 0.4674,
+		"high": 0.7938,
+		"halfWidth": 0.1632
+	},
+	"listEquivalentUsd": {
+		"point": 67.5291,
+		"low": 22.1649,
+		"high": 142.0296,
+		"halfWidth": 59.9323
+	},
+	"coldPremiumShare": {
+		"point": 0.4958,
+		"low": 0.3814,
+		"high": 0.5657,
+		"halfWidth": 0.0921
+	},
+	"wallClockSeconds": {
+		"point": 2501.7,
+		"low": 1586,
+		"high": 4130.2,
+		"halfWidth": 1272.1
+	}
+}

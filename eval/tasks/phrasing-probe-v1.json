@@ -1,0 +1,187 @@
+{
+	"version": 1,
+	"id": "phrasing-probe-v1",
+	"description": "A controlled test of one hypothesis from round 35: Jev under-routes question-shaped turns that sit on hard work, apparently reading `needs_tools: no` as `is easy`. Each pair describes the SAME underlying work twice - once as a question that can be answered in text, once as an instruction that requires editing files. The understanding required is identical; only the output differs. If the question is systematically classified lighter than its paired instruction, the framing is doing the work rather than the difficulty. `difficulty` is the tier the underlying work needs, on the same ladder as the task packs. Expanded in round 39 from 12 pairs to 30, balanced 12 heavy / 10 standard / 8 light, because the original finding moved only three pairs' worth and nothing bounded it beyond the pack. The light pairs are controls: a question about genuinely light work SHOULD be classified light, so a gap that appears there would mean the probe is measuring something other than the effect it claims.",
+	"pairs": [
+		{
+			"id": "race-condition",
+			"difficulty": "heavy",
+			"question": "Why does FileBasedCache.has_key raise FileNotFoundError when a cull runs concurrently?",
+			"instruction": "Fix the race in FileBasedCache.has_key where a concurrent cull makes it raise FileNotFoundError."
+		},
+		{
+			"id": "rewrite-hook",
+			"difficulty": "heavy",
+			"question": "What are the consequences for plugins that install their own assertion-rewrite hooks if the docstring detection changes?",
+			"instruction": "Change the docstring detection in rewrite.py so it is correct for every module shape, keeping plugin rewrite hooks working."
+		},
+		{
+			"id": "smuggling",
+			"difficulty": "heavy",
+			"question": "Can dropping Content-Length from bodyless requests break request-smuggling assumptions downstream?",
+			"instruction": "Drop Content-Length from bodyless requests without breaking request-smuggling assumptions downstream."
+		},
+		{
+			"id": "column-rename",
+			"difficulty": "heavy",
+			"question": "Why does renaming a column in one migration break a continuously-deployed app mid-rollout?",
+			"instruction": "Roll out a column rename on a table a continuously-deployed app writes to, without breaking it mid-rollout."
+		},
+		{
+			"id": "swap-dims-alias",
+			"difficulty": "heavy",
+			"question": "Which variable does swap_dims share rather than copy, so that it mutates the original?",
+			"instruction": "Stop swap_dims mutating the original by copying the variable it currently shares."
+		},
+		{
+			"id": "token-storage",
+			"difficulty": "heavy",
+			"question": "What does storing a JWT in localStorage expose that an httpOnly cookie does not?",
+			"instruction": "Move the JWT out of localStorage into an httpOnly cookie and add the CSRF protection that needs."
+		},
+		{
+			"id": "callers-of-check-scalar",
+			"difficulty": "standard",
+			"question": "Which callers of check_scalar pass a user-supplied dtype?",
+			"instruction": "Find every caller of check_scalar that passes a user-supplied dtype and make them consistent."
+		},
+		{
+			"id": "deprecation-shim",
+			"difficulty": "standard",
+			"question": "Who else in the codebase calls the private _build_app_dict name?",
+			"instruction": "Update every caller of the private _build_app_dict name to the new public one."
+		},
+		{
+			"id": "offset-pagination",
+			"difficulty": "standard",
+			"question": "Why is page 900 of this listing endpoint slow when page 2 is instant?",
+			"instruction": "Make page 900 of this listing endpoint as fast as page 2."
+		},
+		{
+			"id": "n-plus-one",
+			"difficulty": "standard",
+			"question": "Why does this Django view issue one query per row?",
+			"instruction": "Stop this Django view issuing one query per row."
+		},
+		{
+			"id": "mutable-default",
+			"difficulty": "light",
+			"question": "Why does `def add(item, bucket=[])` return results from previous calls?",
+			"instruction": "Fix `def add(item, bucket=[])` so it stops returning results from previous calls."
+		},
+		{
+			"id": "float-equality",
+			"difficulty": "light",
+			"question": "Why does `assert 0.1 + 0.2 == 0.3` fail?",
+			"instruction": "Rewrite `assert 0.1 + 0.2 == 0.3` so it passes."
+		},
+		{
+			"id": "gil-deadlock",
+			"difficulty": "heavy",
+			"question": "Why does this worker pool deadlock when a task submits another task to the same pool?",
+			"instruction": "Stop this worker pool deadlocking when a task submits another task to the same pool."
+		},
+		{
+			"id": "cache-stampede",
+			"difficulty": "heavy",
+			"question": "Why does the cache expiring cause a thundering herd against the database here?",
+			"instruction": "Stop the cache expiry causing a thundering herd against the database here."
+		},
+		{
+			"id": "float-accumulation",
+			"difficulty": "heavy",
+			"question": "Why does summing these balances in a different order change the reconciliation total?",
+			"instruction": "Make summing these balances give the same reconciliation total whatever the order."
+		},
+		{
+			"id": "tz-dst-window",
+			"difficulty": "heavy",
+			"question": "Why does this scheduled job run twice on the night the clocks go back?",
+			"instruction": "Stop this scheduled job running twice on the night the clocks go back."
+		},
+		{
+			"id": "index-lock",
+			"difficulty": "heavy",
+			"question": "Why does adding this index take an exclusive lock and stall writes on a live table?",
+			"instruction": "Add this index to a live table without taking an exclusive lock that stalls writes."
+		},
+		{
+			"id": "retry-idempotency",
+			"difficulty": "heavy",
+			"question": "Why do retries on this payment endpoint sometimes double-charge?",
+			"instruction": "Make retries on this payment endpoint safe so they cannot double-charge."
+		},
+		{
+			"id": "flaky-order",
+			"difficulty": "standard",
+			"question": "Why does this test suite fail only when the tests run in a different order?",
+			"instruction": "Make this test suite pass whatever order the tests run in."
+		},
+		{
+			"id": "env-precedence",
+			"difficulty": "standard",
+			"question": "Why does the config file override the environment variable here instead of the other way round?",
+			"instruction": "Make the environment variable override the config file here."
+		},
+		{
+			"id": "json-roundtrip",
+			"difficulty": "standard",
+			"question": "Why does serialising and reloading this object lose the None values?",
+			"instruction": "Stop serialising and reloading this object losing the None values."
+		},
+		{
+			"id": "import-cycle",
+			"difficulty": "standard",
+			"question": "Why does importing this module raise a partially-initialised module error?",
+			"instruction": "Break the import cycle that makes this module raise a partially-initialised error."
+		},
+		{
+			"id": "regex-catastrophic",
+			"difficulty": "standard",
+			"question": "Why does this validation regex hang on a long input?",
+			"instruction": "Rewrite this validation regex so it does not hang on a long input."
+		},
+		{
+			"id": "logging-duplicate",
+			"difficulty": "standard",
+			"question": "Why does every log line appear twice after the second handler is added?",
+			"instruction": "Stop every log line appearing twice after the second handler is added."
+		},
+		{
+			"id": "assign-in-if",
+			"difficulty": "light",
+			"question": "Why does `if count = 5:` raise a SyntaxError?",
+			"instruction": "Fix `if count = 5:` so it stops raising a SyntaxError."
+		},
+		{
+			"id": "str-int-concat",
+			"difficulty": "light",
+			"question": "Why does `total = 'items: ' + count` raise a TypeError?",
+			"instruction": "Fix `total = 'items: ' + count` so it stops raising a TypeError."
+		},
+		{
+			"id": "sort-returns-none",
+			"difficulty": "light",
+			"question": "Why does `names = names.sort()` leave `names` as None?",
+			"instruction": "Fix `names = names.sort()` so it stops leaving `names` as None."
+		},
+		{
+			"id": "unclosed-handle",
+			"difficulty": "light",
+			"question": "Why does `data = open(path).read()` leave the handle open?",
+			"instruction": "Fix `data = open(path).read()` so it stops leaving the handle open."
+		},
+		{
+			"id": "range-off-by-one",
+			"difficulty": "light",
+			"question": "Why does `for i in range(1, 10)` stop before 10?",
+			"instruction": "Fix `for i in range(1, 10)` so it stops after 10 instead of before it."
+		},
+		{
+			"id": "int-parse-error",
+			"difficulty": "light",
+			"question": "Why does `int('12abc')` raise a ValueError?",
+			"instruction": "Fix `int('12abc')` so it stops raising a ValueError."
+		}
+	]
+}
