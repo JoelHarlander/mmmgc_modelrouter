@@ -13,6 +13,17 @@ is a regression, not a wash. Both smokes are hermetic: each sets `PI_CODING_AGEN
 `test/smoke*/agent/modelrouter.json` (where the `models` label and `allowPayPerToken` entry the billed route needs
 must live, since a project file may not state them) and the user's real global config is never read.
 
+## Release path
+
+Work lands on `dev` and is promoted to `main`; `docs/RELEASING.md` is the authority for the
+procedure, the semver rule and where a CI gate would attach, and `scripts/promote.sh` runs it.
+Never commit a version bump or tag outside that procedure. The channel a running build reports is
+read from the `package.json` version (`X.Y.Z` stable, `X.Y.Z-dev` dev), never from the checkout's
+branch: pi resets its clone with `git reset --hard FETCH_HEAD`, so the branch label there can name a
+branch the tree no longer holds. `src/release.ts` is read-only about pi's install — it may read the
+clone and `settings.json` and run `git ls-remote`, and must never write settings, fetch, or reach
+the network outside the explicitly invoked `/router update`.
+
 ## Where the rules live
 
 - Billing policy is **data**, never hardcoded: `billing`, `entitlement` and `scopes` in `src/config.ts`. Provider
