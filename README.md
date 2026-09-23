@@ -141,7 +141,7 @@ Saving writes **only** the tier lists you changed, and only to the global `~/.pi
 that is a symlink). Every other key, the key order, the indentation and each list's one-line or one-per-line layout
 stay as they were. The file is replaced atomically, the previous copy is kept as `modelrouter.json.bak`, and a tier
 changed on disk since the picker opened, or a file that is not valid JSON, is refused rather than overwritten. The
-router then reloads exactly as `/router reload` does. The picker never writes a project's `.pi/modelrouter.json`, and
+router then reloads as `/router reload` does, except that it keeps the session's on/off state. The picker never writes a project's `.pi/modelrouter.json`, and
 never writes any key but `tiers`. If a pay-per-token model you add shows `excluded: not in billing.allowPayPerToken`,
 permitting that spend is a hand edit of `billing` in the global file. Where the open project's file sets a tier, the
 picker says so: your global change applies everywhere else, and that project keeps its own list.
