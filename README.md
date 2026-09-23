@@ -22,9 +22,72 @@ A [pi](https://github.com/earendil-works/pi) extension that routes every turn to
 
 ## Install
 
+Stable (the `main` branch, which is what an unqualified install follows):
+
 ```bash
-pi install /Users/j/Documents/code/jez_modelrouter
+pi install git:github.com/JoelHarlander/mmmgc_modelrouter
 ```
+
+Dev — the integration channel, where changes land before they are promoted:
+
+```bash
+pi install git:github.com/JoelHarlander/mmmgc_modelrouter@dev
+```
+
+The `@<ref>` suffix is pi's own source syntax (`pi install --help`); pi clones into
+`~/.pi/agent/git/github.com/JoelHarlander/mmmgc_modelrouter` and records the entry, ref and all, in
+`~/.pi/agent/settings.json` under `packages`. Installing again with a different ref **rewrites that
+one entry** rather than adding a second, because pi matches a package by repository and ignores the
+ref when doing so — so `pi install …@dev` and `pi install …@main` are how you switch channels.
+
+| You want | Command |
+| --- | --- |
+| Track dev | `pi install git:github.com/JoelHarlander/mmmgc_modelrouter@dev` |
+| Go back to stable | `pi install git:github.com/JoelHarlander/mmmgc_modelrouter@main` |
+| Pin one release | `pi install git:github.com/JoelHarlander/mmmgc_modelrouter@v0.2.0` |
+| See where you are | `/router update` inside pi |
+
+Use `@main` to return to stable, not the bare form. Dropping the ref rewrites the settings entry,
+but the existing clone keeps the upstream branch it was checked out on, so pi would go on following
+dev while settings say otherwise. `@main` moves both. (A bare install into a *fresh* clone is fine;
+it is only switching back in place that needs the explicit ref.)
+
+Channels, what the versions mean, and how a release is cut: [docs/RELEASING.md](docs/RELEASING.md).
+
+## Updating
+
+pi owns updating. `pi update <source>` — or `pi update --extensions` for every installed package —
+re-fetches the ref the settings entry names and hard-resets the clone to it:
+
+```bash
+pi update git:github.com/JoelHarlander/mmmgc_modelrouter
+```
+
+The ref comes from settings, not from what you type, so `pi update` can never change your channel;
+only `pi install …@<ref>` does. A branch ref moves with the branch each time you update. A ref that
+names one commit — a tag or a SHA — is a pin: the same fetch lands on the same commit, so an
+install pinned to `@v0.2.0` stays there until you install another ref.
+
+One consequence of tracking a channel explicitly: pi's startup "updates available" notice skips
+ref-qualified entries, so it goes quiet once you are on `@dev` or `@main`. That is the gap
+`/router update` fills. It is the only part of the router that talks to the forge, it runs only when
+you type it, and it changes nothing — it reads the installed clone and pi's settings, then asks the
+remote for the tip of your ref with `git ls-remote`:
+
+```
+[router update]
+release: 0.3.0-dev (dev)  1a2b3c4  tracking git:github.com/JoelHarlander/mmmgc_modelrouter@dev
+remote dev: 9f8e7d6 — differs from the installed 1a2b3c4; pi update moves this install to it
+update on this channel:  pi update git:github.com/JoelHarlander/mmmgc_modelrouter@dev
+switch to dev:           pi install git:github.com/JoelHarlander/mmmgc_modelrouter@dev
+switch to stable:        pi install git:github.com/JoelHarlander/mmmgc_modelrouter@main
+```
+
+Offline, or with the remote unreachable, the local lines still print and the remote line says which
+part failed. The channel also shows in `/router` and, while you are on a non-stable one, as a `·dev`
+mark on the status line — it is read from the version in `package.json`, which travels with the
+code, rather than from the clone's branch label, which pi's reset leaves pointing at whatever was
+cloned first.
 
 Jev needs one credential, resolved in this order (`jev.transport: "auto"`):
 
@@ -152,6 +215,7 @@ can never name an endpoint a credential is sent to, assert what pays for a model
 | `/router` | Status card: tiers, auth, billing basis per route, quota, session spend, last decision |
 | `/router explain` | Candidates, billing basis, evidence and uncertainty behind the last decision |
 | `/router billing` | Refreshes entitlement evidence, then shows what pays for each configured route |
+| `/router update` | Channel, version and commit of the running build, whether the channel has moved on, and the `pi` command that moves it |
 | `/router on` / `off` / `reload` | Toggle routing, reload config |
 | `/duo <prompt>` / `/trio <prompt>` | 2 or 3 parallel responses |
 | `/par [N] <prompt>` | N parallel responses (2..8) |
@@ -167,7 +231,7 @@ harvested like any other turn: quota headers and a 429 seen during `/duo`, `/tri
 ```bash
 npm install
 npm run check          # tsc
-npm test               # node --test (router, billing, entitlement, ledger, parallel, config)
+npm test               # node --test (router, billing, entitlement, ledger, parallel, config, release)
 npm run smoke          # end-to-end on pi's faux provider: no tokens spent
 npm run smoke:billing  # same, with a spend gate that must keep the router off the cheap model
 ```
@@ -180,5 +244,9 @@ Verified on pi 0.85.1: `pi.setModel()` inside `before_agent_start` applies to th
 happens before the first provider request. The interactive surfaces (`/router` cards, routing notifications,
 `/duo` panel, Jev judge, adopt dialog, adopted message ordering) were exercised by driving pi in tmux against
 the faux provider with live Jev; they are not part of the automated suite.
+
+Work lands on `dev` and is promoted to `main` with `scripts/promote.sh`, which runs those four
+commands as the release gate before it stamps a version and tags the commit:
+[docs/RELEASING.md](docs/RELEASING.md).
 
 Research behind the defaults lives in `docs/research/` (benchmarks, operational stats, plan quotas, preference data).
