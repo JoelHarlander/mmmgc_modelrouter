@@ -1,0 +1,42 @@
+# Typecheck, unit tests and the two faux-provider smokes. Nothing here uses a
+# secret or reaches a real provider: the smokes answer from a zero-cost faux
+# provider and read only their own test/smoke*/agent fixtures.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # @earendil-works/pi-* require node >=22.19.0; @types/node is ^24.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+
+      # The smokes exit 0 whichever model answers, so assert the route: the
+      # billing gate is what makes them differ (see AGENTS.md).
+      - name: Smoke (routes to faux/b)
+        run: npm run -s smoke | tee smoke.out && grep -qx 'answered by b' smoke.out
+      - name: Smoke billing (routes to faux/a)
+        run: npm run -s smoke:billing | tee smoke-billing.out && grep -qx 'answered by a' smoke-billing.out

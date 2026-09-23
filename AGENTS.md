@@ -10,9 +10,21 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 `npm run eval` and `npm run eval:all -- --gate` (the router eval; offline, deterministic, spends nothing). `npm run smoke` and
 `npm run smoke:billing` drive real pi against the zero-cost faux provider and must answer from `faux/b` and
 `faux/a` respectively; that difference is the billing gate working end to end, so a change that makes them agree
-is a regression, not a wash. Both smokes are hermetic: each sets `PI_CODING_AGENT_DIR` to its own `agent/` fixture, so the global layer is
+is a regression, not a wash. The smoke scripts exit 0 whichever model answers; `.github/workflows/ci.yml` asserts
+the answer line, so keep the two in step if either smoke's expected route changes. Both smokes are hermetic: each sets `PI_CODING_AGENT_DIR` to its own `agent/` fixture, so the global layer is
 `test/smoke*/agent/modelrouter.json` (where the `models` label and `allowPayPerToken` entry the billed route needs
 must live, since a project file may not state them) and the user's real global config is never read.
+
+## Release path
+
+Work lands on `dev` and is promoted to `main`; `docs/RELEASING.md` is the authority for the
+procedure, the semver rule and where a CI gate would attach, and `scripts/promote.sh` runs it.
+Never commit a version bump or tag outside that procedure. The channel a running build reports is
+read from the `package.json` version (`X.Y.Z` stable, `X.Y.Z-dev` dev), never from the checkout's
+branch: pi resets its clone with `git reset --hard FETCH_HEAD`, so the branch label there can name a
+branch the tree no longer holds. `src/release.ts` is read-only about pi's install — it may read the
+clone and `settings.json` and run `git ls-remote`, and must never write settings, fetch, or reach
+the network outside the explicitly invoked `/router update`.
 
 ## Layout
 

@@ -5,11 +5,11 @@
  * -> pick the cheapest billing-eligible model in that tier (billing basis + plan quota +
  * cache-switch aware, see billing.ts) -> pi.setModel before the agent loop starts.
  *
- * Commands: /router [status|on|off|reload|explain|billing], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
+ * Commands: /router [status|on|off|reload|explain|billing|update], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
  */
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Container, Text } from "@earendil-works/pi-tui";
 import { assessBilling, billsPerToken, describeBasis } from "./billing.ts";
 import { loadConfig, modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
@@ -17,6 +17,7 @@ import { refreshEntitlements } from "./entitlement.ts";
 import { type JevChoiceAnswer, JevClient, type JevNoulAnswer, type JevScoreAnswer } from "./jev.ts";
 import { Ledger, ledgerPath } from "./ledger.ts";
 import { PARALLEL_ENTRY_TYPE, type ParallelEntryData, renderParallelEntry, runParallel } from "./parallel.ts";
+import { checkRemote, readReleaseInfo, releaseLine, type ReleaseInfo, updateLines } from "./release.ts";
 import { chooseModel, type Decision, heuristicTier } from "./router.ts";
 import { buildRoutingState, routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "./state.ts";
 
@@ -33,6 +34,9 @@ export default function modelRouter(pi: ExtensionAPI) {
 	let selfSwitching = false;
 	let lastDecision: Decision | undefined;
 	let enabled = cfg.enabled;
+	// Local file reads, resolved once on first use: the running build is a fact about this process,
+	// so it cannot change under it, and the remote is asked about by /router update alone.
+	let release: ReleaseInfo | undefined;
 
 	const reload = (cwd: string) => {
 		const loaded = loadConfig(cwd);
@@ -185,7 +189,7 @@ export default function modelRouter(pi: ExtensionAPI) {
 	// ---- commands ------------------------------------------------------------
 
 	pi.registerCommand("router", {
-		description: "Model router: status | on | off | reload | explain | billing",
+		description: "Model router: status | on | off | reload | explain | billing | update",
 		handler: async (args, ctx) => {
 			const sub = (args ?? "").trim().split(/\s+/)[0] ?? "";
 			switch (sub) {
@@ -210,6 +214,9 @@ export default function modelRouter(pi: ExtensionAPI) {
 				}
 				case "explain":
 					showExplain(ctx);
+					break;
+				case "update":
+					await showUpdate(ctx);
 					break;
 				default:
 					showStatus(ctx);
@@ -248,8 +255,31 @@ export default function modelRouter(pi: ExtensionAPI) {
 		return (chosen?.costUsd ?? 0) + (chosen?.switchPenaltyUsd ?? 0);
 	}
 
+	/** Local, cached for the process: package.json, the checkout's HEAD and pi's settings entry. */
+	function releaseInfo(ctx: { cwd: string }): ReleaseInfo {
+		const agentDir = getAgentDir();
+		release ??= readReleaseInfo({
+			agentDir,
+			settingsFiles: [
+				{ path: join(ctx.cwd, CONFIG_DIR_NAME, "settings.json"), scope: "project", baseDir: ctx.cwd },
+				{ path: join(agentDir, "settings.json"), scope: "user", baseDir: agentDir },
+			],
+		});
+		return release;
+	}
+
 	function setStatus(ctx: ExtensionContext, text: string) {
-		if (ctx.hasUI) ctx.ui.setStatus(STATUS_KEY, text);
+		if (ctx.hasUI) ctx.ui.setStatus(STATUS_KEY, `${text}${channelMark(ctx)}`);
+	}
+
+	/** The one place the channel is always on screen; stable adds nothing, dev is worth a word. */
+	function channelMark(ctx: ExtensionContext): string {
+		try {
+			const ch = releaseInfo(ctx).channel;
+			return ch === "stable" ? "" : ` ·${ch}`;
+		} catch {
+			return "";
+		}
 	}
 
 	function updateStatus(ctx: ExtensionContext) {
@@ -262,8 +292,16 @@ export default function modelRouter(pi: ExtensionAPI) {
 		setStatus(ctx, `router ${bits.join(" ")}${d.switched ? " ⇄" : ""}`);
 	}
 
+	/** Channel, version and commit, then — only because it was asked for — the tip of that ref. */
+	async function showUpdate(ctx: ExtensionCommandContext) {
+		const info = releaseInfo(ctx);
+		const remote = await checkRemote(info);
+		showCard(ctx, "router update", updateLines(info, remote));
+	}
+
 	function showStatus(ctx: ExtensionCommandContext) {
 		const lines: string[] = [];
+		lines.push(releaseLine(releaseInfo(ctx)));
 		lines.push(`enabled: ${enabled}   jev: ${jev.describe()}   pinned: ${pinnedUntilTurn > turn ? `${pinnedUntilTurn - turn} turns` : "no"}`);
 		if (ctx.model) lines.push(`current: ${modelKey(ctx.model)} (${basisOf(ctx, ctx.model)})`);
 		for (const tier of TIERS) {
