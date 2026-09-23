@@ -2605,3 +2605,90 @@ it is listed as one, not quietly assumed away.
 **Where this leaves the loop.** Both pillars are now replicated, the predictions are
 pinned, and the headline finding has independent confirmation at p < 10⁻⁶. See the status
 line for the convergence judgement.
+
+---
+
+## Round 41 — 2026-09-23 — reconcile with billing-aware routing, and collect on a prediction
+
+The captain approved both PRs and billing landed in `main` as `ac3a6a2`, which made this
+branch conflict. The job was to merge it — but the interesting half was that billing
+became a *routing input*, so the harness had to be reconciled with it rather than merely
+made to compile.
+
+`src/` is untouched by this branch throughout: `git diff origin/main...HEAD -- src/` is
+empty.
+
+### The prediction paid off
+
+**§0's bug is fixed, and §9A called it exactly.** The low-confidence early return now
+evaluates the route it would keep and falls through when the gate refuses it — the change
+§9A specified, written before it landed.
+
+| §9A predicted (round 38) | measured after the merge |
+| --- | ---: |
+| `ineligibleChoices` short pack, blocked start: 0 | **0** |
+| `ineligibleChoices` long pack, blocked start: 0 | **0** |
+| `--sweep coverage`: 0 of 396 broken | **0 of 396** |
+| default-start profiles byte-identical | **byte-identical** (`--gate`: no regressions) |
+
+The inertness row mattered as much as the fix, and it held. This is what §9 was written
+for: the eval verified the change instead of anyone arguing about it.
+
+The four tests that documented the bug now guard the fix, and `--blocked-aware-keep` is
+removed — it simulated a change that exists, and dead simulation code invites drift.
+Because a clean sweep is now the *expected* result, the invariant detector is tested
+directly against a record built to break it; a detector that had quietly stopped
+detecting would otherwise look identical from outside.
+
+### Reconciling the harness
+
+Three changes, each chosen so the harness stays an *observer* of the router rather than a
+second implementation of it:
+
+- **`ledger.isBlocked` is gone.** Eligibility is now `assessBilling`'s verdict, so
+  `checkEligibility` asks that, rather than keeping a private notion of "blocked".
+- **`pickParallelModels` ranks its slots by billing basis** and takes an args object with
+  a ledger. The harness's mirror now calls the router's own `evaluateCandidate` instead
+  of restating its ordering rules, so the two cannot drift apart.
+- **The eval fleet declares its own `billing.allowPayPerToken`,** derived from the
+  fleet's own labels. Without it the shipped globs — which name real providers — match no
+  synthetic key, and the eval measures a router with **no billed routes at all**. That
+  was the whole cause of the first wave of failures, and it would have been easy to
+  mistake for a finding.
+
+### What moved, and what did not
+
+Billing rank changed which models the shipped fan-out set contains: the strongest
+per-token model (`claude-fable-5-1`, skill 91) drops out in favour of the two
+subscription routes. So the shipped set is cheaper and *less* bias-exposed than it was —
+but it also has less headroom, and **§5's decision is unchanged**: `tier-top` still wins
+on quality *and* cost *and* wall-clock.
+
+| | before | after |
+| --- | ---: | ---: |
+| fan-out vs none, quality | +25.7pp [+6.9, +46.5] | **+24.6pp [+4.5, +47.3]** |
+| fan-out vs none, spend | +$360.61 | **+$316.35** |
+| `tier-top` vs shipped, spend | −$220.03 | **−$175.77** |
+| wall-clock differences resolving | 4 of 5 | **3 of 5** |
+| under-routing penalty, standard / heavy | −63.1pp / −50.5pp | **unchanged** |
+
+Where a magnitude moved, the test now asserts the **mechanism** and says why the size
+changed — the alternative, quietly loosening a bound until it passes, is how a suite
+stops being evidence. §9B is untouched: the penalties that decide v1-against-v2 are
+identical.
+
+### Merging, twice
+
+`main` moved underneath the first merge — the CI workflow and a release path landed as
+`dfd864d` while it was in progress. Both merges are in. Conflicts were resolved keeping
+**both** sides throughout: `AGENTS.md` carries main's release-path section and its note
+that `.github/workflows/ci.yml` asserts the smoke answer line, alongside the eval layout;
+`test/smoke/.pi/modelrouter.json` adopts main's decisions and matches its agent fixture
+rather than overriding it.
+
+CI now gates every PR. This branch passes it as CI runs it: `check`, **241 tests**, and
+both smokes asserted by *route* rather than exit code — `smoke` answers from `faux/b`,
+`smoke:billing` from `faux/a`, which is the billing gate working end to end.
+
+**Verified from the forge, not locally:** `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`,
+`check=pass`. Not merged; that is the captain's call.

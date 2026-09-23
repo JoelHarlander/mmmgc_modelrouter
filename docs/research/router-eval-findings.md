@@ -32,44 +32,55 @@ So, throughout:
 
 ---
 
-## 0. A bug: the router can route to a provider it knows is rate-limited
+## 0. ~~A bug: the router can route to a provider it knows is rate-limited~~ — **FIXED**
 
-`npm run eval -- --start-model faux-plan-codex/gpt-6-astra` → **exit 1**,
-`ineligibleChoices: 1`.
+**Fixed in `ac3a6a2`**, the billing merge, exactly as §9A said it should be. Kept here
+because the prediction and the fix are the useful pair, not the bug on its own.
 
-`chooseModel`'s low-confidence early return (`src/router.ts:66-75`) hands back the
-current model **without consulting `ledger.isBlocked`**:
+**What it was.** `chooseModel`'s low-confidence early return handed back the current
+model without asking whether it could be used, so an unsure classifier pinned the session
+to whatever it was already on — including a provider in a 429 cooldown. It compounded
+with the Jev-outage fallback: `heuristicTier` returns **0.34 or 0.4** against a default
+`minConfidence` of **0.5**, so *every* heuristic answer took that branch. The two
+fallbacks cancelled each other out — the one for "I don't know what this turn needs"
+disabled the one for "this provider is refusing requests".
+
+**What it is now.** The branch evaluates the route it would keep and only keeps one the
+gate passed:
 
 ```ts
 if (confidence < cfg.switching.minConfidence && current) {
-    return { ..., model: current, switched: false,
-             reason: `confidence ... < ...; keeping ${currentKey}` };
+    const held = evaluateCandidate(currentKey!, args, currentKey);
+    collect([held]);
+    if (!held.skipped) { return { ...keep current... }; }
+    // otherwise fall through to tier selection
 }
 ```
 
-So when the classifier is unsure, the router keeps whatever model the session is on —
-including one the ledger has just put in a 429 cooldown. The same applies to the final
-`"no configured model is available; keeping current"` branch.
+The final fallback now also reports `ineligibleCurrent` rather than keeping a refused
+route silently. Eligibility itself became a billing verdict: `ledger.isBlocked` is gone,
+and `assessBilling` decides.
 
-**It compounds with the Jev-outage fallback.** `heuristicTier` returns confidence
-**0.34 or 0.4**, and `switching.minConfidence` defaults to **0.5** — so *every* heuristic
-answer takes that branch. When Jev is unavailable the router cannot route at all, and
-while it cannot route it also stops avoiding exhausted providers. The two fallbacks
-cancel each other out: the one for "I don't know what this turn needs" disables the one
-for "this provider is refusing requests".
+**Every prediction in §9A checked out against the landed change:**
 
-The observed path: Jev fails → heuristic returns 0.34 → low-confidence branch keeps the
-current model → that model's provider is in a 429 cooldown → the turn is sent to it
-anyway.
+| prediction (§9A, round 38) | predicted | measured after the fix |
+| --- | ---: | ---: |
+| `ineligibleChoices`, short pack, starting on the 429'd provider | 0 | **0** |
+| `ineligibleChoices`, long pack, same start | 0 | **0** |
+| `--sweep coverage` configurations breaking `eligible-route` | 0 of 396 | **0 of 396** |
+| default-start profiles unchanged | byte-identical | **byte-identical** (`eval:all --gate`: no regressions) |
 
-**Recommendation.** Check `ledger.isBlocked` before keeping the current model, in both
-branches; fall through to tier selection when it is blocked. Separately, `heuristicTier`
-cannot clear its own bar, which is worth deciding deliberately rather than by accident.
+The inertness row was half the prediction and it held: every profile that does not start
+on a refused provider is unchanged to the cent.
 
-*Found in round 26, by sweeping the starting model — a default that had gone unexamined
-for twenty-five rounds. `ineligibleChoices` was built in round 1 to catch exactly this
-and had read 0 in every profile until the session started on the provider that gets
-rate-limited.*
+**Still worth deciding deliberately:** `heuristicTier` cannot clear its own confidence
+bar. That is no longer dangerous, but it does mean a Jev outage still routes nothing —
+see §4, which argues `minConfidence` should be *lowered*.
+
+*Found in round 26 by sweeping the starting model, a default that had gone unexamined for
+twenty-five rounds. `ineligibleChoices` was built in round 1 to catch exactly this and had
+read 0 in every profile until the session started on the provider that gets rate-limited.
+Predicted in round 38, fixed in the billing merge, verified in round 41.*
 
 ---
 
@@ -525,14 +536,16 @@ and not something to hold the change to.
 
 ---
 
-### A. Stop keeping a model the ledger has blocked (§0)
+### A. Stop keeping a model the ledger has blocked (§0) — **LANDED, verified**
 
 **The change.** In `chooseModel`'s low-confidence branch and its final fallback, consult
 `ledger.isBlocked` before returning `current`; fall through to tier selection when it is
 blocked.
 
-**Simulated in the harness** with `--blocked-aware-keep`, which re-asks `chooseModel`
-with the confidence gate satisfied whenever the model it would keep is blocked.
+**Landed in `ac3a6a2`.** It was simulated here first, with a `--blocked-aware-keep` flag
+that has since been removed: it stood in for a change that now exists, and dead
+simulation code invites drift. The predictions below are left as written in round 38,
+with the measured column added — that pairing is the point of §9.
 
 | prediction | before | after | resolvable? |
 | --- | ---: | ---: | --- |
