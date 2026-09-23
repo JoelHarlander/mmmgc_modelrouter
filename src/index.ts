@@ -5,7 +5,7 @@
  * -> pick the cheapest billing-eligible model in that tier (billing basis + plan quota +
  * cache-switch aware, see billing.ts) -> pi.setModel before the agent loop starts.
  *
- * Commands: /router [status|on|off|reload|explain|billing|update], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
+ * Commands: /router [status|on|off|reload|explain|billing|models|update], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
  */
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -16,7 +16,9 @@ import { loadConfig, modelKey, type RouterConfig, type Tier, TIERS } from "./con
 import { refreshEntitlements } from "./entitlement.ts";
 import { type JevChoiceAnswer, JevClient, type JevNoulAnswer, type JevScoreAnswer } from "./jev.ts";
 import { Ledger, ledgerPath } from "./ledger.ts";
+import { factsCache, offeredModels, reportLines, reportTiers } from "./models.ts";
 import { PARALLEL_ENTRY_TYPE, type ParallelEntryData, renderParallelEntry, runParallel } from "./parallel.ts";
+import { runModelsCommand } from "./picker.ts";
 import { checkRemote, readReleaseInfo, releaseLine, type ReleaseInfo, updateLines } from "./release.ts";
 import { chooseModel, type Decision, heuristicTier } from "./router.ts";
 import { buildRoutingState, routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "./state.ts";
@@ -73,13 +75,23 @@ export default function modelRouter(pi: ExtensionAPI) {
 		}
 	};
 
-	pi.on("session_start", async (_event, ctx) => {
+	/** `/router reload`, also run after `/router models` saves, so a change applies without a restart. */
+	const reloadRouter = async (ctx: ExtensionCommandContext) => {
+		const loaded = reload(ctx.cwd);
+		await refreshGatewayKey(ctx);
+		await refreshBilling(ctx);
+		ctx.ui.notify(`router: reloaded (${loaded.sources.length ? loaded.sources.join(", ") : "defaults"})${loaded.errors.length ? `; errors: ${loaded.errors.join("; ")}` : ""}`, loaded.errors.length ? "warning" : "info");
+		return cfg;
+	};
+
+	pi.on("session_start", async (event, ctx) => {
 		reload(ctx.cwd);
 		await refreshGatewayKey(ctx);
 		turn = 0;
 		pinnedUntilTurn = 0;
 		await refreshBilling(ctx);
 		updateStatus(ctx);
+		if (event.reason === "startup") warnTierProblems(ctx);
 	});
 
 	pi.on("before_agent_start", async (event, ctx) => {
@@ -189,7 +201,7 @@ export default function modelRouter(pi: ExtensionAPI) {
 	// ---- commands ------------------------------------------------------------
 
 	pi.registerCommand("router", {
-		description: "Model router: status | on | off | reload | explain | billing | update",
+		description: "Model router: status | on | off | reload | explain | billing | models | update",
 		handler: async (args, ctx) => {
 			const sub = (args ?? "").trim().split(/\s+/)[0] ?? "";
 			switch (sub) {
@@ -205,13 +217,13 @@ export default function modelRouter(pi: ExtensionAPI) {
 					await refreshBilling(ctx);
 					showBilling(ctx);
 					break;
-				case "reload": {
-					const loaded = reload(ctx.cwd);
-					await refreshGatewayKey(ctx);
-					await refreshBilling(ctx);
-					ctx.ui.notify(`router: reloaded (${loaded.sources.length ? loaded.sources.join(", ") : "defaults"})${loaded.errors.length ? `; errors: ${loaded.errors.join("; ")}` : ""}`, loaded.errors.length ? "warning" : "info");
+				case "reload":
+					await reloadRouter(ctx);
 					break;
-				}
+				case "models":
+					await refreshBilling(ctx);
+					await runModelsCommand({ ctx, cfg, ledger, reload: () => reloadRouter(ctx), showCard: (title, lines) => showCard(ctx, title, lines) });
+					break;
 				case "explain":
 					showExplain(ctx);
 					break;
@@ -315,9 +327,47 @@ export default function modelRouter(pi: ExtensionAPI) {
 			});
 			lines.push(`${tier}: ${items.join(", ") || "-"}`);
 		}
+		// Unusable entries are marked inline above; what the tiers leave out is not, so say it here.
+		const report = tierReport(ctx);
+		const untiered = reportLines({ ...report, unusable: [] });
+		lines.push(...untiered);
+		if (untiered.length > 0 || report.unusable.length > 0) lines.push("/router models to choose tiers");
 		lines.push(...ledger.summaryLines());
 		if (lastDecision) lines.push(`last: ${lastDecision.reason}`);
 		showCard(ctx, "router status", lines);
+	}
+
+	function tierReport(ctx: ExtensionContext) {
+		return reportTiers(cfg.tiers, offeredModels(ctx.scopedModels, ctx.modelRegistry), factsCache({ cfg, registry: ctx.modelRegistry, ledger }));
+	}
+
+	/**
+	 * Once per launch: a tier naming a model pi cannot route to, or an eligible model no tier
+	 * names, is a configuration mistake that otherwise stays silent. Billing exclusions are left
+	 * to the turn that meets them, since quota comes and goes.
+	 */
+	function warnTierProblems(ctx: ExtensionContext) {
+		if (!ctx.hasUI || !enabled) return;
+		const report = tierReport(ctx);
+		const unusable = report.unusable.filter((u) => u.state !== "excluded");
+		const lines = reportLines({ ...report, unusable, untieredQuiet: 0 });
+		if (lines.length === 0) return;
+		const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+		const some = (keys: string[]) => {
+			const unique = [...new Set(keys)];
+			return unique.length > 4 ? `${unique.slice(0, 4).join(", ")} +${unique.length - 4} more` : unique.join(", ");
+		};
+		const summary =
+			lines.length <= 2
+				? lines.join("; ")
+				: [
+						unusable.length ? `${plural(unusable.length, "tier entry", "tier entries")} pi cannot route to (${some(unusable.map((u) => u.key))})` : "",
+						report.empty.length ? `empty: ${report.empty.join(", ")}` : "",
+						report.untiered.length ? `in no tier: ${some(report.untiered.map((f) => f.key))}` : "",
+					]
+						.filter(Boolean)
+						.join("; ");
+		ctx.ui.notify(`router: ${summary} (/router models)`, "warning");
 	}
 
 	function showExplain(ctx: ExtensionCommandContext) {
