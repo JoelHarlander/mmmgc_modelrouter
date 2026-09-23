@@ -8,7 +8,6 @@
  * never describes a route differently from how the router treats it.
  */
 import { homedir } from "node:os";
-import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import { type Component, decodeKittyPrintable, Key, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
@@ -58,7 +57,6 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 	let tierIdx = 0;
 	let cursor = 0;
 	let filter = "";
-	let showCatalog = false;
 	let discardArmed = false;
 	let flash: { text: string; color: "success" | "warning" | "muted" } | undefined;
 	let cached: string[] | undefined;
@@ -79,7 +77,6 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 
 	const tier = (): Tier => TIERS[tierIdx]!;
 	const dirty = () => changedTiers(input.global, draft).length > 0;
-	const pool = (): Model<Api>[] => (showCatalog ? input.registry.getAll() : input.offered.models);
 
 	function rows(): Row[] {
 		const t = tier();
@@ -88,7 +85,7 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 		const words = filter.toLowerCase().split(/\s+/).filter(Boolean);
 		const seen = new Set(draft[t]);
 		const candidates: { key: string; facts: ModelFacts; untiered: boolean }[] = [];
-		for (const m of pool()) {
+		for (const m of input.offered.models) {
 			const key = modelKey(m);
 			if (seen.has(key)) continue;
 			seen.add(key);
@@ -138,10 +135,6 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 				done(structuredClone(draft));
 				return;
 			}
-		} else if (matchesKey(data, Key.ctrl("a"))) {
-			showCatalog = !showCatalog;
-			cursor = 0;
-			flash = { text: showCatalog ? "Showing pi's whole catalog, including models without a credential" : "Showing the models pi offers", color: "muted" };
 		} else if (matchesKey(data, Key.tab) || matchesKey(data, Key.right)) {
 			tierIdx = (tierIdx + 1) % TIERS.length;
 			cursor = 0;
@@ -229,7 +222,7 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 		all.forEach((r, i) => {
 			if (r.kind === "pool" && (i === 0 || all[i - 1]!.kind === "entry")) {
 				list.push("");
-				list.push(` ${theme.bold(`add to ${t}`)} ${theme.fg("dim", `— ${showCatalog ? "pi's whole catalog" : input.offered.explicit ? "pi's enabled models" : "models pi holds a credential for"}`)}`);
+				list.push(` ${theme.bold(`add to ${t}`)} ${theme.fg("dim", `— ${input.offered.explicit ? "pi's enabled models" : "models pi holds a credential for"}`)}`);
 			}
 			if (i === cursor) cursorLine = list.length;
 			list.push(rowLine(r, i === cursor, w));
@@ -240,7 +233,7 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 		}
 		const start = Math.max(0, Math.min(cursorLine - Math.floor(LIST_LINES / 2), list.length - LIST_LINES));
 		const shown = list.slice(start, start + LIST_LINES);
-		if (start > 0) shown[0] = fit(theme.fg("dim", `   ↑ ${start} more`));
+		if (start > 0) shown[0] = fit(theme.fg("dim", `   ↑ ${start + 1} more`));
 		if (start + LIST_LINES < list.length) shown[shown.length - 1] = fit(theme.fg("dim", `   ↓ ${list.length - start - LIST_LINES + 1} more`));
 		lines.push(...shown.map(fit));
 
@@ -250,7 +243,7 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 		if (flash) lines.push(fit(` ${theme.fg(flash.color, flash.text)}`));
 		lines.push(
 			fit(
-				` ${theme.fg("dim", "↑↓ select • Enter add/remove • Shift+↑↓ reorder • Tab tier • Ctrl+A all/offered • Ctrl+S save • Esc close")}`,
+				` ${theme.fg("dim", "↑↓ select • Enter add/remove • Shift+↑↓ reorder • Tab tier • Ctrl+S save • Esc close")}`,
 			),
 		);
 		lines.push(theme.fg("accent", "─".repeat(w)));

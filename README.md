@@ -116,8 +116,7 @@ truth: edit it by hand, or choose tiers interactively with `/router models`, whi
 ### Choosing models: `/router models`
 
 `/router models` opens a picker listing the models pi itself offers: its enabled set (`enabledModels` or `--models`)
-when you have one, otherwise every catalog model pi holds a credential for (`Ctrl+A` switches to the whole
-catalog). For each tier it shows the models in order, and next to every model it shows the router's own verdict:
+when you have one, otherwise every catalog model pi holds a credential for. For each tier it shows the models in order, and next to every model it shows the router's own verdict:
 the billing basis (`subscription`, `extra-credits`, `pay-per-token`, `free`), how well that is established
 (`verified`, `stale`, `unverified`), and whether it is `preferred`, merely allowed, or `excluded` and why. It also
 shows the catalog price where the basis bills per token. The highlighted model's evidence, uncertainty and known
@@ -128,12 +127,15 @@ tier, typing filters, `Ctrl+S` saves and `Esc` closes. Order within a tier is pr
 still weighs billing rank, then estimated cost, then capability first, and `/duo` considers each tier's first entry
 before the rest.
 
-The picker keeps two mistakes in view, and `/router` and pi's startup repeat them:
+The picker keeps two mistakes in view, and the `/router` status card repeats them:
 
 - a tier entry the router cannot use: not in pi's catalog, no credential, or excluded by the billing gate right now;
 - an eligible model pi offers that no tier names, so the router never considers it. Without an explicit enabled set
   only the untiered models that cost nothing at the margin (subscription or zero-cost) are flagged, and billed ones
   are counted, since "every model with a credential" is often a whole gateway catalog.
+
+pi's startup warns only about what needs fixing: a tier entry pi cannot route to, or a tier that names no model. A
+model left out of every tier may be a choice, so startup stays quiet about it.
 
 Saving writes **only** the tier lists you changed, and only to the global `~/.pi/agent/modelrouter.json` (the target, if
 that is a symlink). Every other key, the key order, the indentation and each list's one-line or one-per-line layout

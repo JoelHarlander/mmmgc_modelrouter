@@ -342,6 +342,19 @@ test("typing filters the models to add; Tab moves between tiers", () => {
 	assert.deepEqual(p.result(), tiers(["claude-bridge/claude-opus-5", "openai-codex/gpt-6-astra"], [], []));
 });
 
+test("a scrolled list counts every hidden line above and below", () => {
+	const many = Array.from({ length: 30 }, (_, i) => model("openrouter", `m-${String(i).padStart(2, "0")}`, { input: 1, output: 1 }));
+	const p = picker(tiers([OPUS], [OPUS], [OPUS]), { offered: many });
+	for (let i = 0; i < 15; i++) p.press(KEY.down);
+	const screen = p.screen().split("\n");
+	const above = screen.map((l) => /↑ (\d+) more/.exec(l)).find(Boolean);
+	const below = screen.map((l) => /↓ (\d+) more/.exec(l)).find(Boolean);
+	assert.ok(above && below, "scrolled into the middle of the list");
+	// light header, OPUS, blank line, "add to light" header, then the 30 offered models.
+	const listLength = 1 + 1 + 1 + 1 + many.length;
+	assert.equal(Number(above[1]) + Number(below[1]) + 14 - 2, listLength);
+});
+
 test("a tier this project replaces is called out, and what it names is not reported as in no tier", () => {
 	const p = picker(tiers([OPUS], [OPUS], [OPUS]), { project: { heavy: ["openai-codex/gpt-6-astra"] } });
 	p.press(KEY.left);

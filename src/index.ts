@@ -40,11 +40,11 @@ export default function modelRouter(pi: ExtensionAPI) {
 	// so it cannot change under it, and the remote is asked about by /router update alone.
 	let release: ReleaseInfo | undefined;
 
-	const reload = (cwd: string) => {
+	const reload = (cwd: string, keepEnabled = false) => {
 		const loaded = loadConfig(cwd);
 		cfg = loaded.config;
 		jev = new JevClient(cfg.jev);
-		enabled = cfg.enabled;
+		if (!keepEnabled) enabled = cfg.enabled;
 		return loaded;
 	};
 
@@ -75,9 +75,12 @@ export default function modelRouter(pi: ExtensionAPI) {
 		}
 	};
 
-	/** `/router reload`, also run after `/router models` saves, so a change applies without a restart. */
-	const reloadRouter = async (ctx: ExtensionCommandContext) => {
-		const loaded = reload(ctx.cwd);
+	/**
+	 * `/router reload`, also run after `/router models` saves, so a change applies without a restart.
+	 * A save is not an explicit reload, so it keeps the session's on/off state.
+	 */
+	const reloadRouter = async (ctx: ExtensionCommandContext, keepEnabled = false) => {
+		const loaded = reload(ctx.cwd, keepEnabled);
 		await refreshGatewayKey(ctx);
 		await refreshBilling(ctx);
 		ctx.ui.notify(`router: reloaded (${loaded.sources.length ? loaded.sources.join(", ") : "defaults"})${loaded.errors.length ? `; errors: ${loaded.errors.join("; ")}` : ""}`, loaded.errors.length ? "warning" : "info");
@@ -222,7 +225,7 @@ export default function modelRouter(pi: ExtensionAPI) {
 					break;
 				case "models":
 					await refreshBilling(ctx);
-					await runModelsCommand({ ctx, cfg, ledger, reload: () => reloadRouter(ctx), showCard: (title, lines) => showCard(ctx, title, lines) });
+					await runModelsCommand({ ctx, cfg, ledger, reload: () => reloadRouter(ctx, true), showCard: (title, lines) => showCard(ctx, title, lines) });
 					break;
 				case "explain":
 					showExplain(ctx);
@@ -342,15 +345,16 @@ export default function modelRouter(pi: ExtensionAPI) {
 	}
 
 	/**
-	 * Once per launch: a tier naming a model pi cannot route to, or an eligible model no tier
-	 * names, is a configuration mistake that otherwise stays silent. Billing exclusions are left
-	 * to the turn that meets them, since quota comes and goes.
+	 * Once per launch, and only for what needs fixing: a tier naming a model pi cannot route to,
+	 * or a tier naming none. Models in no tier may be left out on purpose, so they are reported by
+	 * `/router` and the picker, not here. Billing exclusions are left to the turn that meets them,
+	 * since quota comes and goes.
 	 */
 	function warnTierProblems(ctx: ExtensionContext) {
 		if (!ctx.hasUI || !enabled) return;
 		const report = tierReport(ctx);
 		const unusable = report.unusable.filter((u) => u.state !== "excluded");
-		const lines = reportLines({ ...report, unusable, untieredQuiet: 0 });
+		const lines = reportLines({ ...report, unusable, untiered: [], untieredQuiet: 0 });
 		if (lines.length === 0) return;
 		const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 		const some = (keys: string[]) => {
@@ -363,7 +367,6 @@ export default function modelRouter(pi: ExtensionAPI) {
 				: [
 						unusable.length ? `${plural(unusable.length, "tier entry", "tier entries")} pi cannot route to (${some(unusable.map((u) => u.key))})` : "",
 						report.empty.length ? `empty: ${report.empty.join(", ")}` : "",
-						report.untiered.length ? `in no tier: ${some(report.untiered.map((f) => f.key))}` : "",
 					]
 						.filter(Boolean)
 						.join("; ");
