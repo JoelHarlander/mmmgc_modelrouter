@@ -110,7 +110,41 @@ heuristic, which by default keeps the current model.
 ## Configure
 
 `~/.pi/agent/modelrouter.json` (global) and `<project>/.pi/modelrouter.json` (project) are merged over the defaults in
-`src/config.ts`. Model ids are `provider/modelId` exactly as `pi --list-models` shows them.
+`src/config.ts`. Model ids are `provider/modelId` exactly as `pi --list-models` shows them. The JSON is the source of
+truth: edit it by hand, or choose tiers interactively with `/router models`, which edits the same global file.
+
+### Choosing models: `/router models`
+
+`/router models` opens a picker listing the models pi itself offers: its enabled set (`enabledModels` or `--models`)
+when you have one, otherwise every catalog model pi holds a credential for. For each tier it shows the models in order, and next to every model it shows the router's own verdict:
+the billing basis (`subscription`, `extra-credits`, `pay-per-token`, `free`), how well that is established
+(`verified`, `stale`, `unverified`), and whether it is `preferred`, merely allowed, or `excluded` and why. It also
+shows the catalog price where the basis bills per token. The highlighted model's evidence, uncertainty and known
+quota are shown in full. These are the same assessments `/router billing` makes, not a second opinion.
+
+`Enter` adds a model to the tier or removes it, `Shift+↑/↓` (or `Alt`/`Ctrl` with the arrows) reorders, `Tab` changes
+tier, typing filters, `Ctrl+S` saves and `Esc` closes. Order within a tier is preference among equals: the router
+still weighs billing rank, then estimated cost, then capability first, and `/duo` considers each tier's first entry
+before the rest.
+
+The picker keeps two mistakes in view, and the `/router` status card repeats them:
+
+- a tier entry the router cannot use: not in pi's catalog, no credential, or excluded by the billing gate right now;
+- an eligible model pi offers that no tier names, so the router never considers it. Without an explicit enabled set
+  only the untiered models that cost nothing at the margin (subscription or zero-cost) are flagged, and billed ones
+  are counted, since "every model with a credential" is often a whole gateway catalog.
+
+pi's startup warns only about what needs fixing: a tier entry pi cannot route to, or a tier that names no model. A
+model left out of every tier may be a choice, so startup stays quiet about it.
+
+Saving writes **only** the tier lists you changed, and only to the global `~/.pi/agent/modelrouter.json` (the target, if
+that is a symlink). Every other key, the key order, the indentation and each list's one-line or one-per-line layout
+stay as they were. The file is replaced atomically, the previous copy is kept as `modelrouter.json.bak`, and a tier
+changed on disk since the picker opened, or a file that is not valid JSON, is refused rather than overwritten. The
+router then reloads as `/router reload` does, except that it keeps the session's on/off state. The picker never writes a project's `.pi/modelrouter.json`, and
+never writes any key but `tiers`. If a pay-per-token model you add shows `excluded: not in billing.allowPayPerToken`,
+permitting that spend is a hand edit of `billing` in the global file. Where the open project's file sets a tier, the
+picker says so: your global change applies everywhere else, and that project keeps its own list.
 
 ```jsonc
 {
@@ -212,9 +246,10 @@ can never name an endpoint a credential is sent to, assert what pays for a model
 
 | Command | What it does |
 | --- | --- |
-| `/router` | Status card: tiers, auth, billing basis per route, quota, session spend, last decision |
+| `/router` | Status card: tiers, auth, billing basis per route, eligible models in no tier, quota, session spend, last decision |
 | `/router explain` | Candidates, billing basis, evidence and uncertainty behind the last decision |
 | `/router billing` | Refreshes entitlement evidence, then shows what pays for each configured route |
+| `/router models` | Choose and order each tier's models from what pi offers, and save them to the global config ([details](#choosing-models-router-models)) |
 | `/router update` | Channel, version and commit of the running build, whether the channel has moved on, and the `pi` command that moves it |
 | `/router on` / `off` / `reload` | Toggle routing, reload config |
 | `/duo <prompt>` / `/trio <prompt>` | 2 or 3 parallel responses |
@@ -231,7 +266,7 @@ harvested like any other turn: quota headers and a 429 seen during `/duo`, `/tri
 ```bash
 npm install
 npm run check          # tsc
-npm test               # node --test (router, billing, entitlement, ledger, parallel, config, release)
+npm test               # node --test (router, billing, entitlement, ledger, parallel, config, models, release)
 npm run smoke          # end-to-end on pi's faux provider: no tokens spent
 npm run smoke:billing  # same, with a spend gate that must keep the router off the cheap model
 ```
@@ -243,7 +278,9 @@ from `faux/a` instead. The difference between the two is the billing gate doing 
 Verified on pi 0.85.1: `pi.setModel()` inside `before_agent_start` applies to the same turn, so the switch
 happens before the first provider request. The interactive surfaces (`/router` cards, routing notifications,
 `/duo` panel, Jev judge, adopt dialog, adopted message ordering) were exercised by driving pi in tmux against
-the faux provider with live Jev; they are not part of the automated suite.
+the faux provider with live Jev; they are not part of the automated suite. The `/router models` picker is the
+exception in part: `test/models.test.ts` drives its component headless with raw key sequences (add, reorder, filter,
+tier switch, save, Esc) and the whole save path end to end, and its look in a real terminal was checked in tmux.
 
 Work lands on `dev` and is promoted to `main` with `scripts/promote.sh`, which runs those four
 commands as the release gate before it stamps a version and tags the commit:
