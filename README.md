@@ -145,10 +145,10 @@ The picker keeps two mistakes in view, and the `/router` status card repeats the
 pi's startup warns only about what needs fixing: a tier entry pi cannot route to, or a tier that names no model. A
 model left out of every tier may be a choice, so startup stays quiet about it.
 
-Saving writes **only** the tier lists you changed, and only to the global `~/.pi/agent/modelrouter.json` (the target, if
+Saving writes **only** the tier lists and the `preference` list you changed, and only to the global `~/.pi/agent/modelrouter.json` (the target, if
 that is a symlink). Every other key, the key order, the indentation and each list's one-line or one-per-line layout
-stay as they were. The file is replaced atomically, the previous copy is kept as `modelrouter.json.bak`, and a tier
-changed on disk since the picker opened, or a file that is not valid JSON, is refused rather than overwritten. The
+stay as they were. The file is replaced atomically in one write, the previous copy is kept as `modelrouter.json.bak`, and a tier
+or the `preference` list changed on disk since the picker opened, or a file that is not valid JSON, is refused rather than overwritten. The
 router then reloads as `/router reload` does, except that it keeps the session's on/off state. The picker never writes a project's `.pi/modelrouter.json`, and
 never writes any key but `tiers` and `preference`. If a pay-per-token model you add shows `excluded: not in billing.allowPayPerToken`,
 permitting that spend is a hand edit of `billing` in the global file. Where the open project's file sets a tier, the

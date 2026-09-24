@@ -145,8 +145,10 @@ One task is one pi session. Each turn reproduces `before_agent_start` from
 `src/index.ts`, in order:
 
 ```
-turn++ → manual-pin check → buildRoutingState → classify → stakes override (≥1.5 lifts light to standard)
-       → chooseModel → setModel → thinking level → record usage in the Ledger
+session opens on the highest preference whose window is not spent (sessionModel)
+turn++ → a /model choice sticks → buildRoutingState → classify → stakes override (≥1.5 lifts light to standard)
+       → planTurn (switch only when that model's subscription window is spent) → setModel
+       → thinking level from the effort tier → record usage in the Ledger
 ```
 
 A `/model` choice keeps the model and still classifies the effort, so it is billed for
