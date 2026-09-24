@@ -230,11 +230,16 @@ function assessSubscription(
 	else if (quota.accountWindows.length === 0) uncertainty.push("provider reported no subscription quota window");
 	else uncertainty.push("no quota or entitlement evidence seen for this provider yet");
 
+	// A rejected usage poll is not remaining headroom and not account exhaustion. Eligibility
+	// stays what it is with no window, and the verdict says the limit is unverified.
+	const probeOnly = quota.probeError !== undefined && quota.accountWindows.length === 0;
+	if (probeOnly) uncertainty.push("limit is unverified");
+
 	return {
 		basis: "subscription",
 		verification: freshness,
 		eligibility: "allowed",
-		reason: "assumed subscription usage: nothing has verified the plan behind this route",
+		reason: probeOnly ? "limit is unverified" : "assumed subscription usage: nothing has verified the plan behind this route",
 		evidence,
 		uncertainty,
 		billing: "plan",

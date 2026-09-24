@@ -187,9 +187,17 @@ export default function modelRouter(pi: ExtensionAPI) {
 	});
 
 	pi.on("message_end", async (event) => {
-		const m = event.message as { role?: string; provider?: string; model?: string; usage?: Parameters<Ledger["record"]>[2] };
+		const m = event.message as {
+			role?: string;
+			provider?: string;
+			model?: string;
+			usage?: Parameters<Ledger["record"]>[2];
+			errorMessage?: string;
+		};
 		if (m.role !== "assistant" || !m.provider || !m.model) return;
 		ledger.record(m.provider, m.model, m.usage);
+		// A Claude bridge refusal is an error sentence, not an HTTP 429. Same window write as headers.
+		if (m.errorMessage) ledger.observeResponse(m.provider, 0, {}, cfg, Date.now(), m.errorMessage);
 	});
 
 	pi.on("after_provider_response", async (event, ctx) => {

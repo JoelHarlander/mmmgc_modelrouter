@@ -3,8 +3,9 @@
  *
  * - Records tokens/cost per provider/model from assistant messages (session + persisted totals).
  * - Harvests quota windows and credit facts from response headers (Anthropic unified, Codex) and
- *   429/402 responses, and accepts the same facts from the read-only entitlement polls in
- *   `entitlement.ts`, so routing can tell subscription usage from extra billed usage.
+ *   429/402 responses, from harness refusals that carry no headers (Claude bridge rate-limit
+ *   events, xAI exhaustion bodies), and from the read-only entitlement polls in `entitlement.ts`,
+ *   so routing can tell subscription usage from extra billed usage.
  * - Windows are kept individually, so a model-scoped window (Anthropic's Fable bucket, a Codex
  *   per-model family) can exclude one model while its provider stays usable.
  * - The shared usage file is written under a lock and merged against what is on disk, so
@@ -16,6 +17,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, statSync, u
 import { dirname, join } from "node:path";
 import type { Usage } from "@earendil-works/pi-ai";
 import { anyGlobMatch, credentialOf, globMatch, routableModels, type RouterConfig } from "./config.ts";
+import { mapRefusalToWindows } from "./refusal.ts";
 
 export interface ModelTotals {
 	calls: number;
@@ -50,7 +52,7 @@ export interface CreditState {
 	lastSeen: number;
 }
 
-export type EvidenceSource = "header" | "poll";
+export type EvidenceSource = "header" | "poll" | "refusal";
 
 export interface ProviderState {
 	/** Plan id as the provider reports it (`plus`, `pro`, ...). Never inferred from a name. */
@@ -105,6 +107,8 @@ export interface QuotaAssessment {
 	overage?: WindowState;
 	/** Newest evidence timestamp across everything consulted. */
 	lastEvidenceAt?: number;
+	/** Set when the last entitlement poll was rejected. Not a window and not headroom. */
+	probeError?: string;
 	/** Distinct evidence sources behind this assessment. */
 	sources: EvidenceSource[];
 	plan?: string;
@@ -170,8 +174,22 @@ export class Ledger {
 		});
 	}
 
-	/** Called from after_provider_response. Headers are lower-cased by pi. */
-	observeResponse(provider: string, status: number, headers: Record<string, string>, cfg: RouterConfig, now = Date.now()): void {
+	/**
+	 * Called from after_provider_response and from a harness refusal on message end.
+	 * Headers are lower-cased by pi. `refusal` is the structured rate-limit event, the bridge's
+	 * error sentence, or an exhaustion body; it is applied onto the same window records as headers.
+	 */
+	observeResponse(
+		provider: string,
+		status: number,
+		headers: Record<string, string>,
+		cfg: RouterConfig,
+		now = Date.now(),
+		refusal?: unknown,
+	): void {
+		const mapped = mapRefusalToWindows(refusal, now, headers);
+		const quotaStatus = status === 429 || status === 402 || (status >= 200 && status < 300);
+		if (!quotaStatus && Object.keys(headers).length === 0 && mapped.length === 0) return;
 		const account = this.accountOf(provider);
 		// Which models a window governs is a fact about the provider's windows, not about which
 		// account bucket the numbers are filed in, so scopes are read in the terms the config
@@ -219,6 +237,18 @@ export class Ledger {
 			for (const id of Object.keys(REFUSAL_WINDOWS)) {
 				state.windows[id] = { status: "rejected", resetAt: now, source: "header", lastSeen: now };
 			}
+		}
+		for (const w of mapped) {
+			const existing = state.windows[w.id];
+			// A header observed on this same response already named the window. Keep it when the
+			// refusal adds no reset of its own; a named reset is the instant the exclusion lifts.
+			if (existing && existing.source === "header" && existing.lastSeen === now && w.resetAt === undefined) continue;
+			state.windows[w.id] = {
+				status: "rejected",
+				...(w.resetAt !== undefined ? { resetAt: w.resetAt } : {}),
+				source: "refusal",
+				lastSeen: now,
+			};
 		}
 		this.scheduleSave();
 	}
@@ -298,6 +328,7 @@ export class Ledger {
 		}
 		out.lastEvidenceAt = newest;
 		out.sources = [...sources];
+		out.probeError = state.probeError;
 		return out;
 	}
 

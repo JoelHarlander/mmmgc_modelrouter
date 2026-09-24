@@ -117,6 +117,10 @@ export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "
 		const switched = best.key !== currentKey;
 		const basis = best.assessment ? describeBasis(best.assessment) : (best.billing ?? "unknown");
 		const caveat = best.assessment?.uncertainty.length ? `; caveat: ${best.assessment.uncertainty[0]}` : "";
+		const leftOut = candidates
+			.filter((c) => c.skipped)
+			.map((c) => `${c.key} (${c.skipped})`)
+			.join("; ");
 		return {
 			requestedTier: tier,
 			tier: t,
@@ -127,7 +131,9 @@ export function chooseModel(args: ChooseArgs): Omit<Decision, "at" | "jevMs" | "
 			reason:
 				(t === tier
 					? `${tier} tier -> ${best.key} (${basis}, ~$${best.costUsd.toFixed(4)})`
-					: `${tier} tier had no billing-eligible model; using ${t} -> ${best.key} (${basis})`) + caveat,
+					: `${tier} tier had no billing-eligible model; using ${t} -> ${best.key} (${basis})`) +
+				(leftOut ? `; left out ${leftOut}` : "") +
+				caveat,
 			candidates: evaluated,
 		};
 	}
