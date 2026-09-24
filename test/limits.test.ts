@@ -90,6 +90,35 @@ test("a Claude bridge Fable rejection with no headers excludes Fable and leaves 
 	assert.notEqual(assess(fable, l, resetsAt * 1000 + 1).eligibility, "excluded", "eligible again after the named reset");
 });
 
+test("a spent Claude bridge window and a spent xAI window both lift once the clock passes the named reset", () => {
+	const now = 1_790_214_000_000;
+	const resetsAt = Math.floor(now / 1000) + 3600;
+
+	const claude = ledger();
+	claude.observeResponse("claude-bridge", 0, NO_HEADERS, cfg, now, {
+		rateLimitType: "seven_day_overage_included",
+		resetsAt,
+	});
+	const claudeReset = claude.peekProvider("claude-bridge")?.windows["7d_oi"]?.resetAt;
+	assert.equal(claudeReset, resetsAt * 1000);
+	assert.equal(assess(fable, claude, claudeReset! - 1).eligibility, "excluded");
+	const claudeAfter = assess(fable, claude, claudeReset! + 1);
+	assert.equal(claudeAfter.eligibility, "allowed");
+
+	const xai = ledger();
+	xai.observeResponse("xai", 0, NO_HEADERS, cfg, now, {
+		code: "subscription:free-usage-exhausted",
+		error:
+			"You've used all the included free usage for model grok-4.5-build-free for now. Usage resets over a rolling 24-hour window — tokens (actual/limit): 1065387/1000000.",
+		resetsAt,
+	});
+	const xaiReset = xai.peekProvider("xai")?.windows["grok-4.5-build-free:exhausted"]?.resetAt;
+	assert.equal(xaiReset, resetsAt * 1000);
+	assert.equal(assess(grokFree, xai, xaiReset! - 1).eligibility, "excluded");
+	const xaiAfter = assess(grokFree, xai, xaiReset! + 1);
+	assert.equal(xaiAfter.eligibility, "preferred");
+});
+
 test("the bridge error sentence for that same Fable rejection is enough evidence", () => {
 	const l = ledger();
 	const now = Date.now();
