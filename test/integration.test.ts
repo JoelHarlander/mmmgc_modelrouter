@@ -1,7 +1,7 @@
 /**
  * Does the harness predict what pi actually does?
  *
- * Everything in `eval/` drives `chooseModel` directly, which is what makes it fast and
+ * Everything in `eval/` drives `planTurn` directly, which is what makes it fast and
  * deterministic — and means it never proves the decision reaches pi. `npm run smoke`
  * proves that for one turn; this proves the harness *agrees* with it.
  *
@@ -10,7 +10,7 @@
  * answered is compared against the model the harness predicts for the same prompt, the
  * same starting model and the same configuration. No tokens are spent: the faux provider
  * is zero-cost, and `test/smoke/.pi/modelrouter.json` points Jev at a credential that is
- * never present, so both sides route through `src/router.ts#heuristicTier` offline.
+ * never present. Both sides open on the fixture's preference list offline.
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -101,7 +101,8 @@ function askPi(prompt: string): string | undefined {
 /** What the harness says the router will do, for the same prompt and the same config. */
 async function askHarness(prompt: string): Promise<string> {
 	// The same switching block pi is given, so neither side can drift from the other.
-	const loaded = buildFleet(FAUX_FLEET, { configPatch: { switching: projectConfig().switching } });
+	const project = JSON.parse(readFileSync(join(SMOKE, ".pi", "modelrouter.json"), "utf8")) as { preference?: string[]; switching: SmokeConfig["switching"] };
+	const loaded = buildFleet(FAUX_FLEET, { configPatch: { switching: project.switching, preference: project.preference } });
 	const pack: TaskPack = {
 		version: 1,
 		id: "integration",
@@ -139,7 +140,7 @@ test("the smoke config pins everything the prediction depends on", () => {
 	// If a setting the routing depends on is left to the machine's global config, this
 	// cross-check silently becomes a test of whoever's laptop it runs on.
 	const cfg = JSON.parse(readFileSync(join(SMOKE, ".pi", "modelrouter.json"), "utf8")) as Record<string, unknown>;
-	for (const key of ["enabled", "jev", "tiers", "models", "billing", "switching", "thinking"]) {
+	for (const key of ["enabled", "jev", "tiers", "preference", "models", "billing", "switching", "thinking"]) {
 		assert.ok(key in cfg, `test/smoke/.pi/modelrouter.json no longer pins "${key}"`);
 	}
 	const jev = cfg.jev as { transport: string; apiKeyEnv: string };
@@ -152,8 +153,9 @@ test("the smoke config pins everything the prediction depends on", () => {
 	assert.ok(billing.allowPayPerToken.length > 0, "the faux models must be allowed to bill, or nothing is routable");
 	assert.equal(billing.probe.enabled, false, "the entitlement probe must stay off; it would reach the network");
 	// And the agent layer must be the fixture's own, not the machine's.
-	const agent = JSON.parse(readFileSync(join(SMOKE, "agent", "modelrouter.json"), "utf8")) as { tiers: Record<string, string[]> };
+	const agent = JSON.parse(readFileSync(join(SMOKE, "agent", "modelrouter.json"), "utf8")) as { tiers: Record<string, string[]>; preference: string[] };
 	assert.deepEqual(agent.tiers, cfg.tiers, "the project and agent fixtures disagree about tier membership");
+	assert.deepEqual(agent.preference, cfg.preference, "the project and agent fixtures disagree about preference order");
 	// The fleet mirrored in this file must match the tiers pi is given.
 	assert.deepEqual(FAUX_FLEET.tiers, cfg.tiers);
 });

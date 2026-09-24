@@ -3,6 +3,7 @@
 	"enabled": true,
 	"notifyOnSwitch": false,
 	"jev": { "transport": "typesafe", "apiKeyEnv": "MODELROUTER_SMOKE_NO_SUCH_KEY" },
+	"preference": ["faux/b", "faux/a"],
 	"tiers": {
 		"light": ["faux/b"],
 		"standard": ["faux/a"],

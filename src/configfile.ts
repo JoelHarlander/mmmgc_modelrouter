@@ -97,6 +97,69 @@ export function writeGlobalTiers(path: string, changes: Partial<TierLists>, expe
 	return { path, backup, written: tiers };
 }
 
+export interface PreferenceWriteResult {
+	path: string;
+	backup?: string;
+	written: boolean;
+}
+
+/**
+ * Replaces the root `preference` array, atomically, keeping a `.bak`. `expected` is what the
+ * file stated when the edit began (`undefined` when it did not state the key). A change on
+ * disk since then is a conflict and nothing is written.
+ */
+export function writeGlobalPreference(path: string, preference: string[], expected: string[] | undefined): PreferenceWriteResult {
+	const target = existsSync(path) ? realpathSync(path) : path;
+	const current = readGlobalPreference(target);
+	if (current.error) throw new Error(`${path} is not valid JSON (${current.error}); fix it by hand before saving from /router models`);
+	if (!sameList(current.preference, expected)) {
+		throw new Error(`${path} changed "preference" on disk since the picker opened; reopen /router models and try again`);
+	}
+	if (sameList(current.preference, preference)) return { path, written: false };
+	const before = current.exists ? readFileSync(target, "utf8") : "";
+	const after = editRootArray(before, "preference", preference);
+	mkdirSync(dirname(target), { recursive: true });
+	let backup: string | undefined;
+	if (current.exists) {
+		backup = `${target}.bak`;
+		copyFileSync(target, backup);
+	}
+	const tmp = `${target}.${process.pid}.tmp`;
+	try {
+		writeFileSync(tmp, after, { mode: current.exists ? statSync(target).mode & 0o777 : 0o644 });
+		renameSync(tmp, target);
+	} catch (err) {
+		if (existsSync(tmp)) unlinkSync(tmp);
+		throw err;
+	}
+	return { path, backup, written: true };
+}
+
+export interface GlobalPreferenceFile {
+	path: string;
+	exists: boolean;
+	/** Absent when the file does not state the key. */
+	preference?: string[];
+	error?: string;
+}
+
+export function readGlobalPreference(path: string): GlobalPreferenceFile {
+	if (!existsSync(path)) return { path, exists: false };
+	try {
+		const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
+		if (!isRecord(raw)) return { path, exists: true, error: "top level is not a JSON object" };
+		return { path, exists: true, preference: statedStringList(raw.preference) };
+	} catch (err) {
+		return { path, exists: true, error: err instanceof Error ? err.message : String(err) };
+	}
+}
+
+/** A list of strings, or undefined when the value is absent or not that shape. */
+export function statedStringList(value: unknown): string[] | undefined {
+	if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) return undefined;
+	return [...value];
+}
+
 // ---- text-preserving edit ----------------------------------------------------
 
 /**
@@ -133,6 +196,32 @@ export function editTiersText(text: string, changes: Partial<TierLists>): string
 		const multiline = text.slice(root.start, root.end).includes("\n");
 		const value = multiline ? objectText(tiers.map((t) => [t, inlineArray(changes[t]!)]), indent, unit) : inlineObject(tiers.map((t) => [t, inlineArray(changes[t]!)]));
 		edits.push(insertMembers(text, root, [["tiers", value]], unit));
+	}
+	let out = text;
+	for (const e of edits.sort((a, b) => b.start - a.start)) out = out.slice(0, e.start) + e.text + out.slice(e.end);
+	return out;
+}
+
+/** The file's text with one root array replaced, or added when the file does not state it. */
+export function editRootArray(text: string, key: string, items: string[]): string {
+	if (text.trim() === "") return `${objectText([[key, inlineArray(items)]], "", "  ")}\n`;
+	const root = parseSpans(text);
+	if (root.kind !== "object") throw new Error("top level is not a JSON object");
+	const unit = indentUnit(text);
+	const member = root.members.find((m) => m.key === key);
+	const edits: { start: number; end: number; text: string }[] = [];
+	if (member && member.value.kind === "array") {
+		edits.push({ start: member.value.start, end: member.value.end, text: formatArrayLike(text, member.value, items, unit) });
+	} else if (member) {
+		throw new Error(`"${key}" is not an array; fix it by hand before saving from /router models`);
+	} else {
+		const indent = root.members.length > 0 ? lineIndent(text, root.members[0]!.keyStart) : unit;
+		const multiline = text.slice(root.start, root.end).includes("\n");
+		const written =
+			multiline && items.length > 1
+				? `[\n${items.map((item) => `${indent}${unit}${JSON.stringify(item)}`).join(",\n")}\n${indent}]`
+				: inlineArray(items);
+		edits.push(insertMembers(text, root, [[key, written]], unit));
 	}
 	let out = text;
 	for (const e of edits.sort((a, b) => b.start - a.start)) out = out.slice(0, e.start) + e.text + out.slice(e.end);
@@ -294,19 +383,38 @@ export interface TierLayers {
 	/** Tiers the project file replaces; these win in this project whatever the global file says. */
 	project: Partial<TierLists>;
 	projectPath: string;
+	/** The preference list the picker starts from: the file's, or the defaults when it states none. */
+	preference: string[];
+	/** What the global file itself stated. Absent when the key is not in the file. */
+	statedPreference?: string[];
+	/** Set when this project's file replaces the preference list. */
+	projectPreference?: string[];
 }
 
 export function tierLayers(cwd: string): TierLayers {
 	const paths = configPaths(cwd);
 	const file = readGlobalTiers(paths.global);
+	const preferenceFile = readGlobalPreference(paths.global);
 	let project: Partial<TierLists> = {};
+	let projectPreference: string[] | undefined;
 	if (existsSync(paths.project)) {
 		try {
 			const raw = JSON.parse(readFileSync(paths.project, "utf8")) as unknown;
-			if (isRecord(raw)) project = statedTiers(raw.tiers);
+			if (isRecord(raw)) {
+				project = statedTiers(raw.tiers);
+				projectPreference = statedStringList(raw.preference);
+			}
 		} catch {
 			// loadConfig reports an unreadable project file; it overrides nothing then
 		}
 	}
-	return { file, global: { ...structuredClone(DEFAULT_CONFIG.tiers), ...file.tiers }, project, projectPath: paths.project };
+	return {
+		file,
+		global: { ...structuredClone(DEFAULT_CONFIG.tiers), ...file.tiers },
+		project,
+		projectPath: paths.project,
+		preference: preferenceFile.preference ?? [...DEFAULT_CONFIG.preference],
+		statedPreference: preferenceFile.preference,
+		projectPreference,
+	};
 }

@@ -17,7 +17,7 @@ import { DEFAULT_CONFIG, loadConfig, mergeConfig, type RouterConfig } from "../s
 import { changedTiers, editTiersText, readGlobalTiers, type TierLists, writeGlobalTiers } from "../src/configfile.ts";
 import { Ledger } from "../src/ledger.ts";
 import { addToTier, factsCache, moveInTier, offeredModels, removeFromTier, reportLines, reportTiers } from "../src/models.ts";
-import { createModelPicker, runModelsCommand } from "../src/picker.ts";
+import { createModelPicker, type PickerSave, runModelsCommand } from "../src/picker.ts";
 
 // The global layer lives in a scratch agent dir, so the user's own config is never read or written.
 const AGENT_DIR = mkdtempSync(join(tmpdir(), "mr-agent-"));
@@ -269,7 +269,7 @@ test("a symlinked global file stays a symlink; its target is what gets edited", 
 
 function picker(global: TierLists, extra: { project?: Partial<TierLists>; offered?: Model<Api>[] } = {}) {
 	const registry = fakeRegistry(CATALOG);
-	let result: TierLists | undefined | "open" = "open";
+	let result: PickerSave | undefined | "open" = "open";
 	const cfg = mergeConfig(DEFAULT_CONFIG, { tiers: global });
 	const c: Component = createModelPicker(
 		{
@@ -309,7 +309,7 @@ test("add, reorder to first, save: the draft handed back is the new preference o
 	assert.match(p.screen(), /1\. claude-bridge\/claude-opus-5-5/);
 	assert.match(p.screen(), /● unsaved/);
 	p.press(KEY.ctrlS);
-	assert.deepEqual(p.result(), tiers([OPUS], [OPUS], ["claude-bridge/claude-opus-5-5", OPUS]));
+	assert.deepEqual(p.result(), { tiers: tiers([OPUS], [OPUS], ["claude-bridge/claude-opus-5-5", OPUS]), preference: [...DEFAULT_CONFIG.preference] });
 });
 
 test("Esc with unsaved changes asks once before discarding", () => {
@@ -339,7 +339,7 @@ test("typing filters the models to add; Tab moves between tiers", () => {
 	assert.match(screen, /\+ openai-codex\/gpt-6-astra/);
 	assert.doesNotMatch(screen, /\+ claude-bridge/);
 	p.press(KEY.enter, KEY.ctrlS);
-	assert.deepEqual(p.result(), tiers(["claude-bridge/claude-opus-5", "openai-codex/gpt-6-astra"], [], []));
+	assert.deepEqual(p.result(), { tiers: tiers(["claude-bridge/claude-opus-5", "openai-codex/gpt-6-astra"], [], []), preference: [...DEFAULT_CONFIG.preference] });
 });
 
 test("a scrolled list counts every hidden line above and below", () => {
@@ -366,6 +366,18 @@ test("a tier this project replaces is called out, and what it names is not repor
 });
 
 // ---- the command: global file only, tiers only ------------------------------------------
+
+test("Ctrl+P reorders the fallback list and the save hands that order back", () => {
+	const p = picker(tiers([OPUS], [OPUS], [OPUS]));
+	p.press("\x10");
+	assert.match(p.screen(), /fallback/);
+	assert.match(p.screen(), /1\. fable/);
+	p.press(KEY.shiftDown);
+	assert.match(p.screen(), /1\. grok/);
+	assert.match(p.screen(), /2\. fable/);
+	p.press(KEY.ctrlS);
+	assert.deepEqual(p.result()?.preference, ["grok", "fable", "opus", "astra"]);
+});
 
 test("/router models writes the global tiers and nothing else: not the project file, not a global-only key", async () => {
 	const cwd = mkdtempSync(join(tmpdir(), "mr-project-"));

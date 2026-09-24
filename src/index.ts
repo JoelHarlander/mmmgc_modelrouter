@@ -1,9 +1,11 @@
 /**
- * pi-modelrouter — route each turn to the right-sized model, cheaply.
+ * pi-modelrouter — the user chooses the model; the router chooses the effort.
  *
  * Per turn: build a compact state -> one Jev call (tier / needs_tools / stakes)
- * -> pick the cheapest billing-eligible model in that tier (billing basis + plan quota +
- * cache-switch aware, see billing.ts) -> pi.setModel before the agent loop starts.
+ * -> set the thinking level from that tier (light/standard/heavy -> low/medium/high).
+ * The model stays. It changes only when the current model's subscription window is spent,
+ * and then only to the next usable entry in `preference` (see preference.ts). A new session
+ * opens on the highest preference entry whose window is not spent.
  *
  * Commands: /router [status|on|off|reload|explain|billing|models|update], /duo <prompt>, /trio <prompt>, /par [N] <prompt>
  */
@@ -19,8 +21,9 @@ import { Ledger, ledgerPath } from "./ledger.ts";
 import { factsCache, offeredModels, reportLines, reportTiers } from "./models.ts";
 import { PARALLEL_ENTRY_TYPE, type ParallelEntryData, renderParallelEntry, runParallel } from "./parallel.ts";
 import { runModelsCommand } from "./picker.ts";
+import { planTurn, sessionModel } from "./preference.ts";
 import { checkRemote, readReleaseInfo, releaseLine, type ReleaseInfo, updateLines } from "./release.ts";
-import { chooseModel, type Decision, heuristicTier } from "./router.ts";
+import { type Decision, heuristicTier } from "./router.ts";
 import { buildRoutingState, routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "./state.ts";
 
 const STATUS_KEY = "modelrouter";
@@ -32,9 +35,9 @@ export default function modelRouter(pi: ExtensionAPI) {
 	const ledger = new Ledger(ledgerPath(join(getAgentDir(), "modelrouter")));
 
 	let turn = 0;
-	let pinnedUntilTurn = 0;
-	let selfSwitching = false;
 	let lastDecision: Decision | undefined;
+	/** Why the session opened on this model, shown until the first turn classifies effort. */
+	let sessionNote: string | undefined;
 	let enabled = cfg.enabled;
 	// Local file reads, resolved once on first use: the running build is a fact about this process,
 	// so it cannot change under it, and the remote is asked about by /router update alone.
@@ -87,12 +90,31 @@ export default function modelRouter(pi: ExtensionAPI) {
 		return cfg;
 	};
 
+	/** Models this session may open on: pi's enabled set when it has one, otherwise every authed model. */
+	const catalog = (ctx: ExtensionContext) => offeredModels(ctx.scopedModels, ctx.modelRegistry).models;
+
 	pi.on("session_start", async (event, ctx) => {
 		reload(ctx.cwd);
 		await refreshGatewayKey(ctx);
 		turn = 0;
-		pinnedUntilTurn = 0;
+		sessionNote = undefined;
 		await refreshBilling(ctx);
+		// A new session opens on the highest preference whose window is not spent. Resuming,
+		// forking or reloading keeps the model that session was already on.
+		if (enabled && (event.reason === "startup" || event.reason === "new")) {
+			const pick = sessionModel({ cfg, registry: ctx.modelRegistry, ledger, models: catalog(ctx) });
+			if (pick && (!ctx.model || modelKey(ctx.model) !== pick.key)) {
+				const ok = await pi.setModel(pick.model);
+				if (ok) {
+					sessionNote = pick.reason;
+					if (cfg.notifyOnSwitch && ctx.hasUI) ctx.ui.notify(`router: ${pick.reason}`, "info");
+				} else if (ctx.hasUI) {
+					ctx.ui.notify(`router: could not start on ${pick.key} (setModel refused: no auth)`, "warning");
+				}
+			} else if (pick) {
+				sessionNote = pick.reason;
+			}
+		}
 		updateStatus(ctx);
 		if (event.reason === "startup") warnTierProblems(ctx);
 	});
@@ -100,16 +122,6 @@ export default function modelRouter(pi: ExtensionAPI) {
 	pi.on("before_agent_start", async (event, ctx) => {
 		turn += 1;
 		if (!enabled || !ctx.model) return;
-		if (turn <= pinnedUntilTurn) {
-			// A manual /model choice is honoured, but never without saying what pays for it.
-			await refreshBilling(ctx);
-			const pinned = assessBilling({ model: ctx.model, cfg, registry: ctx.modelRegistry, ledger });
-			setStatus(ctx, `pinned ${modelKey(ctx.model)} (${pinnedUntilTurn - turn + 1} more turn${pinnedUntilTurn - turn === 0 ? "" : "s"}, ${describeBasis(pinned)})`);
-			if (pinned.eligibility === "excluded" && ctx.hasUI) {
-				ctx.ui.notify(`router: pinned ${modelKey(ctx.model)} is not billing-eligible: ${pinned.reason}`, "warning");
-			}
-			return;
-		}
 		const started = Date.now();
 		let tier: Tier;
 		let confidence: number;
@@ -146,44 +158,39 @@ export default function modelRouter(pi: ExtensionAPI) {
 		}
 
 		await refreshBilling(ctx);
-		const choice = chooseModel({
+		const choice = planTurn({
 			tier,
 			confidence,
 			current: ctx.model,
 			registry: ctx.modelRegistry,
 			cfg,
 			ledger,
+			models: catalog(ctx),
 			contextTokens: ctx.getContextUsage()?.tokens ?? 0,
 		});
 		lastDecision = { ...choice, jevMs, jevModel, needsTools, stakes, at: started };
+		sessionNote = undefined;
 
 		if (choice.model && choice.switched) {
-			selfSwitching = true;
 			const ok = await pi.setModel(choice.model);
-			selfSwitching = false;
 			if (!ok) {
 				lastDecision.reason += " (setModel refused: no auth)";
 				lastDecision.switched = false;
+				lastDecision.model = ctx.model;
 			} else if (cfg.notifyOnSwitch && ctx.hasUI) {
 				const basis = choice.billing ? describeBasis(choice.billing) : "billing unknown";
 				const spend = choice.billing && billsPerToken(choice.billing.basis) ? `, ~$${estimatedSpend(choice).toFixed(4)} this turn` : "";
-				ctx.ui.notify(`router: ${tier} -> ${modelKey(choice.model)} (${(confidence * 100).toFixed(0)}%, ${basis}${spend})`, "info");
+				ctx.ui.notify(`router: ${choice.reason} (${basis}${spend})`, "info");
 			}
 		}
 		// Staying on a model the billing gate would refuse is worth saying out loud.
 		if (choice.ineligibleCurrent && ctx.hasUI) {
-			ctx.ui.notify(`router: no billing-eligible model; staying on ${modelKey(ctx.model)} which is itself ${choice.ineligibleCurrent}`, "warning");
+			ctx.ui.notify(`router: staying on ${modelKey(ctx.model)} — ${choice.ineligibleCurrent}`, "warning");
 		}
 		const level = cfg.thinking[choice.tier];
-		if (level && choice.model?.reasoning) pi.setThinkingLevel(level);
+		const effortModel = lastDecision.model ?? ctx.model;
+		if (level && effortModel?.reasoning) pi.setThinkingLevel(level);
 		updateStatus(ctx);
-	});
-
-	pi.on("model_select", async (event) => {
-		if (selfSwitching) return;
-		if (event.source === "set" || event.source === "cycle") {
-			pinnedUntilTurn = turn + cfg.switching.manualPinTurns;
-		}
 	});
 
 	pi.on("message_end", async (event) => {
@@ -308,11 +315,14 @@ export default function modelRouter(pi: ExtensionAPI) {
 	function updateStatus(ctx: ExtensionContext) {
 		if (!ctx.hasUI) return;
 		if (!enabled) return setStatus(ctx, "router off");
-		if (!lastDecision) return setStatus(ctx, jev.available() ? `router ready (${jev.transport()})` : "router (no Jev credential: heuristic)");
+		if (!lastDecision) {
+			if (sessionNote) return setStatus(ctx, `router ⇄ ${sessionNote}`);
+			return setStatus(ctx, jev.available() ? `router ready (${jev.transport()})` : "router (no Jev credential: heuristic)");
+		}
 		const d = lastDecision;
 		const bits = [`${d.tier}${d.tier !== d.requestedTier ? `←${d.requestedTier}` : ""}`, `${(d.confidence * 100).toFixed(0)}%`];
 		if (d.jevMs !== undefined) bits.push(`${d.jevMs}ms`);
-		setStatus(ctx, `router ${bits.join(" ")}${d.switched ? " ⇄" : ""}`);
+		setStatus(ctx, `router ${bits.join(" ")}${d.switched ? ` ⇄ ${d.reason}` : ""}`);
 	}
 
 	/** Channel, version and commit, then — only because it was asked for — the tip of that ref. */
@@ -325,7 +335,9 @@ export default function modelRouter(pi: ExtensionAPI) {
 	function showStatus(ctx: ExtensionCommandContext) {
 		const lines: string[] = [];
 		lines.push(releaseLine(releaseInfo(ctx)));
-		lines.push(`enabled: ${enabled}   jev: ${jev.describe()}   pinned: ${pinnedUntilTurn > turn ? `${pinnedUntilTurn - turn} turns` : "no"}`);
+		lines.push(`enabled: ${enabled}   jev: ${jev.describe()}   model: ${ctx.model ? "sticks until its subscription window is spent" : "none"}`);
+		lines.push(`preference: ${cfg.preference.join(" > ") || "(none)"}`);
+		if (sessionNote) lines.push(sessionNote);
 		if (ctx.model) lines.push(`current: ${modelKey(ctx.model)} (${basisOf(ctx, ctx.model)})`);
 		for (const tier of TIERS) {
 			const items = (cfg.tiers[tier] ?? []).map((key) => {

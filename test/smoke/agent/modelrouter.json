@@ -1,4 +1,5 @@
 {
+  "preference": ["faux/b", "faux/a"],
   "tiers": { "light": ["faux/b"], "standard": ["faux/a"], "heavy": ["faux/a"] },
   "models": { "faux/*": { "billing": "on-demand" } },
   "billing": { "allowPayPerToken": ["faux/*"], "probe": { "enabled": false } },

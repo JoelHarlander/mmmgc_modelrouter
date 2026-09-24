@@ -42,8 +42,8 @@ export function recordAnswers(pack: TaskPack, turns: TurnRecord[]): RecordResult
 				skipped.push(`${where}: no run record`);
 				return turn;
 			}
-			if (record.pinned) {
-				// A pinned turn never called the classifier, so there is nothing to record.
+			if (record.pinned && !record.classifierAnswer) {
+				// A turn that never consulted the classifier has nothing to record.
 				skipped.push(`${where}: pinned, classifier not consulted`);
 				return turn;
 			}

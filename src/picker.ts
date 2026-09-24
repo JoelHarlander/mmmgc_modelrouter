@@ -10,8 +10,9 @@
 import { homedir } from "node:os";
 import type { ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import { type Component, decodeKittyPrintable, Key, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
-import { changedTiers, type TierLists, tierLayers, type WriteResult, writeGlobalTiers } from "./configfile.ts";
+import { DEFAULT_CONFIG, modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
+import { changedTiers, type PreferenceWriteResult, type TierLists, tierLayers, type WriteResult, writeGlobalPreference, writeGlobalTiers } from "./configfile.ts";
+import { resolveEntry } from "./preference.ts";
 import type { Ledger } from "./ledger.ts";
 import {
 	addToTier,
@@ -40,7 +41,16 @@ export interface PickerInput {
 	offered: Offered;
 	/** Where a save goes, for the header. */
 	path: string;
+	/** Fallback order the picker starts from. Defaults to the shipped series list. */
+	preference?: string[];
+	/** Set when this project's file replaces the list, so a global save does not change it here. */
+	projectPreference?: string[];
 	now?: number;
+}
+
+export interface PickerSave {
+	tiers: TierLists;
+	preference: string[];
 }
 
 type Row = { kind: "entry"; key: string; index: number } | { kind: "pool"; key: string };
@@ -52,8 +62,11 @@ const REPORT_LINES = 4;
  * The picker as a plain component: `done` receives the edited tier lists on save, or undefined
  * when closed without saving. Exported so the key handling and rendering can be driven headless.
  */
-export function createModelPicker(input: PickerInput, theme: Theme, requestRender: () => void, done: (result: TierLists | undefined) => void): Component {
+export function createModelPicker(input: PickerInput, theme: Theme, requestRender: () => void, done: (result: PickerSave | undefined) => void): Component {
 	let draft: TierLists = structuredClone(input.global);
+	let preference = [...(input.preference ?? DEFAULT_CONFIG.preference)];
+	const initialPreference = [...preference];
+	let preferenceMode = false;
 	let tierIdx = 0;
 	let cursor = 0;
 	let filter = "";
@@ -76,7 +89,9 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 	tierIdx = Math.max(0, TIERS.findIndex((t) => opening.empty.includes(t) || opening.unusable.some((u) => u.tier === t)));
 
 	const tier = (): Tier => TIERS[tierIdx]!;
-	const dirty = () => changedTiers(input.global, draft).length > 0;
+	const preferenceDirty = () => !sameStrings(preference, initialPreference);
+	const dirty = () => changedTiers(input.global, draft).length > 0 || preferenceDirty();
+	const finish = () => done({ tiers: structuredClone(draft), preference: [...preference] });
 
 	function rows(): Row[] {
 		const t = tier();
@@ -117,7 +132,12 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 		const t = tier();
 		const clamp = (n: number, length = rows().length) => Math.max(0, Math.min(length - 1, n));
 
-		if (matchesKey(data, Key.escape)) {
+		if (matchesKey(data, Key.ctrl("p"))) {
+			preferenceMode = !preferenceMode;
+			cursor = 0;
+			filter = "";
+			flash = { text: preferenceMode ? "Fallback order: Shift+↑↓ reorder, Tab returns to tiers" : "Back to tiers", color: "muted" };
+		} else if (matchesKey(data, Key.escape)) {
 			if (filter) {
 				filter = "";
 				cursor = 0;
@@ -130,11 +150,27 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 			}
 		} else if (matchesKey(data, Key.ctrl("s"))) {
 			if (!dirty()) {
-				flash = { text: "Nothing to save: the tiers are as the file has them", color: "muted" };
+				flash = { text: "Nothing to save: the tiers and the preference order are as the file has them", color: "muted" };
 			} else {
-				done(structuredClone(draft));
+				finish();
 				return;
 			}
+		} else if (preferenceMode && (matchesKey(data, Key.tab) || matchesKey(data, Key.right) || matchesKey(data, Key.left))) {
+			preferenceMode = false;
+			cursor = 0;
+		} else if (preferenceMode && (isMove(data, "up") || isMove(data, "down"))) {
+			const delta = isMove(data, "up") ? -1 : 1;
+			const next = moveString(preference, cursor, delta);
+			if (next !== preference) {
+				preference = next;
+				discardArmed = false;
+				flash = { text: `Moved ${preference[Math.max(0, Math.min(preference.length - 1, cursor + delta))]}`, color: "muted" };
+				cursor = Math.max(0, Math.min(preference.length - 1, cursor + delta));
+			}
+		} else if (preferenceMode && matchesKey(data, Key.up)) {
+			cursor = Math.max(0, cursor - 1);
+		} else if (preferenceMode && matchesKey(data, Key.down)) {
+			cursor = Math.min(preference.length - 1, cursor + 1);
 		} else if (matchesKey(data, Key.tab) || matchesKey(data, Key.right)) {
 			tierIdx = (tierIdx + 1) % TIERS.length;
 			cursor = 0;
@@ -176,13 +212,14 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 			// Typing is for finding a model to add, so land on the first match.
 			cursor = draft[t].length;
 		}
-		cursor = clamp(cursor);
+		cursor = preferenceMode ? (preference.length === 0 ? 0 : Math.max(0, Math.min(preference.length - 1, cursor))) : clamp(cursor);
 		refresh();
 	}
 
 	function render(width: number): string[] {
 		if (cached) return cached;
 		const w = Math.max(20, width);
+		if (preferenceMode) return renderPreference(w);
 		const lines: string[] = [];
 		const fit = (s: string) => truncateToWidth(s, w);
 		const t = tier();
@@ -243,9 +280,42 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 		if (flash) lines.push(fit(` ${theme.fg(flash.color, flash.text)}`));
 		lines.push(
 			fit(
-				` ${theme.fg("dim", "↑↓ select • Enter add/remove • Shift+↑↓ reorder • Tab tier • Ctrl+S save • Esc close")}`,
+				` ${theme.fg("dim", "↑↓ select • Enter add/remove • Shift+↑↓ reorder • Tab tier • Ctrl+P preference • Ctrl+S save • Esc close")}`,
 			),
 		);
+		lines.push(theme.fg("accent", "─".repeat(w)));
+		cached = lines;
+		return lines;
+	}
+
+	function renderPreference(w: number): string[] {
+		const fit = (s: string) => truncateToWidth(s, w);
+		const lines: string[] = [];
+		lines.push(theme.fg("accent", "─".repeat(w)));
+		const state = dirty() ? theme.fg("warning", "● unsaved") : theme.fg("dim", "unchanged");
+		lines.push(fit(` ${theme.fg("accent", "[router models]")} ${state} ${theme.fg("dim", tildePath(input.path))}`));
+		lines.push(fit(` ${theme.bold("fallback")} ${theme.fg("dim", "— used when the current model's subscription window is spent")}`));
+		if (input.projectPreference) {
+			lines.push(fit(` ${theme.fg("warning", "⚠ this project's .pi/modelrouter.json sets preference; a save changes it everywhere else, not here")}`));
+		}
+		lines.push("");
+		preference.forEach((entry, i) => {
+			const resolved = resolveEntry(entry, {
+				cfg: input.cfg,
+				registry: input.registry,
+				ledger: input.ledger,
+				models: input.offered.models,
+				now: input.now,
+			});
+			const where = resolved ? resolved.key : "none available";
+			const prefix = i === cursor ? theme.fg("accent", "> ") : "  ";
+			const label = i === cursor ? theme.fg("accent", entry) : entry;
+			lines.push(fit(` ${prefix}${i + 1}. ${label}  ${theme.fg("dim", "→")} ${where}`));
+		});
+		if (preference.length === 0) lines.push(fit(`   ${theme.fg("error", "(empty: a spent window has nowhere to go)")}`));
+		lines.push("");
+		if (flash) lines.push(fit(` ${theme.fg(flash.color, flash.text)}`));
+		lines.push(fit(` ${theme.fg("dim", "↑↓ select • Shift+↑↓ reorder • Tab tiers • Ctrl+S save • Esc close")}`));
 		lines.push(theme.fg("accent", "─".repeat(w)));
 		cached = lines;
 		return lines;
@@ -321,6 +391,20 @@ function isMove(data: string, dir: "up" | "down"): boolean {
 	return matchesKey(data, Key.shift(dir)) || matchesKey(data, Key.alt(dir)) || matchesKey(data, Key.ctrl(dir));
 }
 
+function moveString(list: string[], index: number, delta: number): string[] {
+	if (index < 0 || index >= list.length) return list;
+	const to = Math.max(0, Math.min(list.length - 1, index + delta));
+	if (to === index) return list;
+	const next = [...list];
+	const [item] = next.splice(index, 1);
+	next.splice(to, 0, item!);
+	return next;
+}
+
+function sameStrings(a: readonly string[], b: readonly string[]): boolean {
+	return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
 // ---- the command -----------------------------------------------------------------
 
 export interface ModelsCommandArgs {
@@ -349,9 +433,19 @@ export async function runModelsCommand(args: ModelsCommandArgs): Promise<void> {
 		return;
 	}
 
-	const result = await ctx.ui.custom<TierLists | undefined>((tui, theme, _kb, done) =>
+	const result = await ctx.ui.custom<PickerSave | undefined>((tui, theme, _kb, done) =>
 		createModelPicker(
-			{ cfg, registry: ctx.modelRegistry, ledger, global: layers.global, project: layers.project, offered, path },
+			{
+				cfg,
+				registry: ctx.modelRegistry,
+				ledger,
+				global: layers.global,
+				project: layers.project,
+				offered,
+				path,
+				preference: layers.preference,
+				projectPreference: layers.projectPreference,
+			},
 			theme,
 			() => tui.requestRender(),
 			done,
@@ -362,24 +456,39 @@ export async function runModelsCommand(args: ModelsCommandArgs): Promise<void> {
 		return;
 	}
 
-	const tiers = changedTiers(layers.global, result);
-	const changes: Partial<TierLists> = Object.fromEntries(tiers.map((t) => [t, result[t]]));
-	let written: WriteResult;
+	const tiers = changedTiers(layers.global, result.tiers);
+	const preferenceChanged = !sameStrings(result.preference, layers.preference);
+	if (tiers.length === 0 && !preferenceChanged) {
+		ctx.ui.notify("router: model tiers left unchanged", "info");
+		return;
+	}
+	const changes: Partial<TierLists> = Object.fromEntries(tiers.map((t) => [t, result.tiers[t]]));
+	let written: WriteResult | undefined;
+	let preferenceWrite: PreferenceWriteResult | undefined;
 	try {
-		written = writeGlobalTiers(path, changes, layers.file.tiers);
+		if (tiers.length > 0) written = writeGlobalTiers(path, changes, layers.file.tiers);
+		if (preferenceChanged) preferenceWrite = writeGlobalPreference(path, result.preference, layers.statedPreference);
 	} catch (err) {
 		ctx.ui.notify(`router: nothing saved: ${err instanceof Error ? err.message : String(err)}`, "error");
 		return;
 	}
 
 	const now = await args.reload();
-	const lines = [`saved ${tiers.join(", ")} to ${written.path}${written.backup ? ` (previous copy: ${written.backup})` : ""}`];
+	const saved = [...tiers, ...(preferenceChanged ? ["preference"] : [])];
+	const where = written?.path ?? preferenceWrite?.path ?? path;
+	const backup = written?.backup ?? preferenceWrite?.backup;
+	const lines = [`saved ${saved.join(", ")} to ${where}${backup ? ` (previous copy: ${backup})` : ""}`];
 	for (const t of tiers) {
-		lines.push(`${t}: ${result[t].join(", ") || "(empty)"}`);
+		lines.push(`${t}: ${result.tiers[t].join(", ") || "(empty)"}`);
 		lines.push(`  was: ${layers.global[t].join(", ") || "(empty)"}`);
+	}
+	if (preferenceChanged) {
+		lines.push(`preference: ${result.preference.join(" > ")}`);
+		lines.push(`  was: ${layers.preference.join(" > ")}`);
 	}
 	const overridden = tiers.filter((t) => layers.project[t]);
 	if (overridden.length > 0) lines.push(`⚠ ${layers.projectPath} still sets ${overridden.join(", ")} for this project`);
+	if (preferenceChanged && layers.projectPreference) lines.push(`⚠ ${layers.projectPath} still sets preference for this project`);
 	lines.push(...reportLines(reportTiers(now.tiers, offered, factsCache({ cfg: now, registry: ctx.modelRegistry, ledger }))));
 	args.showCard("router models", lines);
 }
