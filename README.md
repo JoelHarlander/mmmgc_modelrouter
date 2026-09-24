@@ -1,11 +1,14 @@
 # pi-modelrouter
 
-A [pi](https://github.com/earendil-works/pi) extension that routes every turn to the right-sized model, using
-[TypeSafe AI's Jev](https://docs.typesafe.ai) as a fast, cheap classifier, and supports N-way parallel responses.
+A [pi](https://github.com/earendil-works/pi) extension that keeps the model you chose and sets the reasoning
+effort for each turn, using [TypeSafe AI's Jev](https://docs.typesafe.ai) as a fast, cheap classifier, and supports
+N-way parallel responses.
 
-- **Routing**: one Jev call per turn (a few hundred input tokens, output is free) classifies the request into
-  `light | standard | heavy`, plus `needs_tools` and `stakes`. Code then picks the best-ranked billing-eligible
-  model in that tier, cheapest first within a rank.
+- **You choose the model.** `/model` sticks for the session. The router does not change it because a turn looks
+  hard or cheap.
+- **The router chooses the effort.** One Jev call per turn (a few hundred input tokens, output is free) classifies
+  the request into `light | standard | heavy`, plus `needs_tools` and `stakes`. That tier sets the thinking level
+  (`low` / `medium` / `high` by default) on the current model.
 - **Billing eligibility**: every candidate is assessed before it can be picked. The router separates *what pays*
   (`subscription`, `extra-credits`, `pay-per-token`, `free`) from *how well that is established*
   (`verified`, `stale`, `unverified`), and only a verified subscription-backed route — or a zero-cost one — is
@@ -15,8 +18,12 @@ A [pi](https://github.com/earendil-works/pi) extension that routes every turn to
   The ledger reads Anthropic and Codex quota headers and 429/402 responses, polls the providers' read-only usage
   endpoints, and steers away from exhausted plans — per model, not just per provider.
 - **Cache-aware switching**: leaving a model with a warm prompt cache is charged as a context re-read.
-- **Manual override wins**: `/model` pins your choice for `switching.manualPinTurns` turns. The pin is honoured
-  whatever pays for it, but the status line names the basis and a pin nothing may bill says so.
+- **Fallback order**: `preference` defaults to `fable > grok > opus > astra`. Each name is a series, resolved to
+  the best model pi can use in that series (newest version, on that series' subscription provider when one is
+  signed in). A new session opens on the first entry whose subscription window is not spent. The router switches
+  to the next entry only when the current model's subscription window is spent — a live refusal that names that
+  window counts — and says so on the status line and in a notification. A credential refusal that names no window
+  does not switch. `switching.manualPinTurns` is still accepted from older files and no longer expires a choice.
 - **Parallel**: `/duo`, `/trio`, `/par N <prompt>` fan the same conversation out to N models in-process, show
   timings and cost, let Jev pick the best answer, and let you adopt one into the session.
 
@@ -104,14 +111,14 @@ npx vercel ai-gateway setup --agent pi
 ```
 
 The Vercel team needs a credit card on file before the gateway serves any request (it returns
-`customer_verification_required` otherwise). Without any Jev credential the router falls back to a low-confidence
-heuristic, which by default keeps the current model.
+`customer_verification_required` otherwise). Without any Jev credential the effort tier falls back to a
+low-confidence heuristic. The model is unchanged either way: only a spent subscription window moves it.
 
 ## Configure
 
 `~/.pi/agent/modelrouter.json` (global) and `<project>/.pi/modelrouter.json` (project) are merged over the defaults in
 `src/config.ts`. Model ids are `provider/modelId` exactly as `pi --list-models` shows them. The JSON is the source of
-truth: edit it by hand, or choose tiers interactively with `/router models`, which edits the same global file.
+truth: edit it by hand, or order the fallback list and the tier lists with `/router models`, which edits the same global file.
 
 ### Choosing models: `/router models`
 
@@ -123,9 +130,10 @@ shows the catalog price where the basis bills per token. The highlighted model's
 quota are shown in full. These are the same assessments `/router billing` makes, not a second opinion.
 
 `Enter` adds a model to the tier or removes it, `Shift+↑/↓` (or `Alt`/`Ctrl` with the arrows) reorders, `Tab` changes
-tier, typing filters, `Ctrl+S` saves and `Esc` closes. Order within a tier is preference among equals: the router
-still weighs billing rank, then estimated cost, then capability first, and `/duo` considers each tier's first entry
-before the rest.
+tier, typing filters, `Ctrl+P` opens the fallback order, `Ctrl+S` saves and `Esc` closes. The fallback order is the
+series list a spent subscription walks; `Shift+↑/↓` there reorders it, and each row shows the model that series
+resolves to right now. Order within a tier is for `/duo`: it considers each tier's first entry before the rest.
+The session model does not come from the tiers.
 
 The picker keeps two mistakes in view, and the `/router` status card repeats them:
 
@@ -137,17 +145,18 @@ The picker keeps two mistakes in view, and the `/router` status card repeats the
 pi's startup warns only about what needs fixing: a tier entry pi cannot route to, or a tier that names no model. A
 model left out of every tier may be a choice, so startup stays quiet about it.
 
-Saving writes **only** the tier lists you changed, and only to the global `~/.pi/agent/modelrouter.json` (the target, if
+Saving writes **only** the tier lists and the `preference` list you changed, and only to the global `~/.pi/agent/modelrouter.json` (the target, if
 that is a symlink). Every other key, the key order, the indentation and each list's one-line or one-per-line layout
-stay as they were. The file is replaced atomically, the previous copy is kept as `modelrouter.json.bak`, and a tier
-changed on disk since the picker opened, or a file that is not valid JSON, is refused rather than overwritten. The
+stay as they were. The file is replaced atomically in one write, the previous copy is kept as `modelrouter.json.bak`, and a tier
+or the `preference` list changed on disk since the picker opened, or a file that is not valid JSON, is refused rather than overwritten. The
 router then reloads as `/router reload` does, except that it keeps the session's on/off state. The picker never writes a project's `.pi/modelrouter.json`, and
-never writes any key but `tiers`. If a pay-per-token model you add shows `excluded: not in billing.allowPayPerToken`,
+never writes any key but `tiers` and `preference`. If a pay-per-token model you add shows `excluded: not in billing.allowPayPerToken`,
 permitting that spend is a hand edit of `billing` in the global file. Where the open project's file sets a tier, the
 picker says so: your global change applies everywhere else, and that project keeps its own list.
 
 ```jsonc
 {
+  "preference": ["fable", "grok", "opus", "astra"],
   "tiers": {
     "light": ["openrouter/z-ai/glm-5.3-flash", "vercel-ai-gateway/deepseek/deepseek-v4.1-flash"],
     "standard": ["openai-codex/gpt-6-astra", "openrouter/z-ai/glm-5.3"],
@@ -201,6 +210,8 @@ never the whole credential. Codex names the meter by an opaque limit id on the w
 the model in the usage poll, so the header path keys the window by the `x-codex-<id>-limit-name` it comes with;
 both evidence paths then name the same meter, and a later poll refreshes what a header recorded.
 
+A mapped refusal that names no reset time is given `plan.cooldownMinutesOn429` (30 minutes by default). The next
+successful response from a model that window governs lifts it sooner. A named reset is left alone until that instant.
 A scoped window speaks only for its own models: a Fable-only or overage rejection excludes the models that window
 governs and nothing else, whether it arrives on a 200 or on a 429 with `retry-after`. Only the windows *that*
 response reported spent can answer whose refusal it is; a window stored hours ago cannot. A refusal the response
@@ -236,7 +247,7 @@ that cannot authenticate is recorded as a failed probe — the route then stays 
 rather than guessing either way.
 
 A project `.pi/modelrouter.json` is read key by key against a list of what a repository may say: its tier lists,
-`thinking`, `switching`, the `/duo` settings, `notifyOnSwitch`, `enabled` (off only) and `billing.probe.enabled`
+`preference`, `thinking`, `switching`, the `/duo` settings, `notifyOnSwitch`, `enabled` (off only) and `billing.probe.enabled`
 (off only). Everything else — `jev`, `entitlement`,
 `plan`, `models`, `scopes`, the rest of `billing`, and every key added in future — comes from the global file
 alone. So a repository can pick the models it prefers and make the router stricter than you configured it, and it
@@ -246,10 +257,10 @@ can never name an endpoint a credential is sent to, assert what pays for a model
 
 | Command | What it does |
 | --- | --- |
-| `/router` | Status card: tiers, auth, billing basis per route, eligible models in no tier, quota, session spend, last decision |
+| `/router` | Status card: preference order, current model, effort of the last turn, tiers, quota, session spend, last decision |
 | `/router explain` | Candidates, billing basis, evidence and uncertainty behind the last decision |
 | `/router billing` | Refreshes entitlement evidence, then shows what pays for each configured route |
-| `/router models` | Choose and order each tier's models from what pi offers, and save them to the global config ([details](#choosing-models-router-models)) |
+| `/router models` | Order the fallback preference and each tier's models, and save them to the global config ([details](#choosing-models-router-models)) |
 | `/router update` | Channel, version and commit of the running build, whether the channel has moved on, and the `pi` command that moves it |
 | `/router on` / `off` / `reload` | Toggle routing, reload config |
 | `/duo <prompt>` / `/trio <prompt>` | 2 or 3 parallel responses |
@@ -273,9 +284,10 @@ npm run eval           # SWE-bench-style router eval: offline, deterministic, no
 npm run eval:all -- --gate   # every eval profile, failing on a regression
 ```
 
-`npm run smoke` routes a light prompt to the billed `faux/b`, which its global fixture names in `allowPayPerToken`;
-`npm run smoke:billing` names only `faux/a` there, so `faux/b` is not a route that may bill and the answer comes
-from `faux/a` instead. The difference between the two is the billing gate doing its job end to end.
+`npm run smoke` opens on `faux/b`, the first entry of the fixture's `preference` (`faux/b` then `faux/a`) and a
+model its global fixture names in `allowPayPerToken`. `npm run smoke:billing` names only `faux/a` there, so `faux/b`
+is not a route that may bill and the session opens on `faux/a` instead. The difference between the two is the
+billing gate doing its job end to end. The prompt's difficulty does not choose the model.
 
 Verified on pi 0.85.1: `pi.setModel()` inside `before_agent_start` applies to the same turn, so the switch
 happens before the first provider request. The interactive surfaces (`/router` cards, routing notifications,

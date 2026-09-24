@@ -17,7 +17,7 @@ import { DEFAULT_CONFIG, loadConfig, mergeConfig, type RouterConfig } from "../s
 import { changedTiers, editTiersText, readGlobalTiers, type TierLists, writeGlobalTiers } from "../src/configfile.ts";
 import { Ledger } from "../src/ledger.ts";
 import { addToTier, factsCache, moveInTier, offeredModels, removeFromTier, reportLines, reportTiers } from "../src/models.ts";
-import { createModelPicker, runModelsCommand } from "../src/picker.ts";
+import { createModelPicker, type PickerSave, runModelsCommand } from "../src/picker.ts";
 
 // The global layer lives in a scratch agent dir, so the user's own config is never read or written.
 const AGENT_DIR = mkdtempSync(join(tmpdir(), "mr-agent-"));
@@ -269,7 +269,7 @@ test("a symlinked global file stays a symlink; its target is what gets edited", 
 
 function picker(global: TierLists, extra: { project?: Partial<TierLists>; offered?: Model<Api>[] } = {}) {
 	const registry = fakeRegistry(CATALOG);
-	let result: TierLists | undefined | "open" = "open";
+	let result: PickerSave | undefined | "open" = "open";
 	const cfg = mergeConfig(DEFAULT_CONFIG, { tiers: global });
 	const c: Component = createModelPicker(
 		{
@@ -309,7 +309,7 @@ test("add, reorder to first, save: the draft handed back is the new preference o
 	assert.match(p.screen(), /1\. claude-bridge\/claude-opus-5-5/);
 	assert.match(p.screen(), /● unsaved/);
 	p.press(KEY.ctrlS);
-	assert.deepEqual(p.result(), tiers([OPUS], [OPUS], ["claude-bridge/claude-opus-5-5", OPUS]));
+	assert.deepEqual(p.result(), { tiers: tiers([OPUS], [OPUS], ["claude-bridge/claude-opus-5-5", OPUS]), preference: [...DEFAULT_CONFIG.preference] });
 });
 
 test("Esc with unsaved changes asks once before discarding", () => {
@@ -339,7 +339,7 @@ test("typing filters the models to add; Tab moves between tiers", () => {
 	assert.match(screen, /\+ openai-codex\/gpt-6-astra/);
 	assert.doesNotMatch(screen, /\+ claude-bridge/);
 	p.press(KEY.enter, KEY.ctrlS);
-	assert.deepEqual(p.result(), tiers(["claude-bridge/claude-opus-5", "openai-codex/gpt-6-astra"], [], []));
+	assert.deepEqual(p.result(), { tiers: tiers(["claude-bridge/claude-opus-5", "openai-codex/gpt-6-astra"], [], []), preference: [...DEFAULT_CONFIG.preference] });
 });
 
 test("a scrolled list counts every hidden line above and below", () => {
@@ -366,6 +366,49 @@ test("a tier this project replaces is called out, and what it names is not repor
 });
 
 // ---- the command: global file only, tiers only ------------------------------------------
+
+test("Ctrl+P reorders the fallback list and the save hands that order back", () => {
+	const p = picker(tiers([OPUS], [OPUS], [OPUS]));
+	p.press("\x10");
+	assert.match(p.screen(), /fallback/);
+	assert.match(p.screen(), /1\. fable/);
+	p.press(KEY.shiftDown);
+	assert.match(p.screen(), /1\. grok/);
+	assert.match(p.screen(), /2\. fable/);
+	p.press(KEY.ctrlS);
+	const saved = p.result() as PickerSave;
+	assert.deepEqual(saved.preference, ["grok", "fable", "opus", "astra"]);
+	assert.deepEqual(saved.tiers, tiers([OPUS], [OPUS], [OPUS]), "reordering preference does not edit tiers");
+});
+
+test("in the fallback view, tier keys do nothing: no hidden tier is edited and nothing is dirty", () => {
+	const p = picker(tiers([OPUS], [OPUS], [OPUS]));
+	p.press("\x10", KEY.enter, "\x1b[3~", "\x1b[Z", "\x1b[6~", KEY.backspace, "x");
+	assert.match(p.screen(), /1\. fable/);
+	p.press(KEY.ctrlS);
+	assert.equal(p.result(), "open", "nothing to save");
+	p.press(KEY.tab, KEY.esc);
+	assert.equal(p.result(), undefined, "closes without a discard prompt, so nothing was changed");
+});
+
+test("a save of tiers and preference together is one write whose backup is the file before the save", () => {
+	writeFileSync(GLOBAL, HAND_WRITTEN);
+	const res = writeGlobalTiers(GLOBAL, { heavy: ["x/y"] }, readGlobalTiers(GLOBAL).tiers, { items: ["grok", "fable"], expected: undefined });
+	assert.deepEqual(res.written, ["heavy"]);
+	assert.equal(res.preference, true);
+	const written = JSON.parse(readFileSync(GLOBAL, "utf8"));
+	assert.deepEqual(written.tiers.heavy, ["x/y"]);
+	assert.deepEqual(written.preference, ["grok", "fable"]);
+	assert.equal(readFileSync(res.backup!, "utf8"), HAND_WRITTEN);
+
+	// A preference changed on disk is a conflict for the whole save: the tiers are not written either.
+	const onDisk = readFileSync(GLOBAL, "utf8");
+	assert.throws(
+		() => writeGlobalTiers(GLOBAL, { light: ["p/q"] }, { light: written.tiers.light }, { items: ["opus"], expected: undefined }),
+		/changed "preference" on disk/,
+	);
+	assert.equal(readFileSync(GLOBAL, "utf8"), onDisk);
+});
 
 test("/router models writes the global tiers and nothing else: not the project file, not a global-only key", async () => {
 	const cwd = mkdtempSync(join(tmpdir(), "mr-project-"));

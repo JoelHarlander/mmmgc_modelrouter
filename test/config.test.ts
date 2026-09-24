@@ -111,11 +111,13 @@ test("a project config states its routing preferences and may switch probing off
 	const cfg = withProject({
 		tiers: { light: ["ds4/deepseek-v4-flash"], standard: ["ds4/deepseek-v4-flash"], heavy: ["ds4/deepseek-v4-flash"] },
 		thinking: { light: "high" },
+		preference: ["astra", "opus"],
 		switching: { minConfidence: 0.3, manualPinTurns: 0 },
 		billing: { probe: { enabled: false, minIntervalMinutes: 1440 } },
 	});
 	assert.deepEqual(cfg.tiers.light, ["ds4/deepseek-v4-flash"]);
 	assert.equal(cfg.thinking.light, "high");
+	assert.deepEqual(cfg.preference, ["astra", "opus"]);
 	assert.equal(cfg.switching.minConfidence, 0.3);
 	assert.equal(cfg.switching.manualPinTurns, 0);
 	assert.equal(cfg.billing.probe.enabled, false);

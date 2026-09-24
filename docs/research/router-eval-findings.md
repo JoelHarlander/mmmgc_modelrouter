@@ -4,6 +4,11 @@
 changes nothing about how the router selects or adopts a model. Everything below is
 evidence for whoever owns that change.
 
+The session router no longer walks tiers: the user keeps the model, and a spent subscription
+window is the only switch. On the long pack that is `$149.30` of cold-start premium and `5 switches`,
+almost all of them thinking-level changes on a model that stayed put. The tier-routing figures below
+were measured before that change.
+
 Reproduce any figure here with the command beside it. Round-by-round working is in
 [`eval/results/log.md`](../../eval/results/log.md); how to read each metric is in
 [`eval/README.md`](../../eval/README.md).

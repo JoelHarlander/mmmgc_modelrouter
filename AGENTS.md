@@ -9,7 +9,8 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 `npm run check` (tsc), `npm test` (node --test over `test/*.test.ts`), then both smokes, then
 `npm run eval` and `npm run eval:all -- --gate` (the router eval; offline, deterministic, spends nothing). `npm run smoke` and
 `npm run smoke:billing` drive real pi against the zero-cost faux provider and must answer from `faux/b` and
-`faux/a` respectively; that difference is the billing gate working end to end, so a change that makes them agree
+`faux/a` respectively. Both fixtures list `preference` as `faux/b` then `faux/a`; the billing fixture allows only
+`faux/a` to bill, so the session opens on the next entry. That difference is the billing gate working end to end, so a change that makes them agree
 is a regression, not a wash. The smoke scripts exit 0 whichever model answers; `.github/workflows/ci.yml` asserts
 the answer line, so keep the two in step if either smoke's expected route changes. Both smokes are hermetic: each sets `PI_CODING_AGENT_DIR` to its own `agent/` fixture, so the global layer is
 `test/smoke*/agent/modelrouter.json` (where the `models` label and `allowPayPerToken` entry the billed route needs
@@ -79,8 +80,8 @@ what the harness predicts each queued fix will do, with the command that checks 
   that Anthropic utilization is 0..1 in headers but 0..100 from `/api/oauth/usage`.
 - `src/entitlement.ts` may only call read-only usage endpoints. Nothing here may send inference or log a credential.
 - The only config writer is `/router models` (`src/picker.ts` -> `src/configfile.ts`): it rewrites just the changed
-  `tiers.<tier>` arrays of the **global** file as a text edit, so every other byte survives. Never widen it to another
-  key or to the project file; per-model verdicts it shows come from `evaluateCandidate`, never a parallel judgment.
+  `tiers.<tier>` arrays and the `preference` list of the **global** file as a text edit, so every other byte survives.
+  Never widen it to another key or to the project file; per-model verdicts it shows come from `evaluateCandidate`, never a parallel judgment.
 
 ## Sharp edges
 
@@ -96,16 +97,20 @@ what the harness predicts each queued fix will do, with the command that checks 
 - **`ledger.costUsd` is not the cost of a run.** A subscription route bills $0 while still consuming a plan, so
   the eval reports `listEquivalentUsd` and `planHiddenUsd` beside it; on the default config the hidden half is
   the large majority of spend.
+- **The session model is the user's.** `/model` sticks until that model's subscription window is spent; the router
+  then takes the next usable entry in `preference` (default `fable > grok > opus > astra`, each a series resolved
+  to the best available model — see `src/preference.ts`). The classifier still runs every turn and sets the thinking
+  level from `thinking`. `switching.manualPinTurns` still loads and no longer expires a choice. The tier lists feed
+  `/duo` and the eval's price audit, not the session model.
 - **The default tiers are not a cost ladder.** On published prices the `standard` tier's preferred model costs
-  more per warm turn than `heavy`'s and scores no better, so escalating a tier can make a turn cheaper.
-  `npm run eval -- --audit-config` re-derives this from `docs/data/` and names it; several findings trace back
-  to it.
+  more per warm turn than `heavy`'s and scores no better. `npm run eval -- --audit-config` re-derives this from
+  `docs/data/` and names it; it describes the tier table, which the session router no longer walks.
 - **The eval's `goldTier` is derived, never hand-written** — it is the cheapest tier holding a model that meets
   the turn's `requiredSkill`. Editing a task pack means editing `requiredSkill`; `--validate` fails if a written
   `goldTier` disagrees.
 - `test/eval.test.ts` pins several things against `src/` **source text** (the fan-out candidate policy, the judge
-  question, the stakes-override threshold, the auto-adopt confidence bar, and whether the low-confidence early
-  return consults `isBlocked`). Changing those in `src/` will fail tests in `test/` — that is deliberate, so the
+  question, the stakes-override threshold, the auto-adopt confidence bar, and that `planTurn` keeps the model
+  unless its subscription window is spent). Changing those in `src/` will fail tests in `test/` — that is deliberate, so the
   harness cannot silently drift from what ships, and the failure message says what to update.
 
 ## Maintaining this file

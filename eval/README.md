@@ -87,11 +87,14 @@ baseline** — otherwise the gate fires once and the regression becomes the new 
 
 ## What it measures, and what it does not
 
-The harness measures **the decision layer**: given a classification, which model does
-the router pick, was that model eligible and affordable, what did the pick cost in
-money and in cache, and did the task get done. All of that logic is imported from
-`src/` and run unmodified — `chooseModel`, `heuristicTier`, `buildRoutingState`,
-`Ledger`, `JevClient`, `choiceConfidence`. The harness supplies only the world.
+The harness measures **the decision layer**: the session opens on the highest `preference`
+entry whose window is not spent, a turn's classification sets the thinking level, and the
+model moves only when that subscription window is spent. It records whether the model was
+eligible, what the turn cost in money and in cache, and whether the task got done. All of
+that logic is imported from `src/` and run unmodified — `planTurn`, `sessionModel`,
+`heuristicTier`, `buildRoutingState`, `Ledger`, `JevClient`, `choiceConfidence`. The
+harness supplies only the world. `chooseModel` still ranks a tier for the price audit and
+for `/duo`; the session does not call it.
 
 It does **not** run real repositories or real patches. Two things are declared rather
 than measured, and both live in fixtures so you can argue with them:
@@ -142,23 +145,24 @@ One task is one pi session. Each turn reproduces `before_agent_start` from
 `src/index.ts`, in order:
 
 ```
-turn++ → manual-pin check → buildRoutingState → classify → stakes override (≥1.5 lifts light to standard)
-       → chooseModel → setModel → thinking level → record usage in the Ledger
+session opens on the highest preference whose window is not spent (sessionModel)
+turn++ → a /model choice sticks → buildRoutingState → classify → stakes override (≥1.5 lifts light to standard)
+       → planTurn (switch only when that model's subscription window is spent) → setModel
+       → thinking level from the effort tier → record usage in the Ledger
 ```
 
-A pinned turn returns before the classifier call, so it costs nothing to route — the
-harness books that the same way.
+A `/model` choice keeps the model and still classifies the effort, so it is billed for
+the classifier call. The harness books that the same way.
 
-Driving `chooseModel` directly is what makes this fast and deterministic, and it means
+Driving `planTurn` directly is what makes this fast and deterministic, and it means
 the harness never proves the decision *reaches* pi. `test/integration.test.ts` closes
 that: for five prompts it runs **real pi** with the faux provider from
 `test/faux-provider.ext.ts` and the shipped extension, and requires the model that
 actually answered to be the one the harness predicts. `test/smoke/.pi/modelrouter.json`
-pins every setting the prediction depends on — including a Jev transport whose credential
-is never present — so both sides route through `heuristicTier` offline and the check
-cannot become a test of whoever's machine it runs on. One `Ledger` serves the whole run, because plan
-quota and 429 cooldowns are account facts that outlive a session: a 429 in one task
-still steers the next.
+pins every setting the prediction depends on — including the preference list and a Jev
+transport whose credential is never present — so both sides open on that list offline
+and the check cannot become a test of whoever's machine it runs on. One `Ledger` serves the whole run, because plan
+quota and a spent window are account facts that outlive a session.
 
 ## Cost and cache
 

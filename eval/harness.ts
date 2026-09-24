@@ -4,8 +4,10 @@
  * One task = one pi session. Each turn reproduces what src/index.ts does in
  * `before_agent_start`, in the same order and with the same code:
  *
- *   turn++ -> manual pin check -> buildRoutingState -> classify -> stakes override
- *          -> chooseModel -> setModel -> thinking level -> record usage
+ *   session opens on the highest preference whose window is not spent
+ *   turn++ -> a /model choice sticks -> buildRoutingState -> classify -> stakes override
+ *          -> planTurn (switch only when that model's subscription window is spent)
+ *          -> thinking level from the effort tier -> record usage
  *
  * Everything that decides is imported from src/. The harness only supplies the
  * world (a fleet, a conversation, a clock-free cost model) and writes down what
@@ -19,7 +21,8 @@ import { assessBilling } from "../src/billing.ts";
 import { modelKey, type RouterConfig, type ThinkingLevel, TIERS } from "../src/config.ts";
 
 import { Ledger } from "../src/ledger.ts";
-import { chooseModel, type Decision } from "../src/router.ts";
+import { planTurn, sessionModel } from "../src/preference.ts";
+import { type Decision } from "../src/router.ts";
 import { buildRoutingState } from "../src/state.ts";
 import { applyStakesOverride, classify, type StakesOverride } from "./classifier.ts";
 import {
@@ -147,8 +150,10 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 	session.model = findModel(loaded, startModelKey);
 
 	let turnNo = 0;
-	let pinnedUntilTurn = 0;
 	const judgeWins = new Map<string, number>();
+	// A new session opens on the preference list, whatever model the process was last on.
+	const opening = sessionModel({ cfg, registry, ledger, models: loaded.models });
+	if (opening) session.model = opening.model;
 	// What the session has forgotten, and how much of it has been rebuilt since.
 	let lastCompaction: { from: number; to: number } | undefined;
 	const exploreTurns = options.exploreTurns ?? 0;
@@ -159,11 +164,10 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 	const stateChars: number[] = [];
 
 	for (const turn of task.turns) {
-		// A /model pin lands between turns; src/index.ts stamps it with the turn count so far.
+		// A /model choice lands between turns and sticks until that model's subscription window is spent.
 		if (turn.manualPin) {
 			const pinned = findModel(loaded, turn.manualPin);
 			if (pinned) session.model = pinned;
-			pinnedUntilTurn = turnNo + cfg.switching.manualPinTurns;
 		}
 
 		turnNo += 1;
@@ -187,56 +191,56 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			const model = findModel(loaded, committedKey!);
 			if (model) session.model = model;
 		}
-		const isPinned = turnNo <= pinnedUntilTurn || committed;
 		let decision: Omit<Decision, "at" | "jevMs" | "jevModel" | "needsTools" | "stakes">;
 		let classifierCostUsd = 0;
-		let classifierSource: TurnRecord["classifierSource"] = "pinned";
+		let classifierSource: TurnRecord["classifierSource"] = "heuristic";
 		let requestedTier = goldTier;
 		let confidence = 1;
 		let classifierAnswer: TurnRecord["classifierAnswer"];
 
-		if (isPinned) {
-			// src/index.ts returns before the Jev call, so a pinned turn costs nothing to route.
+		// Effort is classified on every turn, including one whose model the user chose.
+		const classification = await classify({
+			mode: options.classifier,
+			turn: { ...turn, goldTier },
+			prompt: turn.prompt,
+			state,
+			jev: options.jev,
+			signal: options.signal,
+		});
+		classifierCostUsd = classification.costUsd;
+		classifierSource = classification.source;
+		// src/index.ts books every answered Jev call under a synthetic jev:<transport>
+		// provider, so the router's own overhead shows up in its own ledger. Mirror that.
+		if (classification.source === "jev") {
+			ledger.recordJev(options.classifier === "live" ? "typesafe" : "scripted", cfg.jev.model, CLASSIFIER_INPUT_TOKENS, 0, classification.costUsd);
+		}
+		classifierAnswer = {
+			tier: classification.tier,
+			confidence: round2(classification.confidence),
+			needsTools: classification.needsTools === undefined ? undefined : round2(classification.needsTools),
+			stakes: classification.stakes === undefined ? undefined : round2(classification.stakes),
+		};
+		requestedTier = applyStakesOverride(classification.tier, classification.stakes, options.stakesOverride);
+		confidence = classification.confidence;
+		if (committed) {
 			decision = {
-				requestedTier: goldTier,
-				tier: goldTier,
-				confidence: 1,
+				requestedTier,
+				tier: requestedTier,
+				confidence,
 				model: session.model,
 				switched: false,
-				reason: committed ? `committed to ${committedKey} after ${exploreTurns} exploration turn(s)` : `pinned ${session.model ? modelKey(session.model) : "none"}`,
+				reason: `committed to ${committedKey} after ${exploreTurns} exploration turn(s); ${requestedTier} effort`,
 				candidates: [],
 			};
 		} else {
-			const classification = await classify({
-				mode: options.classifier,
-				turn: { ...turn, goldTier },
-				prompt: turn.prompt,
-				state,
-				jev: options.jev,
-				signal: options.signal,
-			});
-			classifierCostUsd = classification.costUsd;
-			classifierSource = classification.source;
-			// src/index.ts books every answered Jev call under a synthetic jev:<transport>
-			// provider, so the router's own overhead shows up in its own ledger. Mirror that.
-			if (classification.source === "jev") {
-				ledger.recordJev(options.classifier === "live" ? "typesafe" : "scripted", cfg.jev.model, CLASSIFIER_INPUT_TOKENS, 0, classification.costUsd);
-			}
-			classifierAnswer = {
-				tier: classification.tier,
-				confidence: round2(classification.confidence),
-				needsTools: classification.needsTools === undefined ? undefined : round2(classification.needsTools),
-				stakes: classification.stakes === undefined ? undefined : round2(classification.stakes),
-			};
-			requestedTier = applyStakesOverride(classification.tier, classification.stakes, options.stakesOverride);
-			confidence = classification.confidence;
-			decision = chooseModel({
+			decision = planTurn({
 				tier: requestedTier,
 				confidence,
 				current: session.model,
 				registry,
 				cfg,
 				ledger,
+				models: loaded.models,
 				contextTokens,
 			});
 			if (decision.model && decision.switched) session.model = decision.model;
@@ -245,10 +249,9 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 		const chosen = session.model;
 		const chosenKey = chosen ? modelKey(chosen) : "none";
 		const spec = byKey.get(chosenKey);
-		// src/index.ts returns from before_agent_start on a pinned turn, *before* it reaches
-		// pi.setThinkingLevel - so a pinned turn cannot change the thinking level, and must
-		// not be charged a cache flush for one.
-		const thinking = isPinned ? lastThinking : chosen?.reasoning ? cfg.thinking[decision.tier] : undefined;
+		// src/index.ts sets the thinking level from the effort tier on every turn, including
+		// one whose model the user chose. A change of level flushes the prompt cache.
+		const thinking = chosen?.reasoning ? cfg.thinking[decision.tier] : undefined;
 
 		// pi compacts before the agent runs when the context no longer fits the *chosen*
 		// model's window, so this can only be decided after the router has picked.
@@ -335,7 +338,7 @@ async function runTask(args: TaskRunArgs): Promise<{ turns: TurnRecord[]; stateC
 			model: chosenKey,
 			previousModel: previousKey,
 			switched: previousKey !== undefined && previousKey !== chosenKey,
-			pinned: isPinned,
+			pinned: false,
 			reason: decision.reason,
 			eligible: eligibility.eligible,
 			ineligibleReason: eligibility.reason,

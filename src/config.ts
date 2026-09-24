@@ -62,6 +62,13 @@ export interface RouterConfig {
 		maxCharsPerMessage: number;
 	};
 	tiers: Record<Tier, string[]>;
+	/**
+	 * Fallback order. Each entry is a series name (`fable`, `grok`, `opus`, `astra`), resolved
+	 * to the best model available in that series, or a concrete `provider/modelId`. The session
+	 * opens on the first entry whose window is not spent, and moves to the next only when the
+	 * current model's subscription window is spent. The tier lists do not choose the model.
+	 */
+	preference: string[];
 	thinking: Partial<Record<Tier, ThinkingLevel>>;
 	models: Record<string, ModelOverride>;
 	plan: {
@@ -99,7 +106,10 @@ export interface RouterConfig {
 		minConfidence: number;
 		/** Charge the context re-read when leaving a model with a warm cache. */
 		cacheSwitchPenalty: boolean;
-		/** Turns to respect a manual /model choice before routing again. */
+		/**
+		 * Accepted so older files still load. A `/model` choice now sticks for the session;
+		 * this count no longer expires it.
+		 */
 		manualPinTurns: number;
 		expectedOutputTokens: number;
 	};
@@ -137,6 +147,8 @@ export const DEFAULT_CONFIG: RouterConfig = {
 		heavy: ["claude-bridge/claude-fable-5-1", "anthropic/claude-opus-5", "claude-bridge/claude-opus-5", "openai-codex/gpt-6-astra"],
 	},
 	thinking: { light: "low", standard: "medium", heavy: "high" },
+	// Series names, not pinned versions: each resolves to the best model pi can use in that series.
+	preference: ["fable", "grok", "opus", "astra"],
 	models: {
 		// The OAuth-backed subscription routes. `anthropic/*` and `xai/*` carry no label: whether
 		// they are a plan or an API key is pi's own auth evidence to answer, not this file's - and
@@ -252,6 +264,7 @@ export const PROJECT_SETTABLE: Readonly<Record<string, ProjectRule>> = {
 	enabled: "off",
 	notifyOnSwitch: "set",
 	tiers: "set",
+	preference: "set",
 	thinking: "set",
 	"switching.minConfidence": "set",
 	"switching.cacheSwitchPenalty": "set",
@@ -275,6 +288,7 @@ export function mergeConfig(base: RouterConfig, rawPatch: Partial<RouterConfig>,
 		notifyOnSwitch: patch.notifyOnSwitch ?? base.notifyOnSwitch,
 		jev: { ...base.jev, ...(patch.jev ?? {}) },
 		tiers: patch.tiers ? { ...base.tiers, ...patch.tiers } : base.tiers,
+		preference: preferenceList(patch.preference, base.preference),
 		thinking: { ...base.thinking, ...(patch.thinking ?? {}) },
 		models: { ...base.models, ...(patch.models ?? {}) },
 		plan: { ...base.plan, ...(patch.plan ?? {}) },
@@ -328,9 +342,16 @@ export function credentialOf(cfg: RouterConfig, provider: string): string {
 	return cfg.entitlement[provider]?.authProvider ?? provider;
 }
 
-/** Every model key the router can actually route to, from the tiers and the fan-out list. */
+/** Every concrete model key the config names, from the tiers, the fan-out list, and preference. */
 export function routableModels(cfg: RouterConfig): string[] {
-	return [...new Set([...Object.values(cfg.tiers).flat(), ...cfg.parallel.models])];
+	const named = cfg.preference.filter((entry) => entry.includes("/"));
+	return [...new Set([...Object.values(cfg.tiers).flat(), ...cfg.parallel.models, ...named])];
+}
+
+/** A preference list replaces wholesale. A value that is not a list of strings keeps the base. */
+function preferenceList(patch: RouterConfig["preference"] | undefined, base: string[]): string[] {
+	if (!Array.isArray(patch)) return base;
+	return patch.filter((entry) => typeof entry === "string" && entry.trim() !== "");
 }
 
 /** True when any glob in `patterns` matches `modelKey`. */
