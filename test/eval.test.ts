@@ -1033,12 +1033,7 @@ test("exploring beats fanning out every turn when the judge is good, and is wors
 });
 
 test("a user-chosen model still takes the effort tier, so a thinking change can flush the cache", async () => {
-	// src/index.ts classifies every turn and calls pi.setThinkingLevel from that tier. Holding the
-	// model does not freeze the thinking level.
-	const src = readFileSync(join(ROOT, "src", "index.ts"), "utf8");
-	assert.equal(src.includes("pinnedUntilTurn"), false, "a /model choice is no longer a turn countdown");
-	assert.ok(src.includes("pi.setThinkingLevel"), "src/index.ts no longer applies the effort tier");
-
+	// Holding the model does not freeze the thinking level.
 	const outcome = await run();
 	const pinnedTask = pack().tasks.find((t) => t.turns.some((turn) => turn.manualPin))!;
 	const turns = outcome.turns.filter((t) => t.taskId === pinnedTask.id);

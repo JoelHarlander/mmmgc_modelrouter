@@ -9,9 +9,9 @@
  * (plan-quotas.md §3).
  */
 export interface MappedWindow {
-	/** Existing window id: `5h`, `7d`, `7d_oi`, `7d_opus`, `7d_sonnet`, `<model>:exhausted`, `weekly`, or a credential refusal id. */
+	/** Existing window id: `5h`, `7d`, `7d_oi`, `7d_opus`, `7d_sonnet`, `<model>:exhausted`, or `weekly`. */
 	id: string;
-	/** Epoch ms when the exclusion lifts. Absent only when the refusal named no instant. */
+	/** Epoch ms when the exclusion lifts. Absent when the refusal named no instant; the ledger then applies its cooldown. */
 	resetAt?: number;
 }
 
@@ -39,8 +39,6 @@ export function mapRefusalToWindows(refusal: unknown, now: number, headers: Reco
 	if (claude) return [claude];
 	const xai = xaiWindow(rec, now, headers);
 	if (xai) return [xai];
-	const gateway = gatewayWindow(rec, now, headers);
-	if (gateway) return [gateway];
 	return [];
 }
 
@@ -54,9 +52,7 @@ interface Rec {
 	error?: unknown;
 	model?: string;
 	text?: string;
-	type?: string;
 	message?: string;
-	metadata?: { limit_source?: string };
 }
 
 function coerce(refusal: unknown): Rec | undefined {
@@ -74,8 +70,8 @@ function coerce(refusal: unknown): Rec | undefined {
 	if (typeof refusal !== "object" || refusal === null || Array.isArray(refusal)) return undefined;
 	const root = refusal as Rec & { error?: unknown };
 	const nested = asRec(root.error);
-	// A transport envelope `{ error: { type, message, metadata } }` and a flat event both count.
-	if (nested && (nested.type || nested.metadata || nested.code || nested.message)) {
+	// A transport envelope `{ error: { code, message } }` and a flat event both count.
+	if (nested && (nested.code || nested.message)) {
 		return {
 			...root,
 			...nested,
@@ -116,16 +112,6 @@ function xaiWindow(rec: Rec, now: number, headers: Record<string, string>): Mapp
 	let resetAt = namedReset(rec, now, headers);
 	if (resetAt === undefined && /24-hour/.test(text)) resetAt = now + 24 * 60 * 60 * 1000;
 	return { id: model ? `${model}:exhausted` : "weekly", resetAt };
-}
-
-function gatewayWindow(rec: Rec, now: number, headers: Record<string, string>): MappedWindow | undefined {
-	const type = rec.type ?? "";
-	const source = rec.metadata?.limit_source ?? "";
-	let id: string | undefined;
-	if (type === "quota_for_entity_exceeded" || source === "openrouter_key_limit" || source === "openrouter_credits") id = "budget-exhausted";
-	else if (type === "rate_limit_exceeded" || source === "openrouter_in_flight_budget") id = "rate-limited";
-	if (!id) return undefined;
-	return { id, resetAt: namedReset(rec, now, headers) };
 }
 
 /** Explicit epoch wins; otherwise Retry-After, otherwise a clock time in the bridge sentence. */

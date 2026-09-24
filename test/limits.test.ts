@@ -240,22 +240,40 @@ test("an OpenRouter key with no remaining limit excludes that route", () => {
 	assert.notEqual(assess(gateway, l, now).eligibility, "excluded");
 });
 
-test("a Vercel budget exhaustion and a Vercel rate exhaustion each exclude that route", () => {
+test("a Vercel budget exhaustion excludes that route; a gateway error sentence is not a spent window", () => {
 	const now = Date.now();
 	const budget = ledger();
 	budget.applyEntitlement("vercel-ai-gateway", parseEntitlement("vercel-credits", { balance: 0 }), now);
 	assert.equal(assess(gateway, budget, now).eligibility, "excluded");
 	assert.notEqual(assess(router, budget, now).eligibility, "excluded");
 
+	// The 429/402 header path records gateway refusals; the message text alone records nothing.
 	const rate = ledger();
-	const resetsAt = Math.floor(now / 1000) + 60;
 	rate.observeResponse("vercel-ai-gateway", 0, NO_HEADERS, cfg, now, {
 		error: { message: "Rate limit exceeded", type: "rate_limit_exceeded" },
-		resetsAt,
+		resetsAt: Math.floor(now / 1000) + 60,
 	});
-	assert.equal(assess(gateway, rate, now).eligibility, "excluded");
+	rate.observeResponse("openrouter", 0, NO_HEADERS, cfg, now, {
+		error: { message: "Key limit exceeded", type: "quota_for_entity_exceeded", metadata: { limit_source: "openrouter_key_limit" } },
+	});
+	assert.deepEqual(rate.peekProvider("vercel-ai-gateway")?.windows ?? {}, {});
+	assert.deepEqual(rate.peekProvider("openrouter")?.windows ?? {}, {});
+	assert.notEqual(assess(gateway, rate, now).eligibility, "excluded");
 	assert.notEqual(assess(router, rate, now).eligibility, "excluded");
-	assert.notEqual(assess(gateway, rate, resetsAt * 1000 + 1).eligibility, "excluded");
+});
+
+test("a spent window whose refusal names no reset lifts after the 429 cooldown instead of never", () => {
+	const l = ledger();
+	const now = Date.now();
+	l.observeResponse("claude-bridge", 0, NO_HEADERS, cfg, now, "Claude rate limit (five_hour) — resets 3pm");
+	l.observeResponse("xai", 0, NO_HEADERS, cfg, now, "You've used your weekly usage pool for model grok-4.7.");
+	const lifts = now + cfg.plan.cooldownMinutesOn429 * 60_000;
+	assert.equal(l.peekProvider("claude-bridge")?.windows["5h"]?.resetAt, lifts);
+	assert.equal(l.peekProvider("xai")?.windows["grok-4.7:exhausted"]?.resetAt, lifts);
+	assert.equal(assess(opus, l, now).eligibility, "excluded");
+	assert.equal(assess(grok, l, now).eligibility, "excluded");
+	assert.notEqual(assess(opus, l, lifts).eligibility, "excluded");
+	assert.notEqual(assess(grok, l, lifts).eligibility, "excluded");
 });
 
 test("a usage poll HTTP 401 writes no window and leaves the limit unverified", () => {

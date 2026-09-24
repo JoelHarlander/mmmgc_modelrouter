@@ -376,7 +376,36 @@ test("Ctrl+P reorders the fallback list and the save hands that order back", () 
 	assert.match(p.screen(), /1\. grok/);
 	assert.match(p.screen(), /2\. fable/);
 	p.press(KEY.ctrlS);
-	assert.deepEqual(p.result()?.preference, ["grok", "fable", "opus", "astra"]);
+	assert.deepEqual((p.result() as PickerSave).preference, ["grok", "fable", "opus", "astra"]);
+});
+
+test("in the fallback view, tier keys do nothing: no hidden tier is edited and nothing is dirty", () => {
+	const p = picker(tiers([OPUS], [OPUS], [OPUS]));
+	p.press("\x10", KEY.enter, "\x1b[3~", "\x1b[Z", "\x1b[6~", KEY.backspace, "x");
+	assert.match(p.screen(), /1\. fable/);
+	p.press(KEY.ctrlS);
+	assert.equal(p.result(), "open", "nothing to save");
+	p.press(KEY.tab, KEY.esc);
+	assert.equal(p.result(), undefined, "closes without a discard prompt, so nothing was changed");
+});
+
+test("a save of tiers and preference together is one write whose backup is the file before the save", () => {
+	writeFileSync(GLOBAL, HAND_WRITTEN);
+	const res = writeGlobalTiers(GLOBAL, { heavy: ["x/y"] }, readGlobalTiers(GLOBAL).tiers, { items: ["grok", "fable"], expected: undefined });
+	assert.deepEqual(res.written, ["heavy"]);
+	assert.equal(res.preference, true);
+	const written = JSON.parse(readFileSync(GLOBAL, "utf8"));
+	assert.deepEqual(written.tiers.heavy, ["x/y"]);
+	assert.deepEqual(written.preference, ["grok", "fable"]);
+	assert.equal(readFileSync(res.backup!, "utf8"), HAND_WRITTEN);
+
+	// A preference changed on disk is a conflict for the whole save: the tiers are not written either.
+	const onDisk = readFileSync(GLOBAL, "utf8");
+	assert.throws(
+		() => writeGlobalTiers(GLOBAL, { light: ["p/q"] }, { light: written.tiers.light }, { items: ["opus"], expected: undefined }),
+		/changed "preference" on disk/,
+	);
+	assert.equal(readFileSync(GLOBAL, "utf8"), onDisk);
 });
 
 test("/router models writes the global tiers and nothing else: not the project file, not a global-only key", async () => {

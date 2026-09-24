@@ -260,8 +260,14 @@ export function versionCompare(a: string, b: string): number {
 	return 0;
 }
 
+/** Numeric components up to the first date-like one (4+ digits: `0709`, `20250514`), which is a snapshot, not a version. */
 function versionParts(id: string): number[] {
-	return [...id.matchAll(/\d+/g)].map((m) => Number(m[0]));
+	const parts: number[] = [];
+	for (const m of id.matchAll(/\d+/g)) {
+		if (m[0].length >= 4) break;
+		parts.push(Number(m[0]));
+	}
+	return parts;
 }
 
 function gate(model: Model<Api>, args: PreferenceArgs): { ok: true } | { ok: false; why: string } {

@@ -11,7 +11,7 @@ import { homedir } from "node:os";
 import type { ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import { type Component, decodeKittyPrintable, Key, matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { DEFAULT_CONFIG, modelKey, type RouterConfig, type Tier, TIERS } from "./config.ts";
-import { changedTiers, type PreferenceWriteResult, type TierLists, tierLayers, type WriteResult, writeGlobalPreference, writeGlobalTiers } from "./configfile.ts";
+import { changedTiers, type TierLists, tierLayers, type WriteResult, writeGlobalTiers } from "./configfile.ts";
 import { resolveEntry } from "./preference.ts";
 import type { Ledger } from "./ledger.ts";
 import {
@@ -171,6 +171,8 @@ export function createModelPicker(input: PickerInput, theme: Theme, requestRende
 			cursor = Math.max(0, cursor - 1);
 		} else if (preferenceMode && matchesKey(data, Key.down)) {
 			cursor = Math.min(preference.length - 1, cursor + 1);
+		} else if (preferenceMode) {
+			return;
 		} else if (matchesKey(data, Key.tab) || matchesKey(data, Key.right)) {
 			tierIdx = (tierIdx + 1) % TIERS.length;
 			cursor = 0;
@@ -463,11 +465,14 @@ export async function runModelsCommand(args: ModelsCommandArgs): Promise<void> {
 		return;
 	}
 	const changes: Partial<TierLists> = Object.fromEntries(tiers.map((t) => [t, result.tiers[t]]));
-	let written: WriteResult | undefined;
-	let preferenceWrite: PreferenceWriteResult | undefined;
+	let written: WriteResult;
 	try {
-		if (tiers.length > 0) written = writeGlobalTiers(path, changes, layers.file.tiers);
-		if (preferenceChanged) preferenceWrite = writeGlobalPreference(path, result.preference, layers.statedPreference);
+		written = writeGlobalTiers(
+			path,
+			changes,
+			layers.file.tiers,
+			preferenceChanged ? { items: result.preference, expected: layers.statedPreference } : undefined,
+		);
 	} catch (err) {
 		ctx.ui.notify(`router: nothing saved: ${err instanceof Error ? err.message : String(err)}`, "error");
 		return;
@@ -475,9 +480,7 @@ export async function runModelsCommand(args: ModelsCommandArgs): Promise<void> {
 
 	const now = await args.reload();
 	const saved = [...tiers, ...(preferenceChanged ? ["preference"] : [])];
-	const where = written?.path ?? preferenceWrite?.path ?? path;
-	const backup = written?.backup ?? preferenceWrite?.backup;
-	const lines = [`saved ${saved.join(", ")} to ${where}${backup ? ` (previous copy: ${backup})` : ""}`];
+	const lines = [`saved ${saved.join(", ")} to ${written.path}${written.backup ? ` (previous copy: ${written.backup})` : ""}`];
 	for (const t of tiers) {
 		lines.push(`${t}: ${result.tiers[t].join(", ") || "(empty)"}`);
 		lines.push(`  was: ${layers.global[t].join(", ") || "(empty)"}`);

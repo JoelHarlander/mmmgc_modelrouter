@@ -3,7 +3,7 @@
  *
  * The file stays the source of truth and stays the user's: a save replaces the text of the tier
  * arrays that actually changed and leaves every other byte where it was - keys, order, spacing,
- * the tiers nobody touched. Only `tiers` is writable here. Everything else, and above all every key
+ * the tiers nobody touched. Only `tiers` and `preference` are writable here. Everything else, and above all every key
  * the project-trust allowlist keeps global-only (`models`, `billing`, `entitlement`, ...), is edited
  * by hand or not at all, so this surface can never widen what a route may spend.
  *
@@ -58,15 +58,23 @@ export interface WriteResult {
 	/** Where the previous file was copied, when there was one. */
 	backup?: string;
 	written: Tier[];
+	/** True when the root `preference` list was rewritten too. */
+	preference: boolean;
 }
 
 /**
- * Replaces the named tier arrays in the global file, atomically, keeping a `.bak` of what was
- * there. `expected` is what the file stated for those tiers when the edit began: a tier that has
- * changed on disk since then is a conflict and nothing is written, because saving would silently
- * undo someone else's edit.
+ * Replaces the named tier arrays, and the root `preference` array when one is given, in the
+ * global file as one atomic write, keeping a `.bak` of what was there before the save. Each
+ * `expected` is what the file stated when the edit began (a `preference` of `undefined` when it
+ * did not state the key): anything that has changed on disk since then is a conflict and nothing
+ * is written, because saving would silently undo someone else's edit.
  */
-export function writeGlobalTiers(path: string, changes: Partial<TierLists>, expected: Partial<TierLists>): WriteResult {
+export function writeGlobalTiers(
+	path: string,
+	changes: Partial<TierLists>,
+	expected: Partial<TierLists>,
+	preference?: { items: string[]; expected: string[] | undefined },
+): WriteResult {
 	const target = existsSync(path) ? realpathSync(path) : path;
 	const current = readGlobalTiers(target);
 	if (current.error) throw new Error(`${path} is not valid JSON (${current.error}); fix it by hand before saving from /router models`);
@@ -76,48 +84,16 @@ export function writeGlobalTiers(path: string, changes: Partial<TierLists>, expe
 			throw new Error(`${path} changed tier "${tier}" on disk since the picker opened; reopen /router models and try again`);
 		}
 	}
-	if (tiers.length === 0) return { path, written: [] };
-
-	const before = current.exists ? readFileSync(target, "utf8") : "";
-	const after = editTiersText(before, changes);
-	mkdirSync(dirname(target), { recursive: true });
-	let backup: string | undefined;
-	if (current.exists) {
-		backup = `${target}.bak`;
-		copyFileSync(target, backup);
-	}
-	const tmp = `${target}.${process.pid}.tmp`;
-	try {
-		writeFileSync(tmp, after, { mode: current.exists ? statSync(target).mode & 0o777 : 0o644 });
-		renameSync(tmp, target);
-	} catch (err) {
-		if (existsSync(tmp)) unlinkSync(tmp);
-		throw err;
-	}
-	return { path, backup, written: tiers };
-}
-
-export interface PreferenceWriteResult {
-	path: string;
-	backup?: string;
-	written: boolean;
-}
-
-/**
- * Replaces the root `preference` array, atomically, keeping a `.bak`. `expected` is what the
- * file stated when the edit began (`undefined` when it did not state the key). A change on
- * disk since then is a conflict and nothing is written.
- */
-export function writeGlobalPreference(path: string, preference: string[], expected: string[] | undefined): PreferenceWriteResult {
-	const target = existsSync(path) ? realpathSync(path) : path;
-	const current = readGlobalPreference(target);
-	if (current.error) throw new Error(`${path} is not valid JSON (${current.error}); fix it by hand before saving from /router models`);
-	if (!sameList(current.preference, expected)) {
+	const statedPreference = readGlobalPreference(target).preference;
+	if (preference && !sameList(statedPreference, preference.expected)) {
 		throw new Error(`${path} changed "preference" on disk since the picker opened; reopen /router models and try again`);
 	}
-	if (sameList(current.preference, preference)) return { path, written: false };
+	const writePreference = preference !== undefined && !sameList(statedPreference, preference.items);
+	if (tiers.length === 0 && !writePreference) return { path, written: [], preference: false };
+
 	const before = current.exists ? readFileSync(target, "utf8") : "";
-	const after = editRootArray(before, "preference", preference);
+	const withTiers = editTiersText(before, changes);
+	const after = writePreference ? editRootArray(withTiers, "preference", preference.items) : withTiers;
 	mkdirSync(dirname(target), { recursive: true });
 	let backup: string | undefined;
 	if (current.exists) {
@@ -132,7 +108,7 @@ export function writeGlobalPreference(path: string, preference: string[], expect
 		if (existsSync(tmp)) unlinkSync(tmp);
 		throw err;
 	}
-	return { path, backup, written: true };
+	return { path, backup, written: tiers, preference: writePreference };
 }
 
 export interface GlobalPreferenceFile {

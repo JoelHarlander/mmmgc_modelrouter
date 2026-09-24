@@ -245,7 +245,7 @@ export class Ledger {
 			if (existing && existing.source === "header" && existing.lastSeen === now && w.resetAt === undefined) continue;
 			state.windows[w.id] = {
 				status: "rejected",
-				...(w.resetAt !== undefined ? { resetAt: w.resetAt } : {}),
+				resetAt: w.resetAt ?? now + cfg.plan.cooldownMinutesOn429 * 60_000,
 				source: "refusal",
 				lastSeen: now,
 			};

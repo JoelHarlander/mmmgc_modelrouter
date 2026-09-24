@@ -170,3 +170,73 @@ test("an older config with no preference list still loads, and a /model pin coun
 		else process.env.PI_CODING_AGENT_DIR = previous;
 	}
 });
+
+test("a dated snapshot never outranks a real minor version in the same series", () => {
+	assert.ok(versionCompare("claude-opus-4-1", "claude-opus-4-20250514") > 0);
+	assert.ok(versionCompare("grok-4.7", "grok-4-0709") > 0);
+	assert.ok(versionCompare("claude-opus-5-5", "claude-opus-5-20260101") > 0);
+	const dated = model("claude-bridge", "claude-opus-5-20260101");
+	assert.equal(resolveEntry("opus", args({ models: [dated, opus55] }))?.key, "claude-bridge/claude-opus-5-5");
+});
+
+test("a rate-limit or gateway-budget refusal does not switch the model", () => {
+	const l = ledger();
+	const now = Date.now();
+	l.observeResponse("claude-bridge", 0, {}, cfg, now, JSON.stringify({ error: { message: "Rate limit exceeded", type: "rate_limit_exceeded" } }));
+	l.observeResponse(
+		"claude-bridge",
+		0,
+		{},
+		cfg,
+		now,
+		JSON.stringify({ error: { message: "Key limit exceeded", type: "quota_for_entity_exceeded", metadata: { limit_source: "openrouter_key_limit" } } }),
+	);
+	const stayed = planTurn({ ...args({ ledger: l, now }), tier: "standard", confidence: 0.9, current: fable51 });
+	assert.equal(stayed.switched, false);
+	assert.equal(stayed.model, fable51);
+});
+
+/** Drives the extension's own session_start handler against a fake pi that records setModel. */
+async function startSession(reason: "startup" | "new" | "resume", current: Model<Api>) {
+	const dir = mkdtempSync(join(tmpdir(), "mr-start-"));
+	writeFileSync(join(dir, "modelrouter.json"), JSON.stringify({ billing: { probe: { enabled: false } } }));
+	const previous = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = dir;
+	try {
+		const { default: modelRouter } = await import("../src/index.ts");
+		const handlers = new Map<string, (event: unknown, ctx: unknown) => Promise<void>>();
+		const set: Model<Api>[] = [];
+		const pi = new Proxy(
+			{
+				on: (name: string, h: (event: unknown, ctx: unknown) => Promise<void>) => handlers.set(name, h),
+				setModel: async (m: Model<Api>) => (set.push(m), true),
+			},
+			{ get: (target, key) => (target as Record<string | symbol, unknown>)[key] ?? (() => {}) },
+		);
+		modelRouter(pi as never);
+		const reg = registry();
+		await handlers.get("session_start")!(
+			{ type: "session_start", reason },
+			{
+				cwd: mkdtempSync(join(tmpdir(), "mr-start-cwd-")),
+				hasUI: false,
+				model: current,
+				scopedModels: [],
+				modelRegistry: { ...reg, getApiKeyForProvider: async () => undefined },
+			},
+		);
+		return set.map((m) => `${m.provider}/${m.id}`);
+	} finally {
+		if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previous;
+	}
+}
+
+test("a new session opens on the highest preference even when pi started on another model; a resume keeps it", async () => {
+	// Pi does not tell an extension whether the model came from --model or from its saved default,
+	// so the preference list wins on startup and new; resuming keeps the session's own model.
+	assert.deepEqual(await startSession("startup", grok47), ["claude-bridge/claude-fable-5-1"]);
+	assert.deepEqual(await startSession("new", grok47), ["claude-bridge/claude-fable-5-1"]);
+	assert.deepEqual(await startSession("resume", grok47), []);
+	assert.deepEqual(await startSession("startup", fable51), []);
+});
