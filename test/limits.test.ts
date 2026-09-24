@@ -183,6 +183,23 @@ test("an xAI free-usage exhaustion names one model and leaves another xAI model 
 	assert.notEqual(assess(grokFree, l, resetsAt * 1000 + 1).eligibility, "excluded");
 });
 
+test("Pi's xAI free-usage error string excludes that model until the 24-hour reset", () => {
+	// generate() keeps the error string, so the live message is the OpenAI SDK form of the
+	// documented sentence and does not carry subscription:free-usage-exhausted or resetsAt.
+	const l = ledger();
+	const now = 1_790_214_000_000;
+	const piMessage =
+		'429 "You\'ve used all the included free usage for model grok-4.5-build-free for now. Usage resets over a rolling 24-hour window — tokens (actual/limit): 1065387/1000000."';
+	l.observeResponse("xai", 0, NO_HEADERS, cfg, now, piMessage);
+
+	const resetAt = l.peekProvider("xai")?.windows["grok-4.5-build-free:exhausted"]?.resetAt;
+	assert.equal(resetAt, now + 24 * 60 * 60 * 1000);
+	assert.equal(assess(grokFree, l, now).eligibility, "excluded");
+	assert.notEqual(assess(grok, l, now).eligibility, "excluded");
+	assert.equal(assess(grokFree, l, resetAt! - 1).eligibility, "excluded");
+	assert.equal(assess(grokFree, l, resetAt!).eligibility, "preferred");
+});
+
 test("an xAI weekly-pool refusal that names a model does not exclude the other xAI model", () => {
 	const l = ledger();
 	const now = Date.now();

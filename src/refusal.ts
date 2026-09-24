@@ -102,7 +102,12 @@ function claudeWindow(rec: Rec, now: number, headers: Record<string, string>): M
 function xaiWindow(rec: Rec, now: number, headers: Record<string, string>): MappedWindow | undefined {
 	const code = rec.code ?? "";
 	const text = `${typeof rec.error === "string" ? rec.error : ""} ${rec.text ?? ""} ${rec.message ?? ""}`;
-	const free = code === "subscription:free-usage-exhausted" || /free-usage-exhausted/.test(text);
+	// Pi keeps only the OpenAI SDK error string (`429 "You've used all the included free usage..."`),
+	// so the machine code is gone and the documented sentence is the evidence.
+	const free =
+		code === "subscription:free-usage-exhausted" ||
+		/free-usage-exhausted/.test(text) ||
+		/included free usage for model /i.test(text);
 	const weekly = /weekly/i.test(code) || /weekly usage pool|weekly pool/i.test(text);
 	if (!free && !weekly) return undefined;
 	const model = rec.model ?? XAI_MODEL.exec(text)?.[1];
