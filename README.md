@@ -210,6 +210,8 @@ never the whole credential. Codex names the meter by an opaque limit id on the w
 the model in the usage poll, so the header path keys the window by the `x-codex-<id>-limit-name` it comes with;
 both evidence paths then name the same meter, and a later poll refreshes what a header recorded.
 
+A mapped refusal that names no reset time is given `plan.cooldownMinutesOn429` (30 minutes by default). The next
+successful response from a model that window governs lifts it sooner. A named reset is left alone until that instant.
 A scoped window speaks only for its own models: a Fable-only or overage rejection excludes the models that window
 governs and nothing else, whether it arrives on a 200 or on a 429 with `retry-after`. Only the windows *that*
 response reported spent can answer whose refusal it is; a window stored hours ago cannot. A refusal the response

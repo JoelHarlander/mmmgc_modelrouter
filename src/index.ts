@@ -209,7 +209,7 @@ export default function modelRouter(pi: ExtensionAPI) {
 
 	pi.on("after_provider_response", async (event, ctx) => {
 		if (!ctx.model) return;
-		ledger.observeResponse(ctx.model.provider, event.status, event.headers ?? {}, cfg);
+		ledger.observeResponse(ctx.model.provider, event.status, event.headers ?? {}, cfg, Date.now(), undefined, ctx.model.id);
 	});
 
 	pi.on("session_shutdown", async () => {

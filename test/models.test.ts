@@ -376,7 +376,9 @@ test("Ctrl+P reorders the fallback list and the save hands that order back", () 
 	assert.match(p.screen(), /1\. grok/);
 	assert.match(p.screen(), /2\. fable/);
 	p.press(KEY.ctrlS);
-	assert.deepEqual((p.result() as PickerSave).preference, ["grok", "fable", "opus", "astra"]);
+	const saved = p.result() as PickerSave;
+	assert.deepEqual(saved.preference, ["grok", "fable", "opus", "astra"]);
+	assert.deepEqual(saved.tiers, tiers([OPUS], [OPUS], [OPUS]), "reordering preference does not edit tiers");
 });
 
 test("in the fallback view, tier keys do nothing: no hidden tier is edited and nothing is dirty", () => {

@@ -276,6 +276,23 @@ test("a spent window whose refusal names no reset lifts after the 429 cooldown i
 	assert.notEqual(assess(grok, l, lifts).eligibility, "excluded");
 });
 
+test("a cooldown-stamped refusal lifts on the next success from the model it governs, and not from another", () => {
+	const l = ledger();
+	const now = Date.now();
+	l.observeResponse("xai", 0, NO_HEADERS, cfg, now, "You've used your weekly usage pool for model grok-4.7.");
+	assert.equal(assess(grok, l, now).eligibility, "excluded");
+	l.observeResponse("xai", 200, {}, cfg, now + 1_000, undefined, "grok-4.5-build-free");
+	assert.equal(assess(grok, l, now + 1_000).eligibility, "excluded", "another model's success does not clear it");
+	l.observeResponse("xai", 200, {}, cfg, now + 2_000, undefined, "grok-4.7");
+	assert.notEqual(assess(grok, l, now + 2_000).eligibility, "excluded");
+
+	const named = ledger();
+	const resetsAt = Math.floor(now / 1000) + 3600;
+	named.observeResponse("claude-bridge", 0, NO_HEADERS, cfg, now, { rateLimitType: "seven_day_overage_included", resetsAt });
+	named.observeResponse("claude-bridge", 200, {}, cfg, now + 1_000, undefined, "claude-fable-5-1");
+	assert.equal(assess(fable, named, now + 1_000).eligibility, "excluded", "a named reset is not cleared by a later success");
+});
+
 test("a usage poll HTTP 401 writes no window and leaves the limit unverified", () => {
 	const now = Date.now();
 	const bare = ledger();

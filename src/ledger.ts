@@ -186,6 +186,8 @@ export class Ledger {
 		cfg: RouterConfig,
 		now = Date.now(),
 		refusal?: unknown,
+		/** Model id of a successful answer, so a cooldown-stamped refusal can lift for that model. */
+		modelId?: string,
 	): void {
 		const mapped = mapRefusalToWindows(refusal, now, headers);
 		const quotaStatus = status === 429 || status === 402 || (status >= 200 && status < 300);
@@ -237,6 +239,10 @@ export class Ledger {
 			for (const id of Object.keys(REFUSAL_WINDOWS)) {
 				state.windows[id] = { status: "rejected", resetAt: now, source: "header", lastSeen: now };
 			}
+			// A mapped refusal that named no reset was stamped with plan.cooldownMinutesOn429.
+			// The next success from a model that window governs lifts it sooner than that stamp.
+			// A refusal that carried its own reset stays until that instant.
+			if (modelId) clearCooldownRefusals(state, cfg, scoped, `${provider}/${modelId}`, now);
 		}
 		for (const w of mapped) {
 			const existing = state.windows[w.id];
@@ -245,6 +251,8 @@ export class Ledger {
 			if (existing && existing.source === "header" && existing.lastSeen === now && w.resetAt === undefined) continue;
 			state.windows[w.id] = {
 				status: "rejected",
+				// No named reset: the exclusion lasts plan.cooldownMinutesOn429, or until this
+				// model's next success, whichever comes first. See clearCooldownRefusals.
 				resetAt: w.resetAt ?? now + cfg.plan.cooldownMinutesOn429 * 60_000,
 				source: "refusal",
 				lastSeen: now,
@@ -455,6 +463,24 @@ export function scopeGlobs(cfg: RouterConfig, provider: string, windowId: string
  */
 export function meteredModel(limitName: string): string {
 	return limitName.trim().toLowerCase();
+}
+
+/**
+ * Lift cooldown-stamped refusals that govern `modelKey`. A mapped refusal with no named reset is
+ * stored with `resetAt = lastSeen + plan.cooldownMinutesOn429`; that equality is what marks the
+ * stamp. The next success from a model the window governs expires it. A refusal that carried its
+ * own reset does not match and stays until that reset.
+ */
+function clearCooldownRefusals(state: ProviderState, cfg: RouterConfig, account: string, modelKey: string, now: number): void {
+	const cooldownMs = cfg.plan.cooldownMinutesOn429 * 60_000;
+	for (const [id, w] of Object.entries(state.windows)) {
+		if (w.source !== "refusal" || w.resetAt === undefined || w.resetAt !== w.lastSeen + cooldownMs) continue;
+		if (REFUSAL_WINDOWS[id] !== undefined) continue;
+		const scope = scopeGlobs(cfg, account, id);
+		const governs = scope === undefined || anyGlobMatch(scope.globs, modelKey);
+		if (!governs) continue;
+		state.windows[id] = { status: "rejected", resetAt: now, source: "refusal", lastSeen: now };
+	}
 }
 
 /** Human reason when a window is spent, or undefined when it still has room. */
