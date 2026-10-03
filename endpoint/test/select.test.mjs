@@ -57,6 +57,14 @@ test("a gate is soft: when everything is gated the least-used subscription still
   assert.equal(pick.via, "soft");
 });
 
+test("the soft pass takes the least-used candidate across series, not just within the first series", () => {
+  const gates = [{ series: "opus", at: 0.5 }, { series: "sonnet", at: 0.5 }];
+  const state = stateOf([claude("a", ["opus"], { "7d_opus": win(0.9) }), claude("b", ["sonnet"], { "7d_sonnet": win(0.6) })], { gates });
+  const pick = pickAccount(state, { now: NOW });
+  assert.equal(pick.account.id, "b", "sonnet at 60% beats opus at 80% even though opus is first in preference");
+  assert.equal(pick.via, "soft");
+});
+
 test("the backup serves only when no subscription account can", () => {
   const backup = { id: "or", kind: "pi-auth", enabled: true, backup: true, series: ["backup"], provider: "openrouter" };
   const a = claude("a", ["opus"]);

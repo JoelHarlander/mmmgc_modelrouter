@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { dirname } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { cliArgs, runClaude, transcript, windowsOf } from "../src/claude-cli.mjs";
+import { cliArgs, MAX_ARG_SYSTEM_BYTES, runClaude, transcript, windowsOf } from "../src/claude-cli.mjs";
 
 const FAKE = join(dirname(fileURLToPath(import.meta.url)), "fake-claude.mjs");
 const account = (extra = {}) => ({ id: "a", kind: "claude-code", cli: FAKE, configDir: "/accounts/a", ...extra });
@@ -112,4 +112,52 @@ test("windowsOf maps the CLI's names and clamps", () => {
   assert.deepEqual(w, { "5h": { u: 1, reset: 10_000 }, "7d_opus": { u: 0.5, reset: undefined } });
   assert.deepEqual(windowsOf(undefined), {});
   assert.ok(cliArgs({ model: "m", system: "" }).includes("You are a helpful assistant."));
+});
+
+test("a system prompt too big for one argument rides stdin instead, so the CLI is not killed by E2BIG", async () => {
+  const log = join(mkdtempSync(join(tmpdir(), "router-log-")), "calls.jsonl");
+  process.env.FAKE_CLAUDE_LOG = log;
+  const big = "rule ".repeat(MAX_ARG_SYSTEM_BYTES / 5 + 100);
+  try {
+    const out = await runClaude(account(), { model: "sonnet", body: { system: big, messages: [{ role: "user", content: "hi" }] }, protocol: "anthropic" });
+    assert.equal(out.ok, true);
+    assert.match((await collect(out.events)).text, /^reply:sonnet:\[instructions\]$/, "the fake echoes the first stdin line");
+  } finally {
+    delete process.env.FAKE_CLAUDE_LOG;
+  }
+  const call = JSON.parse(readFileSync(log, "utf8").trim());
+  assert.ok(call.stdin.includes(big) && call.stdin.endsWith("hi"));
+  const at = call.argv.indexOf("--system-prompt");
+  assert.ok(call.argv[at + 1].length < 100, "the argument is the short default, not the huge prompt");
+  assert.equal(transcript([{ role: "user", content: "q" }], "be terse"), "[instructions]\nbe terse\n[end of instructions]\n\nq");
+});
+
+test("the process cap is per account: a busy account queues its own turns without blocking another", async () => {
+  process.env.ROUTER_CLAUDE_CONCURRENCY = "1";
+  // The cap is read at import; load a fresh copy of the module so it sees 1.
+  const fresh = await import(`../src/claude-cli.mjs?cap=${Date.now()}`);
+  delete process.env.ROUTER_CLAUDE_CONCURRENCY;
+  const a = account({ id: "a", configDir: "/accounts/cap-a" });
+  const b = account({ id: "b", configDir: "/accounts/cap-b" });
+  const abort = new AbortController();
+  const holding = fresh.runClaude(a, { model: "hang", body: body("x"), protocol: "openai", signal: abort.signal });
+  try {
+    await new Promise((r) => setTimeout(r, 100));
+    const queued = fresh.runClaude(a, { model: "opus", body: body("second"), protocol: "openai" });
+    const other = await Promise.race([fresh.runClaude(b, { model: "opus", body: body("other"), protocol: "openai" }), new Promise((r) => setTimeout(() => r("blocked"), 3000))]);
+    assert.notEqual(other, "blocked", "account b is not held up by account a");
+    assert.equal(other.ok, true);
+    await collect(other.events);
+    const state = await Promise.race([queued.then(() => "ran"), new Promise((r) => setTimeout(() => r("waiting"), 400))]);
+    assert.equal(state, "waiting", "a second turn on account a waits for its slot");
+    abort.abort();
+    await holding;
+    const second = await queued;
+    assert.equal(second.ok, true, "and runs once the slot frees");
+    await collect(second.events);
+  } finally {
+    // Whatever failed above, the process that was deliberately left hanging must not outlive the test.
+    abort.abort();
+    await holding.catch(() => undefined);
+  }
 });

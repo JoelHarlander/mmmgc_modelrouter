@@ -95,13 +95,20 @@ export function pickAccount(state, { tier, now = Date.now(), exclude = new Set()
     const pick = resolveGated(state, series, now, opts, new Set());
     if (pick) return pick;
   }
+  // Everything usable is past its gate. Gates only demote, so take the least-used candidate across every series
+  // (preference order breaks a tie) before paying for the backup.
+  let least;
+  let leastUsed = Number.POSITIVE_INFINITY;
   for (const series of order) {
-    const all = subscriptionAccounts(state, series, now, opts);
-    if (all.length === 0) continue;
-    // Least-used first: the soft pass exists because every candidate is past its gate.
-    const least = [...all].sort((a, b) => (utilization(a, series, now) ?? 0) - (utilization(b, series, now) ?? 0))[0];
-    return { account: least, series, via: "soft" };
+    for (const account of subscriptionAccounts(state, series, now, opts)) {
+      const used = utilization(account, series, now) ?? 0;
+      if (used < leastUsed) {
+        least = { account, series, via: "soft" };
+        leastUsed = used;
+      }
+    }
   }
+  if (least) return least;
   const backups = (state.accounts ?? []).filter((a) => a.backup && accountUsable(a, now, { ...opts, series: "backup" }));
   if (backups.length > 0) return { account: takeTurn(state, "backup", backups), series: "backup", via: "backup" };
   return undefined;

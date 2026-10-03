@@ -22,14 +22,22 @@ const WINDOW_IDS = {
   seven_day_overage_included: "7d_oi",
 };
 
-/** A conversation as one prompt: the CLI takes a single user turn, so earlier turns ride along as a transcript. */
-export function transcript(messages) {
+/**
+ * A conversation as one prompt: the CLI takes a single user turn, so earlier turns ride along as a transcript.
+ * A system prompt too large for one argument (Linux caps one at 128 KB, and a long AGENTS.md can pass that) is
+ * passed here instead, ahead of the conversation.
+ */
+export function transcript(messages, inlineSystem = "") {
   const turns = (messages ?? []).filter((m) => m.role !== "system");
   const last = turns.at(-1);
-  if (turns.length <= 1) return contentText(last?.content);
+  const head = inlineSystem ? `[instructions]\n${inlineSystem}\n[end of instructions]\n\n` : "";
+  if (turns.length <= 1) return `${head}${contentText(last?.content)}`;
   const body = turns.map((m) => `[${m.role === "assistant" ? "assistant" : "user"}]\n${contentText(m.content)}`).join("\n\n");
-  return `${body}\n\n[end of conversation]\nReply as the assistant to the last user message.`;
+  return `${head}${body}\n\n[end of conversation]\nReply as the assistant to the last user message.`;
 }
+
+/** The longest system prompt passed as an argument; Linux allows 131072 bytes per argument. */
+export const MAX_ARG_SYSTEM_BYTES = 100_000;
 
 export function systemText(body, protocol) {
   if (protocol === "anthropic") return contentText(body.system);
@@ -86,7 +94,15 @@ class Semaphore {
   }
 }
 
-const gate = new Semaphore(Number(process.env.ROUTER_CLAUDE_CONCURRENCY || 3));
+/** CLI processes running per account (one login's config dir). Each is a Node process, so this protects the machine. */
+const SLOTS = Number(process.env.ROUTER_CLAUDE_CONCURRENCY || 3);
+const semaphores = new Map();
+function slotsFor(account) {
+  const key = account.configDir || account.id;
+  let slots = semaphores.get(key);
+  if (!slots) semaphores.set(key, (slots = new Semaphore(SLOTS)));
+  return slots;
+}
 
 /**
  * Run one request. Resolves once the outcome is known up to the first text, so a refusal (which
@@ -99,9 +115,12 @@ const gate = new Semaphore(Number(process.env.ROUTER_CLAUDE_CONCURRENCY || 3));
  * @returns {Promise<import("./types.js").Failure | { ok: true, events: AsyncIterable<import("./types.js").StreamEvent> }>}
  */
 export async function runClaude(account, { model, body, protocol, signal, onWindows, spawnImpl = spawn }) {
-  await gate.acquire();
+  const slots = slotsFor(account);
+  await slots.acquire();
+  const system = systemText(body, protocol);
+  const oversized = Buffer.byteLength(system) > MAX_ARG_SYSTEM_BYTES;
   const cwd = mkdtempSync(join(tmpdir(), "router-claude-"));
-  const child = spawnImpl(account.cli || process.env.CLAUDE_BIN || "claude", cliArgs({ model, system: systemText(body, protocol) }), {
+  const child = spawnImpl(account.cli || process.env.CLAUDE_BIN || "claude", cliArgs({ model, system: oversized ? "" : system }), {
     cwd,
     env: { ...process.env, ...(account.configDir ? { CLAUDE_CONFIG_DIR: account.configDir } : {}) },
     stdio: ["pipe", "pipe", "pipe"],
@@ -125,7 +144,7 @@ export async function runClaude(account, { model, body, protocol, signal, onWind
     clearTimeout(timer);
     signal?.removeEventListener("abort", kill);
     kill();
-    gate.release();
+    slots.release();
     rmSync(cwd, { recursive: true, force: true });
   };
   signal?.addEventListener("abort", kill, { once: true });
@@ -133,7 +152,7 @@ export async function runClaude(account, { model, body, protocol, signal, onWind
   let stderr = "";
   child.stderr.on("data", (d) => (stderr = (stderr + d).slice(-2000)));
   child.stdin.on("error", () => {});
-  child.stdin.end(transcript(body.messages));
+  child.stdin.end(transcript(body.messages, oversized ? system : ""));
 
   // An explicit iterator: `for await ... break` would close the generator, and the rest is read later.
   const lines = readLines(child.stdout)[Symbol.asyncIterator]();

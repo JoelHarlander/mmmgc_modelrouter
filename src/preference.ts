@@ -106,10 +106,8 @@ export function sessionModel(args: PreferenceArgs): SessionPick | undefined {
 		const pick = resolveThroughGates(entry, args);
 		if (pick) return { ...pick, reason: `session starts on ${pick.key} (${entry}, highest preference with quota left)` };
 	}
-	for (const entry of args.cfg.preference) {
-		const pick = resolveEntry(entry, args);
-		if (pick) return { ...pick, reason: `session starts on ${pick.key} (${entry}; every open entry is past its usage gate, so the least-gated one is used)` };
-	}
+	const gated = leastGated(args.cfg.preference, args);
+	if (gated) return { ...gated, reason: `session starts on ${gated.key} (${gated.entry}; every open entry is past its usage gate, so the least-used one is taken)` };
 	const backup = resolveBackup(args);
 	if (backup) return { ...backup, reason: `session starts on ${backup.key} (backup: no preference entry is usable)` };
 	return undefined;
@@ -177,11 +175,21 @@ function reroute(current: Model<Api>, args: PreferenceArgs): { next: Resolved; w
 	const trip = gateTrip(current, args);
 	if (!trip) return undefined;
 	const order = trip.gate.then ? [trip.gate.then, ...rotated(current, args)] : rotated(current, args);
+	const why = `${trip.gate.series} gate: ${percent(trip.used)} used >= ${percent(trip.gate.at)}`;
 	for (const entry of order) {
 		const pick = resolveThroughGates(entry, args);
-		if (pick && pick.key !== currentKey) return { next: pick, why: `${trip.gate.series} gate: ${percent(trip.used)} used >= ${percent(trip.gate.at)}` };
+		if (pick && pick.key !== currentKey) return { next: pick, why };
 	}
+	// Everything else is past its gate too. Gates only demote, so move to the least-used one, but only on a
+	// strict improvement: that is what keeps two gated models from trading the session back and forth.
+	const alt = leastGated(order, args, currentKey);
+	if (alt && usedOf(alt.model, args) < trip.used) return { next: alt, why: `${why}; ${alt.key} has used less (${percent(usedOf(alt.model, args))})` };
 	return undefined;
+}
+
+/** Highest live quota utilization governing `model`, 0..1; none known reads as 0. */
+function usedOf(model: Model<Api>, args: PreferenceArgs): number {
+	return args.ledger.assess(model.provider, modelKey(model), args.cfg, args.now ?? Date.now()).modelUtilization ?? 0;
 }
 
 /** First usable entry in `entries`, preferring open gates, never `exclude`. */
@@ -190,11 +198,23 @@ function firstUsable(entries: readonly string[], args: PreferenceArgs, exclude?:
 		const pick = resolveThroughGates(entry, args);
 		if (pick && pick.key !== exclude) return pick;
 	}
+	return leastGated(entries, args, exclude);
+}
+
+/** Of the usable entries, the one that has used the least of its quota; preference order breaks a tie. */
+function leastGated(entries: readonly string[], args: PreferenceArgs, exclude?: string): Resolved | undefined {
+	let best: Resolved | undefined;
+	let bestUsed = Number.POSITIVE_INFINITY;
 	for (const entry of entries) {
 		const pick = resolveEntry(entry, args);
-		if (pick && pick.key !== exclude) return pick;
+		if (!pick || pick.key === exclude) continue;
+		const used = usedOf(pick.model, args);
+		if (used < bestUsed) {
+			best = pick;
+			bestUsed = used;
+		}
 	}
-	return undefined;
+	return best;
 }
 
 /** The preference list starting at the entry that covers `current`, wrapping once. */

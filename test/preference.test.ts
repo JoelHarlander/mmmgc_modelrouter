@@ -305,6 +305,32 @@ test("a gate is soft: when nothing past it is usable, the gated subscription sti
 	assert.equal(stay.switched, false, "no alternative, so the gated model is kept rather than paying");
 });
 
+test("when everything is past its gate, the least-used entry is taken, not merely the first", () => {
+	const l = ledger();
+	const now = Date.now();
+	opusUsed(l, 0.8, now);
+	l.observeResponse(
+		"claude-bridge",
+		200,
+		{ "anthropic-ratelimit-unified-7d_sonnet-utilization": "0.6", "anthropic-ratelimit-unified-7d_sonnet-reset": String(Math.floor(now / 1000) + 3600) },
+		cfg,
+		now,
+		undefined,
+		"claude-sonnet-5-5",
+	);
+	const both = mergeConfig(GATED, { preference: ["opus", "sonnet"], gates: [{ series: "opus", at: 0.5 }, { series: "sonnet", at: 0.5 }] });
+	const session = sessionModel(gatedArgs({ ledger: l, now, cfg: both }));
+	assert.equal(session?.key, "claude-bridge/claude-sonnet-5-5", "sonnet is at 60%, opus at 80%");
+	assert.match(session!.reason, /least-used/);
+	const turn = planTurn({ ...gatedArgs({ ledger: l, now, cfg: both }), tier: "heavy", confidence: 0.9, current: opus55 });
+	assert.equal(turn.model, sonnet55, "a gated current model moves to the least-used alternative");
+	assert.match(turn.reason, /sonnet.* has used less \(60%\)/);
+
+	// Strict improvement only: on sonnet (60%) with opus at 80%, nothing is better, so it stays rather than trading back.
+	const stay = planTurn({ ...gatedArgs({ ledger: l, now, cfg: both }), tier: "heavy", confidence: 0.9, current: sonnet55 });
+	assert.equal(stay.switched, false);
+});
+
 test("astra gates to another series the same way, and a gate may name one concrete model", () => {
 	const l = ledger();
 	const now = Date.now();
