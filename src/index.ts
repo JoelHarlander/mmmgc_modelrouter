@@ -21,7 +21,7 @@ import { Ledger, ledgerPath } from "./ledger.ts";
 import { factsCache, offeredModels, reportLines, reportTiers } from "./models.ts";
 import { PARALLEL_ENTRY_TYPE, type ParallelEntryData, renderParallelEntry, runParallel } from "./parallel.ts";
 import { runModelsCommand } from "./picker.ts";
-import { planTurn, sessionModel } from "./preference.ts";
+import { gateReadings, planTurn, sessionModel } from "./preference.ts";
 import { checkRemote, readReleaseInfo, releaseLine, type ReleaseInfo, updateLines } from "./release.ts";
 import { type Decision, heuristicTier } from "./router.ts";
 import { buildRoutingState, routingQuestions, STAKES_QUESTION_KEY, TIER_QUESTION_KEY, TOOLS_QUESTION_KEY } from "./state.ts";
@@ -343,7 +343,15 @@ export default function modelRouter(pi: ExtensionAPI) {
 		lines.push(`enabled: ${enabled}   classifier: ${jev.describe()}   model: ${ctx.model ? "sticks until its subscription window is spent" : "none"}`);
 		lines.push(`preference: ${cfg.preference.join(" > ") || "(none)"}`);
 		if (cfg.gates.length > 0) {
-			lines.push(`gates: ${cfg.gates.map((g) => `${g.series} at ${Math.round(g.at * 100)}% > ${g.then ?? "next entry"}`).join(", ")}`);
+			const readings = gateReadings({ cfg, registry: ctx.modelRegistry, ledger, models: catalog(ctx) });
+			lines.push(
+				`gates: ${readings
+					.map(({ gate, model, used, tripped }) => {
+						const reading = used === undefined ? (model ? "no reading yet, so it cannot trip" : "no model") : `${Math.round(used * 100)}% used${tripped ? ", tripped" : ""}`;
+						return `${gate.series} at ${Math.round(gate.at * 100)}% > ${gate.then ?? "next entry"} (${reading})`;
+					})
+					.join("; ")}`,
+			);
 		}
 		if (cfg.backup) lines.push(`backup (pay-per-token, last resort): ${cfg.backup}`);
 		if (sessionNote) lines.push(sessionNote);

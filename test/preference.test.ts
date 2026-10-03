@@ -12,7 +12,7 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, loadConfig, mergeConfig, type RouterConfig } from "../src/config.ts";
 import { Ledger } from "../src/ledger.ts";
-import { planTurn, resolveBackup, resolveEntry, sessionModel, versionCompare } from "../src/preference.ts";
+import { gateReadings, planTurn, resolveBackup, resolveEntry, sessionModel, versionCompare } from "../src/preference.ts";
 
 function model(provider: string, id: string, cost: Partial<Model<Api>["cost"]> = {}): Model<Api> {
 	return {
@@ -419,4 +419,22 @@ test("the backup follows the config: any provider, a concrete model, or none", (
 	// A backup the billing gate excludes is never used.
 	const blocked = mergeConfig(GATED, { ...base, backup: "openrouter/z-ai/glm-*", billing: { ...GATED.billing, allowPayPerToken: [] } });
 	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: blocked })), undefined);
+});
+
+test("gateReadings says what each gate sees, and flags a gate that has no evidence and so can never trip", () => {
+	const l = ledger();
+	const now = Date.now();
+	const both = mergeConfig(GATED, { gates: [{ series: "opus", at: 0.5, then: "sonnet" }, { series: "astra", at: 0.5 }, { series: "nothing-like-this", at: 0.5 }] });
+
+	let [opus, astraGate, ghost] = gateReadings(gatedArgs({ ledger: l, now, cfg: both }));
+	assert.equal(opus!.used, undefined, "nothing has reported yet");
+	assert.equal(opus!.tripped, false);
+	assert.equal(opus!.model?.id, "claude-opus-5-5");
+	assert.equal(ghost!.model, undefined, "a series that resolves to no model is named as such");
+
+	opusUsed(l, 0.55, now);
+	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "20", "x-codex-primary-reset-after-seconds": "3600" }, cfg, now, undefined, "gpt-6-astra");
+	[opus, astraGate] = gateReadings(gatedArgs({ ledger: l, now, cfg: both }));
+	assert.deepEqual([opus!.used, opus!.tripped], [0.55, true]);
+	assert.deepEqual([astraGate!.used, astraGate!.tripped], [0.2, false]);
 });

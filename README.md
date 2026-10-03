@@ -219,7 +219,15 @@ and `:`), so `"glm"` is `z-ai/glm-5.3` and `"sol"` is `gpt-6.1-sol` but never `u
 `:batch`, `:free` and similar variants, which are used only when nothing else matches.
 
 - **Evidence only.** The percentage comes from live quota windows (response headers and the read-only usage polls). A
-  window with no reading, or one past its reset, never trips a gate.
+  window with no reading, or one past its reset, never trips a gate. `/router` shows each gate's reading, or says it has
+  none yet, so an inert gate is visible rather than silent.
+- **Where the evidence comes from.** Codex (`openai-codex`, so `astra` and `sol`) reports utilization in its response
+  headers, so those gates work as soon as the account has answered. **Claude through `claude-bridge` does not**:
+  the bridge reads the CLI's utilization only to show you a warning, and does not hand it to other extensions. The router
+  therefore polls Anthropic's read-only usage endpoint with pi's `anthropic` login for the same account
+  (`entitlement.claude-bridge.authProvider`). Without an `anthropic` login in pi (`/login`), `/router billing` shows
+  `no anthropic credential to query entitlement with` and a gate on `opus` or `fable` never trips. The [endpoint](endpoint/README.md)
+  has no such gap: it runs the CLI itself and reads the utilization the CLI reports.
 - **Soft.** A tripped gate demotes; it never locks out. When every usable entry is past its gate, the least-gated one is
   still used before anything is paid for.
 - **One model only.** Put a concrete `provider/modelId` in `preference` (or as a gate's `then`) and that is exactly the

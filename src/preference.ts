@@ -124,6 +124,24 @@ export function gateTrip(model: Model<Api>, args: PreferenceArgs): { gate: Gate;
 	return used !== undefined && used >= gate.at ? { gate, used } : undefined;
 }
 
+export interface GateReading {
+	gate: Gate;
+	/** The model the gate's series resolves to right now, if any. */
+	model?: Model<Api>;
+	/** Its highest live window utilization, or undefined when nothing has reported one (the gate is inert). */
+	used?: number;
+	tripped: boolean;
+}
+
+/** What each gate sees right now, for `/router`: a gate with no reading never trips, and should say so. */
+export function gateReadings(args: PreferenceArgs): GateReading[] {
+	return args.cfg.gates.map((gate) => {
+		const pick = resolveEntry(gate.series, args);
+		const used = pick ? args.ledger.assess(pick.model.provider, pick.key, args.cfg, args.now ?? Date.now()).modelUtilization : undefined;
+		return { gate, model: pick?.model, used, tripped: used !== undefined && used >= gate.at };
+	});
+}
+
 function percent(n: number): string {
 	return `${Math.round(n * 100)}%`;
 }
