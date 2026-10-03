@@ -45,7 +45,8 @@ const sol = model("openai-codex", "gpt-6-sol");
 const glm52 = model("openrouter", "z-ai/glm-5.2", { input: 0.5, output: 1.8 });
 const glm53 = model("openrouter", "z-ai/glm-5.3", { input: 0.6, output: 2 });
 const glm53flash = model("openrouter", "z-ai/glm-5.3-flash", { input: 0.1, output: 0.4 });
-const CATALOG = [fable5, fable51, fableApi, grok46, grok47, opus5, opus55, sonnet5, sonnet55, astra, sol, glm52, glm53, glm53flash, fauxA, fauxB];
+const glm54batch = model("openrouter", "z-ai/glm-5.4:batch", { input: 0.3, output: 1 });
+const CATALOG = [fable5, fable51, fableApi, grok46, grok47, opus5, opus55, sonnet5, sonnet55, astra, sol, glm52, glm53, glm53flash, glm54batch, fauxA, fauxB];
 
 function registry(unauthed: string[] = []): ModelRegistry {
 	return {
@@ -342,7 +343,9 @@ test("gates loop-protect and malformed gates are dropped", () => {
 test("the backup is the newest matching pay-per-token model, used only when no preference entry is", () => {
 	const backupCfg = mergeConfig(GATED, { preference: ["opus"], gates: [], backup: "openrouter/z-ai/glm-*" });
 	assert.equal(sessionModel(gatedArgs({ cfg: backupCfg }))?.key, "claude-bridge/claude-opus-5-5", "subscriptions first");
-	assert.equal(resolveBackup(gatedArgs({ cfg: backupCfg }))?.key, "openrouter/z-ai/glm-5.3", "newest version, plain id over -flash");
+	assert.equal(resolveBackup(gatedArgs({ cfg: backupCfg }))?.key, "openrouter/z-ai/glm-5.3", "newest version, plain id over -flash; the newer :batch route is not a model");
+	const asked = mergeConfig(backupCfg, { backup: "openrouter/z-ai/glm-*:batch" });
+	assert.equal(resolveBackup(gatedArgs({ cfg: asked }))?.key, "openrouter/z-ai/glm-5.4:batch", "unless the glob asks for it");
 
 	const l = ledger();
 	const now = Date.now();

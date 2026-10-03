@@ -145,7 +145,8 @@ function resolveThroughGates(entry: string, args: PreferenceArgs, seen = new Set
 function backupCandidates(args: PreferenceArgs): Model<Api>[] {
 	const entry = args.cfg.backup;
 	if (!entry) return [];
-	if (entry.includes("*")) return args.models.filter((model) => globMatch(entry, modelKey(model)));
+	// `:batch`, `:free`, `:thinking` and the like are routes to a model, not a newer model: skip them unless the glob asks.
+	if (entry.includes("*")) return args.models.filter((model) => globMatch(entry, modelKey(model)) && (entry.includes(":") || !model.id.includes(":")));
 	return candidatesFor(entry, args);
 }
 
