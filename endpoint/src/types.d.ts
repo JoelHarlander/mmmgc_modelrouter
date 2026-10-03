@@ -16,7 +16,8 @@ export interface UsageWindow {
   reset?: number;
 }
 
-export interface Usage {
+/** What an account has used of its quota windows, as its CLI last reported. */
+export interface QuotaUsage {
   windows: Record<string, UsageWindow>;
   at?: number;
 }
@@ -47,7 +48,7 @@ export interface Account {
   lastError?: string;
   cooldownUntil?: number;
   coolSeries?: Record<string, number>;
-  usage?: Usage;
+  usage?: QuotaUsage;
 }
 
 export interface Decision {
@@ -90,7 +91,8 @@ export interface State {
 
 export type Protocol = "openai" | "anthropic";
 
-export interface Usage1 {
+/** Tokens a turn used, as the clients report them. */
+export interface TokenUsage {
   input_tokens: number;
   output_tokens: number;
 }
@@ -101,7 +103,7 @@ export interface StreamEvent {
   done?: boolean;
   isError?: boolean;
   error?: string;
-  usage?: Usage1;
+  usage?: TokenUsage;
 }
 
 export interface Failure {

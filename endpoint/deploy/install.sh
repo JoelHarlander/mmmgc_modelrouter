@@ -78,6 +78,12 @@ while [ $# -gt 0 ]; do
 done
 
 case "$PORT" in '' | *[!0-9]*) die "--port must be a number" ;; esac
+# A login name: it reaches `getent`, a unit file's User= line and, on a last-resort path, tilde expansion.
+case "$RUN_AS" in
+  '' | [a-z_]*) ;;
+  *) die "--run-as must be a login name (lowercase letters, digits, - and _)" ;;
+esac
+case "$RUN_AS" in *[!a-z0-9_.-]*) die "--run-as must be a login name (lowercase letters, digits, - and _)" ;; esac
 [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || die "--port must be 1-65535"
 
 # ---- detection ---------------------------------------------------------------------------------
@@ -256,6 +262,7 @@ home_of() {
   else
     home="$(getent passwd "$user" 2>/dev/null | cut -d: -f6)"
   fi
+  # A last resort for systems with neither getent nor dscl; `user` was validated as a plain login name.
   [ -n "$home" ] || home="$(eval "printf '%s' ~$user")"
   printf '%s' "$home"
 }

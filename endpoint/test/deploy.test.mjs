@@ -260,5 +260,14 @@ test("bad options are rejected with a message", () => {
   assert.match(run(["install", "--port", "99999"]).all, /--port must be 1-65535/);
   assert.match(run(["install", "--port", "eighty"]).all, /--port must be a number/);
   assert.match(run(["install", "--bogus"]).all, /unknown option: --bogus/);
+  for (const bad of ["x; touch /tmp/pwned", "$(id)", "Has Space", "../etc", "`id`", "A"]) {
+    const r = run(["install", "--system", "--run-as", bad, "--dry-run"]);
+    assert.notEqual(r.status, 0, bad);
+    assert.match(r.all, /--run-as must be a login name/, bad);
+  }
+  assert.ok(!existsSync("/tmp/pwned"), "a hostile --run-as never reached a shell");
+  for (const good of ["svc-user_1", "j", "_apt", "deploy.bot"]) {
+    assert.doesNotMatch(run(["install", "--system", "--run-as", good, "--dry-run"]).all, /must be a login name/, `${good} is a valid login name`);
+  }
   assert.match(run(["--help"]).stdout, /Commands/);
 });
