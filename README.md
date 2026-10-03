@@ -1,12 +1,13 @@
 # pi-modelrouter
 
 A [pi](https://github.com/earendil-works/pi) extension that keeps the model you chose and sets the reasoning
-effort for each turn, using [TypeSafe AI's Jev](https://docs.typesafe.ai) as a fast, cheap classifier, and supports
-N-way parallel responses.
+effort for each turn, using a local [Laya](https://github.com/NandhaKishorM/laya) server as a fast, free classifier
+(with [TypeSafe AI's Jev](https://docs.typesafe.ai) behind it), and supports N-way parallel responses. The same policy
+is available to any OpenAI- or Anthropic-speaking client, such as OpenCode, through [`endpoint/`](endpoint/README.md).
 
 - **You choose the model.** `/model` sticks for the session. The router does not change it because a turn looks
   hard or cheap.
-- **The router chooses the effort.** One Jev call per turn (a few hundred input tokens, output is free) classifies
+- **The router chooses the effort.** One classifier call per turn (a few hundred input tokens, no generation) classifies
   the request into `light | standard | heavy`, plus `needs_tools` and `stakes`. That tier sets the thinking level
   (`low` / `medium` / `high` by default) on the current model.
 - **Billing eligibility**: every candidate is assessed before it can be picked. The router separates *what pays*
@@ -26,6 +27,9 @@ N-way parallel responses.
   does not switch. `switching.manualPinTurns` is still accepted from older files and no longer expires a choice.
 - **Parallel**: `/duo`, `/trio`, `/par N <prompt>` fan the same conversation out to N models in-process, show
   timings and cost, let Jev pick the best answer, and let you adopt one into the session.
+- **Usage gates and a backup**: `gates` move the session off a model once it has used a share of its quota
+  (`opus` at 50% hands to `sonnet`, `astra` to another series), and one configurable pay-per-token `backup` catches the
+  turn when nothing else is usable. See [Usage gates and the backup](#usage-gates-and-the-backup).
 
 ## Install
 
@@ -96,23 +100,32 @@ mark on the status line — it is read from the version in `package.json`, which
 code, rather than from the clone's branch label, which pi's reset leaves pointing at whatever was
 cloned first.
 
-Jev needs one credential, resolved in this order (`jev.transport: "auto"`):
+### The classifier
 
-1. `TYPESAFE_API_KEY` (or `jev.apiKey`): direct to `api.typesafe.ai`, model `jev-latest`.
-2. A Vercel AI Gateway key: `AI_GATEWAY_API_KEY`, `jev.gatewayApiKey`, or the `vercel-ai-gateway` entry pi already
-   stores in `~/.pi/agent/auth.json`. Calls go to the gateway's TypeSafe-compatible surface
-   (`https://ai-gateway.vercel.sh/typesafe/v1/systemone`) as model `typesafe-ai/jev`, billed to gateway credits, and
-   the per-call cost from the gateway metadata is recorded in the ledger.
+One call per turn classifies the request. It tries, in order (`jev.transport: "auto"`), and a transport that
+fails hands the call to the next, so a stopped Laya never costs a turn:
 
-The easiest path is the gateway one, which also unlocks its catalog as on-demand candidates:
+1. **A local Laya server** (`jev.layaUrl`, default `http://127.0.0.1:8787`). Free, about 33 ms, nothing leaves the
+   machine. Run it with `LAYA_HOST=127.0.0.1 LAYA_PORT=8787 LAYA_MODELS=english LAYA_JEV_STRICT=1 python -m laya.serve`
+   (`pip install 'laya[serve]'`), or let [`endpoint/deploy/install.sh`](endpoint/README.md#install-as-a-service) install and
+   supervise it. A Laya that does not answer is skipped for 30 seconds, then tried again.
+2. **TypeSafe Jev direct** (`typesafe/jev-latest`): `TYPESAFE_API_KEY`, `jev.apiKey`, or the `typesafe` entry in pi's
+   `auth.json`.
+3. **Jev through the Vercel AI Gateway**: `AI_GATEWAY_API_KEY`, `jev.gatewayApiKey`, or the `vercel-ai-gateway` entry
+   pi already stores. Calls go to the gateway's TypeSafe-compatible surface
+   (`https://ai-gateway.vercel.sh/typesafe/v1/systemone`) as model `typesafe-ai/jev`, billed to gateway credits (the
+   gateway answers `403 no_providers_available` on a free tier; add credits or use the first two).
+
+Naming one transport (`"laya"`, `"typesafe"`, `"gateway"`) pins it, with no fallback. With none reachable the effort
+tier falls back to a low-confidence heuristic. The model is unchanged either way: only a spent subscription window,
+a tripped gate, or the backup rule moves it.
+
+The `/duo` judge is the one exception: it compares several long answers, more than a local Laya reads, so it only ever
+asks the hosted Jev (2 and 3) and is unavailable rather than quietly using Laya.
 
 ```bash
-npx vercel ai-gateway setup --agent pi
+npx vercel ai-gateway setup --agent pi   # the gateway path, which also unlocks its catalog as on-demand candidates
 ```
-
-The Vercel team needs a credit card on file before the gateway serves any request (it returns
-`customer_verification_required` otherwise). Without any Jev credential the effort tier falls back to a
-low-confidence heuristic. The model is unchanged either way: only a spent subscription window moves it.
 
 ## Configure
 
@@ -157,6 +170,8 @@ picker says so: your global change applies everywhere else, and that project kee
 ```jsonc
 {
   "preference": ["fable", "grok", "opus", "astra"],
+  "gates": [{ "series": "opus", "at": 0.5, "then": "sonnet" }, { "series": "astra", "at": 0.5, "then": "sol" }],
+  "backup": "openrouter/z-ai/glm-*",
   "tiers": {
     "light": ["openrouter/z-ai/glm-5.3-flash", "vercel-ai-gateway/deepseek/deepseek-v4.1-flash"],
     "standard": ["openai-codex/gpt-6-astra", "openrouter/z-ai/glm-5.3"],
@@ -191,6 +206,30 @@ is really spent (the ChatGPT overflow), and last ordinary per-token billing — 
 Evidence orders the subscription basis against itself, never against another account: a subscription with no sign
 of being spent is still included usage and comes before a different credential's credits. A route is excluded only
 when it cannot serve the turn: no auth, a cooldown, or a spent window or balance with no paid path behind it.
+
+### Usage gates and the backup
+
+`gates` spend a model only down to a share of its quota. Each gate is `{ "series", "at", "then" }`: once a model in
+`series` has used `at` (0 to 1, exclusive of 0) of the highest quota window that governs it, the session moves to
+`then`, a series name or a concrete `provider/modelId`. Without `then` it moves to the next `preference` entry.
+`"opus"` at `0.5` then `"sonnet"` resolves `sonnet` to the newest Sonnet pi can use, the same way a series in
+`preference` is resolved. Any name that is not a built-in series (`fable`, `grok`, `opus`, `sonnet`, `astra`) matches
+a model-id substring, so `"sol"` means any model whose id contains `sol`.
+
+- **Evidence only.** The percentage comes from live quota windows (response headers and the read-only usage polls). A
+  window with no reading, or one past its reset, never trips a gate.
+- **Soft.** A tripped gate demotes; it never locks out. When every usable entry is past its gate, the least-gated one is
+  still used before anything is paid for.
+- **One model only.** Put a concrete `provider/modelId` in `preference` (or as a gate's `then`) and that is exactly the
+  model, with no newer one ever substituted.
+- **Global only.** A project `.pi/modelrouter.json` cannot set `gates` or `backup`.
+
+`backup` is the single pay-per-token route kept for when no `preference` entry is usable. It is a series name, a
+concrete `provider/modelId`, or a glob such as `openrouter/z-ai/glm-*`, which resolves to the newest match (a tie on
+version prefers the shorter id, so `glm-5.3` beats `glm-5.3-flash`). It still has to pass the billing gate, so its
+provider must be in `billing.allowPayPerToken`. The session leaves it on the first turn after any `preference` entry
+becomes usable again, so a pay-per-token model never keeps a session once a subscription reopens. Empty (the default)
+means no backup. It can be any provider pi has a credential for.
 
 ### Billing policy
 
@@ -248,7 +287,7 @@ rather than guessing either way.
 
 A project `.pi/modelrouter.json` is read key by key against a list of what a repository may say: its tier lists,
 `preference`, `thinking`, `switching`, the `/duo` settings, `notifyOnSwitch`, `enabled` (off only) and `billing.probe.enabled`
-(off only). Everything else — `jev`, `entitlement`,
+(off only). Everything else — `jev`, `gates`, `backup`, `entitlement`,
 `plan`, `models`, `scopes`, the rest of `billing`, and every key added in future — comes from the global file
 alone. So a repository can pick the models it prefers and make the router stricter than you configured it, and it
 can never name an endpoint a credential is sent to, assert what pays for a model, or loosen a spend safeguard.

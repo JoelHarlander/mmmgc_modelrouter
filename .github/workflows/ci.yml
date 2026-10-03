@@ -32,6 +32,7 @@ jobs:
 
       - run: npm ci
       - run: npm run check
+      - run: npm run lint:deploy
       - run: npm test
 
       # The smokes exit 0 whichever model answers, so assert the route: the

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Router</title>
+  <style>
+    :root { color-scheme: dark; --bg:#12140f; --panel:#1c1f17; --line:#34382c; --text:#e7e4d8; --muted:#9a967f; --ok:#b6d36a; --warn:#e2b15a; --bad:#e07a6a; --accent:#d7e2a3; }
+    * { box-sizing: border-box; }
+    body { margin:0; font:15px/1.45 ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--text); }
+    header { display:flex; justify-content:space-between; gap:16px; align-items:end; padding:22px 28px 8px; flex-wrap:wrap; }
+    h1 { font-size:22px; font-weight:600; margin:0; letter-spacing:-.03em; }
+    h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 10px; }
+    p { margin:0 0 8px; color:var(--muted); }
+    main { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:18px; padding:18px 28px 40px; }
+    section { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:18px; min-width:0; }
+    code,.mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .pill { border-radius:999px; padding:2px 8px; border:1px solid var(--line); color:var(--muted); font-size:12px; white-space:nowrap; }
+    .pill.ok { color:var(--ok); border-color:#4d5c32; } .pill.bad { color:var(--bad); border-color:#6b3a32; } .pill.warn { color:var(--warn); border-color:#6d5528; }
+    table { width:100%; border-collapse:collapse; } th,td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:top; overflow-wrap:anywhere; }
+    th { color:var(--muted); font-weight:500; font-size:12px; }
+    button,input,textarea,select { font:inherit; color:var(--text); background:#12140f; border:1px solid var(--line); border-radius:8px; padding:7px 10px; max-width:100%; }
+    button { cursor:pointer; background:#262a20; } button.primary { background:var(--accent); color:#1a1c14; border-color:transparent; font-weight:600; }
+    label { display:grid; gap:4px; color:var(--muted); font-size:12px; min-width:0; }
+    form { display:grid; gap:8px; margin-top:12px; } .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; background:#12140f; border-radius:8px; padding:10px; border:1px solid var(--line); margin:8px 0 0; }
+    .bar { height:6px; background:#12140f; border-radius:3px; border:1px solid var(--line); margin-top:3px; min-width:70px; } .bar > i { display:block; height:100%; border-radius:3px; background:var(--ok); }
+    .decision { border-bottom:1px solid var(--line); padding:6px 0; overflow-wrap:anywhere; }
+    textarea { width:100%; min-height:64px; }
+    @media (max-width:900px) { main { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>Router</h1><p>One model, <span class="mono">auto</span>, for Pi and OpenCode. Laya picks the tier; gates and cooldowns pick the account.</p></div>
+    <div class="row" id="health"></div>
+  </header>
+  <main>
+    <div>
+      <section>
+        <h2>Accounts</h2>
+        <p>Accounts that serve the same series share its turns. A refusal cools that account (or just that series) until the provider says it resets.</p>
+        <table><thead><tr><th>Account</th><th>Serves</th><th>Usage</th><th>Status</th><th></th></tr></thead><tbody id="accounts"></tbody></table>
+        <form id="add">
+          <div class="grid">
+            <label>Id <input name="id" placeholder="claude-a" required /></label>
+            <label>Kind <select name="kind">
+              <option value="claude-code">claude-code: Claude subscription via the claude CLI</option>
+              <option value="pi-auth">pi-auth: a provider in pi's auth.json</option>
+              <option value="openai">openai: any OpenAI-compatible URL</option>
+              <option value="echo">echo: testing only</option></select></label>
+            <label>Series (comma separated) <input name="series" value="opus,sonnet" /></label>
+            <label>Plan USD / month <input name="planUsd" value="30" /></label>
+            <label>Claude config dir <input name="configDir" placeholder="/home/you/.claude" /></label>
+            <label>pi provider <input name="provider" placeholder="openrouter" /></label>
+            <label>Base URL <input name="baseUrl" placeholder="https://openrouter.ai/api/v1" /></label>
+            <label>Model glob (newest match wins) <input name="modelGlob" placeholder="z-ai/glm-*" /></label>
+            <label>Pin one model for the first series <input name="pin" placeholder="leave empty to follow the latest" /></label>
+            <label class="row"><span><input type="checkbox" name="backup" /> this is the pay-per-token backup</span></label>
+          </div>
+          <div class="row"><button class="primary" type="submit">Save account</button><span id="add-msg" class="mono"></span></div>
+        </form>
+      </section>
+      <section>
+        <h2>Try it</h2>
+        <textarea id="chat">Reply with exactly: pong</textarea>
+        <div class="row" style="margin-top:8px"><button class="primary" id="send" type="button">Send as auto</button><span id="chat-meta" class="pill"></span></div>
+        <pre id="chat-out"></pre>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h2>Policy</h2>
+        <p>Series order is tried first to last. A gate moves an account off a series once it has used that share of its highest window. Gates only demote: a gated account still beats paying.</p>
+        <form id="policy">
+          <label>Series order <input name="preference" /></label>
+          <label>Gates, one per line: <span class="mono">opus 50% > sonnet</span><textarea name="gates"></textarea></label>
+          <label>Tiers (optional JSON): <span class="mono">{"light":["sonnet"],"heavy":["opus"]}</span><textarea name="tiers"></textarea></label>
+          <div class="row"><button class="primary" type="submit">Save policy</button><span id="policy-msg" class="mono"></span></div>
+        </form>
+      </section>
+      <section>
+        <h2>Clients</h2>
+        <p>Point both tools at this URL as model <span class="mono">auto</span>.</p>
+        <pre id="snippet"></pre>
+      </section>
+      <section><h2>Recent turns</h2><div id="log"></div></section>
+    </div>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    // `http://127.0.0.1:8788/#token=...` stores the token and drops it from the address bar.
+    const fromHash = /[#&]token=([^&]+)/.exec(location.hash);
+    if (fromHash) { localStorage.setItem("router-token", decodeURIComponent(fromHash[1])); history.replaceState(null, "", location.pathname); }
+    let token = localStorage.getItem("router-token") || "";
+    let status;
+    const pill = (text, kind) => `<span class="pill ${kind || ""}">${esc(text)}</span>`;
+    async function api(path, body) {
+      const res = await fetch(path, { method: body ? "POST" : "GET", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: body ? JSON.stringify(body) : undefined });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) { token = ""; localStorage.removeItem("router-token"); throw new Error("unauthorized"); }
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      return data;
+    }
+    const left = (ts) => { const m = Math.ceil((ts - Date.now()) / 60000); return m > 90 ? `${Math.round(m / 60)}h` : `${m}m`; };
+    async function refresh() {
+      if (!token) { token = prompt("Router token (printed by the installer, or in router-endpoint.json):") || ""; if (token) localStorage.setItem("router-token", token); else return; }
+      try { status = await api("/api/status"); } catch (e) { $("health").innerHTML = pill(e.message, "bad"); return; }
+      $("health").innerHTML = [
+        status.laya.up ? pill("laya up", "ok") : pill(status.jev.key ? "laya down → typesafe:jev" : "laya down, no jev key → heuristic", status.jev.key ? "warn" : "bad"),
+        pill(status.baseUrl, "ok"),
+      ].join("");
+      $("accounts").innerHTML = status.accounts.map((a) => {
+        const now = Date.now();
+        const cooling = a.cooldownUntil && a.cooldownUntil > now;
+        const series = Object.entries(a.coolSeries || {}).filter(([, t]) => t > now).map(([s, t]) => pill(`${s} cooling ${left(t)}`, "bad")).join(" ");
+        const state = a.enabled === false ? pill("off", "warn") : cooling ? pill(`cooling ${left(a.cooldownUntil)}`, "bad") : pill("ready", "ok");
+        const bars = Object.entries(a.utilization || {}).filter(([, u]) => u !== undefined && u !== null).map(([s, u]) => `<div class="mono">${esc(s)} ${Math.round(u * 100)}%<div class="bar"><i style="width:${Math.round(u * 100)}%;background:${u >= .8 ? "var(--bad)" : u >= .5 ? "var(--warn)" : "var(--ok)"}"></i></div></div>`).join("") || `<span class="mono">no data yet</span>`;
+        return `<tr><td><strong>${esc(a.id)}</strong>${a.backup ? " " + pill("backup", "warn") : ""}<br><span class="mono">${esc(a.kind)}</span>${a.planUsd ? " · $" + esc(a.planUsd) : ""}<br><span class="mono">${esc(a.configDir || a.provider || a.baseUrl || "")}</span></td>
+          <td class="mono">${esc((a.series || []).join(" "))}${a.modelGlob ? "<br>" + esc(a.modelGlob) : ""}${Object.entries(a.models || {}).map(([s, m]) => `<br>${esc(s)} = ${esc(m)} (pinned)`).join("")}<br>${a.served || 0} turns</td>
+          <td>${bars}</td><td>${state} ${series}<br><span class="mono">${esc(a.lastError || "")}</span></td>
+          <td><button data-act="toggle" data-id="${esc(a.id)}">${a.enabled === false ? "enable" : "disable"}</button> <button data-act="clear" data-id="${esc(a.id)}">clear</button> <button data-act="delete" data-id="${esc(a.id)}">delete</button></td></tr>`;
+      }).join("") || `<tr><td colspan="5"><p>No accounts yet. Add one below.</p></td></tr>`;
+      if (document.activeElement?.closest("#policy") == null) {
+        $("policy").preference.value = status.preference.join(", ");
+        $("policy").gates.value = status.gates.map((g) => `${g.series} ${Math.round(g.at * 100)}%${g.then ? " > " + g.then : ""}`).join("\n");
+        $("policy").tiers.value = Object.keys(status.tiers || {}).length ? JSON.stringify(status.tiers) : "";
+      }
+      $("log").innerHTML = (status.decisions || []).map((d) => `<div class="decision"><span class="mono">${new Date(d.at).toLocaleTimeString()}</span> ${esc(d.account || "none")} · ${esc(d.series || "")}/${esc(d.model || "")} <span class="mono">${esc(d.route || "")}</span> · ${esc(d.tier)} via ${esc(d.via || "?")}${d.error ? " · " + esc(d.error) : ""}</div>`).join("") || "<p>No turns yet.</p>";
+      $("snippet").textContent = [
+        "Pi: ~/.pi/agent/models.json",
+        JSON.stringify({ providers: { router: { baseUrl: status.baseUrl, api: "openai-completions", apiKey: token, models: [{ id: "auto", name: "Auto", reasoning: false, input: ["text"], contextWindow: 200000, maxTokens: 8192, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }] } } }, null, 2),
+        "", "OpenCode: opencode.json",
+        JSON.stringify({ model: "router/auto", provider: { router: { npm: "@ai-sdk/openai-compatible", name: "Router", options: { baseURL: status.baseUrl, apiKey: token }, models: { auto: { name: "Auto", tool_call: true } } } } }, null, 2),
+      ].join("\n");
+    }
+    function parseGates(text) {
+      return text.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
+        const m = /^(\S+)\s+(\d+(?:\.\d+)?)%?\s*(?:>\s*(\S+))?$/.exec(line);
+        if (!m) throw new Error(`cannot read gate: "${line}" (write: opus 50% > sonnet)`);
+        const gate = { series: m[1], at: Number(m[2]) / 100 };
+        if (m[3]) gate.then = m[3];
+        return gate;
+      });
+    }
+    document.body.addEventListener("click", async (event) => {
+      const { act, id } = event.target.dataset;
+      if (!act) return;
+      const account = status.accounts.find((a) => a.id === id);
+      try {
+        if (act === "delete") { if (!confirm(`Delete ${id}?`)) return; await api("/api/accounts/delete", { id }); }
+        else await api("/api/accounts/update", act === "toggle" ? { id, enabled: account.enabled === false } : { id, clearCooldown: true });
+      } catch (e) { alert(e.message); }
+      refresh();
+    });
+    $("add").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const f = Object.fromEntries(new FormData(event.target));
+      const series = f.series.split(",").map((s) => s.trim()).filter(Boolean);
+      const models = f.pin && series[0] ? { [series[0]]: f.pin } : undefined;
+      try {
+        await api("/api/accounts", { ...f, series, models, backup: f.backup === "on", planUsd: Number(f.planUsd || 0) });
+        $("add-msg").textContent = "saved"; event.target.reset();
+      } catch (e) { $("add-msg").textContent = e.message; }
+      refresh();
+    });
+    $("policy").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const f = event.target;
+      try {
+        const body = { preference: f.preference.value.split(",").map((s) => s.trim()).filter(Boolean), gates: parseGates(f.gates.value) };
+        if (f.tiers.value.trim()) body.tiers = JSON.parse(f.tiers.value); else body.tiers = {};
+        await api("/api/policy", body);
+        $("policy-msg").textContent = "saved";
+      } catch (e) { $("policy-msg").textContent = e.message; }
+      refresh();
+    });
+    $("send").addEventListener("click", async () => {
+      $("chat-out").textContent = "…";
+      const res = await fetch("/v1/chat/completions", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ model: "auto", messages: [{ role: "user", content: $("chat").value }] }) });
+      const data = await res.json().catch(() => ({}));
+      $("chat-meta").textContent = [res.headers.get("x-router-account"), res.headers.get("x-router-model"), res.headers.get("x-router-tier"), res.headers.get("x-router-via")].filter(Boolean).join(" · ");
+      $("chat-out").textContent = data.choices?.[0]?.message?.content ?? data.error?.message ?? JSON.stringify(data, null, 2);
+      refresh();
+    });
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

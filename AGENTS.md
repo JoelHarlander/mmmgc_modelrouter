@@ -29,6 +29,11 @@ the network outside the explicitly invoked `/router update`.
 
 ## Layout
 
+`endpoint/` is a second, dependency-free Node package (`.mjs`, no build): a local OpenAI/Anthropic server that applies
+the same policy to clients that cannot load a pi extension, plus `endpoint/deploy/install.sh`, the distro-aware service
+installer. Its tests run with the rest in `npm test`; `npm run lint:deploy` is shellcheck on the installer. Policy shapes
+(`gates`, `backup`) are the same in both and live in `src/config.ts` and `endpoint/src/store.mjs`; change one, change both.
+
 `src/` is the shipped pi extension; `eval/` is the measurement harness. It imports from `src/` and is never
 imported by it, so it can be read as an observer of the router rather than a part of it. `eval/README.md`
 explains what the harness *declares* versus what it *measures* — read it before trusting any number it prints.
@@ -84,6 +89,19 @@ what the harness predicts each queued fix will do, with the command that checks 
   Never widen it to another key or to the project file; per-model verdicts it shows come from `evaluateCandidate`, never a parallel judgment.
 
 ## Sharp edges
+
+- **The classifier is Laya first, hosted Jev second** (`src/jev.ts`). A transport that fails hands the call to the next, and a
+  Laya that failed is left alone for 30 s. The `/duo` judge and the eval judge must pass `HOSTED_JEV`: they read several long
+  answers, more than a local Laya's context holds, and quietly using Laya would degrade them without an error.
+- **Gates demote, never lock out** (`src/preference.ts`, `endpoint/src/select.mjs`). Three passes everywhere: entries under
+  their gate, then any usable entry, then the one `backup`. A gate acts on a live reading only; no reading means no trip.
+  `gates` and `backup` are global-only (`PROJECT_SETTABLE` does not name them), like every spend-adjacent key.
+- **The endpoint never uses a Claude OAuth token.** Claude subscription accounts run the `claude` CLI headless (the
+  pi-claude-bridge approach) because Anthropic may refuse or bill subscription tokens used outside Claude Code. Do not add an
+  HTTP path that sends one, and do not add headers that present the endpoint as Claude Code. Utilization comes from the
+  CLI's `rate_limit_event`, not a poll.
+- **`endpoint/deploy/install.sh` validates before it acts**: an impossible mode/init pairing is refused before Laya is
+  downloaded. Tests use `--stage` or `--dry-run`; a test that runs it bare installs for real.
 
 - `~/.pi/agent/modelrouter/usage.json` (version 3; `readLedgerFile` upgrades 1 and 2) is shared by every concurrent pi session. `Ledger.save()` merges token
   totals as deltas against the last disk sync under a directory lock; adding a field means teaching

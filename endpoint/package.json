@@ -1,0 +1,11 @@
+{
+  "name": "pi-modelrouter-endpoint",
+  "private": true,
+  "type": "module",
+  "description": "One local OpenAI/Anthropic model (`auto`) for pi and OpenCode: Laya classifies, usage gates and a pay-per-token backup pick the account.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/main.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
