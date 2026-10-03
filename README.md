@@ -213,8 +213,10 @@ when it cannot serve the turn: no auth, a cooldown, or a spent window or balance
 `series` has used `at` (0 to 1, exclusive of 0) of the highest quota window that governs it, the session moves to
 `then`, a series name or a concrete `provider/modelId`. Without `then` it moves to the next `preference` entry.
 `"opus"` at `0.5` then `"sonnet"` resolves `sonnet` to the newest Sonnet pi can use, the same way a series in
-`preference` is resolved. Any name that is not a built-in series (`fable`, `grok`, `opus`, `sonnet`, `astra`) matches
-a model-id substring, so `"sol"` means any model whose id contains `sol`.
+`preference` is resolved. The built-in series are `fable`, `grok`, `opus`, `sonnet`, `astra` and `sol` (the last two
+prefer the `openai-codex` subscription). Any other name matches a whole token of the model id (split at `/`, `-`, `.`, `_`
+and `:`), so `"glm"` is `z-ai/glm-5.3` and `"sol"` is `gpt-6.1-sol` but never `upstage/solar-pro-3`. Plain ids win over
+`:batch`, `:free` and similar variants, which are used only when nothing else matches.
 
 - **Evidence only.** The percentage comes from live quota windows (response headers and the read-only usage polls). A
   window with no reading, or one past its reset, never trips a gate.

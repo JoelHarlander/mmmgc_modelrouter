@@ -26,6 +26,10 @@ export const WINDOWS_FOR = {
   haiku: ["5h", "7d"],
 };
 
+/** A built-in series by its pattern; any other name by whole tokens, so `glm` is glm-5.3 and `sol` is not solar. Same rule as the pi extension. */
 export function matcherFor(series) {
-  return SERIES_ID[series] ?? new RegExp(series.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  const builtin = SERIES_ID[series];
+  if (builtin) return builtin;
+  const token = series.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`, "i");
 }

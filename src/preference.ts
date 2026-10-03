@@ -23,7 +23,7 @@ import { type Gate, globMatch, modelKey, type RouterConfig, type Tier } from "./
 import type { Ledger } from "./ledger.ts";
 import { type Candidate, evaluateCandidate } from "./router.ts";
 
-export const SERIES = ["fable", "grok", "opus", "sonnet", "astra"] as const;
+export const SERIES = ["fable", "grok", "opus", "sonnet", "astra", "sol"] as const;
 export type SeriesName = (typeof SERIES)[number];
 
 /** Model-id test for each series. The provider is a separate tie-break. */
@@ -33,6 +33,8 @@ const SERIES_ID: Record<SeriesName, RegExp> = {
 	opus: /opus/i,
 	sonnet: /sonnet/i,
 	astra: /astra/i,
+	// A whole token: `sol` is gpt-6.1-sol, not upstage/solar-pro-3.
+	sol: /(^|[^a-z0-9])sol([^a-z0-9]|$)/i,
 };
 
 /**
@@ -45,6 +47,7 @@ const SERIES_PROVIDER: Record<SeriesName, readonly string[]> = {
 	opus: ["claude-bridge", "anthropic"],
 	sonnet: ["claude-bridge", "anthropic"],
 	astra: ["openai-codex", "openai"],
+	sol: ["openai-codex", "openai"],
 };
 
 export interface PreferenceArgs {
@@ -336,7 +339,11 @@ function candidatesFor(entry: string, args: PreferenceArgs): Model<Api>[] {
 		const found = args.models.find((model) => modelKey(model) === entry) ?? findKey(entry, args.registry);
 		return found ? [found] : [];
 	}
-	return args.models.filter((model) => idMatches(model.id, entry));
+	const matched = args.models.filter((model) => idMatches(model.id, entry));
+	// `:batch`, `:free`, `:thinking` and the like are routes to a model, not a newer model: take the plain ids
+	// when there are any, and the variants only when that is all there is.
+	const plain = matched.filter((model) => !model.id.includes(":"));
+	return plain.length > 0 ? plain : matched;
 }
 
 function findKey(key: string, registry: ModelRegistry): Model<Api> | undefined {
@@ -350,10 +357,12 @@ function entryCovers(entry: string, model: Model<Api>): boolean {
 	return idMatches(model.id, entry);
 }
 
+/** A built-in series by its pattern; any other name by whole tokens, so `glm` is glm-5.3 and `sol` is not solar. */
 function idMatches(id: string, entry: string): boolean {
 	const named = SERIES_ID[entry.toLowerCase() as SeriesName];
 	if (named) return named.test(id);
-	return id.toLowerCase().includes(entry.toLowerCase());
+	const token = entry.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`, "i").test(id);
 }
 
 /** Newer version first; a tied version prefers the series' subscription provider. */

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { forgetListings, resolveModel, upstreamOf } from "../src/models.mjs";
 import { loadState, normalize, normalizeGates } from "../src/store.mjs";
+import { matcherFor } from "../src/series.mjs";
 import { globMatch, newestFirst, versionCompare } from "../src/versions.mjs";
 
 test("version ordering matches the pi extension: newest first, dated snapshots are not versions, shorter id wins a tie", () => {
@@ -116,4 +117,13 @@ test("the log is one line per event, quotes only what needs it, and drops empty 
   const off = [];
   createLogger({ out: { write: (l) => off.push(l) }, enabled: false }).info("turn", { a: 1 });
   assert.deepEqual(off, [], "ROUTER_LOG=0 silences it");
+});
+
+test("a series the code has never heard of matches whole tokens, like the pi extension: sol is not solar", () => {
+  const sol = matcherFor("sol");
+  assert.ok(sol.test("gpt-6.1-sol") && sol.test("openai/gpt-6-sol:batch") && sol.test("sol"));
+  assert.ok(!sol.test("upstage/solar-pro-3"));
+  assert.ok(matcherFor("glm").test("z-ai/glm-5.3") && !matcherFor("ol").test("gpt-6.1-sol"));
+  assert.ok(matcherFor("opus").test("claude-opus-5-5"), "built-ins keep their own patterns");
+  assert.ok(matcherFor("c++").test("tool/c++-1") && !matcherFor("c++").test("cxx"), "regex characters in a name are literal");
 });

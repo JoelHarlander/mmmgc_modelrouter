@@ -42,11 +42,16 @@ const fauxB = model("faux", "b", { input: 0.1, output: 0.4 });
 const sonnet5 = model("claude-bridge", "claude-sonnet-5");
 const sonnet55 = model("claude-bridge", "claude-sonnet-5-5");
 const sol = model("openai-codex", "gpt-6-sol");
+const sol61 = model("openai-codex", "gpt-6.1-sol");
+const solPro = model("openrouter", "openai/gpt-6.1-sol-pro");
+const solBatch = model("openrouter", "openai/gpt-6.1-sol:batch");
+const solar = model("openrouter", "upstage/solar-pro-3");
+const luna = model("openai-codex", "gpt-6-luna");
 const glm52 = model("openrouter", "z-ai/glm-5.2", { input: 0.5, output: 1.8 });
 const glm53 = model("openrouter", "z-ai/glm-5.3", { input: 0.6, output: 2 });
 const glm53flash = model("openrouter", "z-ai/glm-5.3-flash", { input: 0.1, output: 0.4 });
 const glm54batch = model("openrouter", "z-ai/glm-5.4:batch", { input: 0.3, output: 1 });
-const CATALOG = [fable5, fable51, fableApi, grok46, grok47, opus5, opus55, sonnet5, sonnet55, astra, sol, glm52, glm53, glm53flash, glm54batch, fauxA, fauxB];
+const CATALOG = [fable5, fable51, fableApi, grok46, grok47, opus5, opus55, sonnet5, sonnet55, astra, sol, sol61, solPro, solBatch, solar, luna, glm52, glm53, glm53flash, glm54batch, fauxA, fauxB];
 
 function registry(unauthed: string[] = []): ModelRegistry {
 	return {
@@ -336,10 +341,24 @@ test("astra gates to another series the same way, and a gate may name one concre
 	const now = Date.now();
 	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "60", "x-codex-primary-reset-after-seconds": "3600" }, cfg, now, undefined, "gpt-6-astra");
 	const astraGate = mergeConfig(GATED, { preference: ["astra"], gates: [{ series: "astra", at: 0.5, then: "sol" }] });
-	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: astraGate }))?.key, "openai-codex/gpt-6-sol");
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: astraGate }))?.key, "openai-codex/gpt-6.1-sol", "sol resolves to the newest sol on the Codex subscription");
 
 	const pinned = mergeConfig(GATED, { preference: ["astra"], gates: [{ series: "astra", at: 0.5, then: "openai-codex/gpt-6-sol" }] });
 	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: pinned }))?.key, "openai-codex/gpt-6-sol");
+});
+
+test("series names match whole tokens and prefer plain ids: sol is not solar, and :batch is not a newer model", () => {
+	const a = gatedArgs();
+	assert.equal(resolveEntry("sol", a)?.key, "openai-codex/gpt-6.1-sol");
+	const noCodex = { ...a, models: CATALOG.filter((m) => m.provider !== "openai-codex") };
+	assert.equal(resolveEntry("sol", noCodex)?.key, "openrouter/openai/gpt-6.1-sol-pro", "no Codex: the plain ids that match, never solar");
+	assert.ok(!["openrouter/upstage/solar-pro-3"].includes(resolveEntry("sol", noCodex)!.key));
+	const onlyVariant = { ...a, models: [solBatch, solar, fauxA] };
+	assert.equal(resolveEntry("sol", onlyVariant)?.key, "openrouter/openai/gpt-6.1-sol:batch", "a variant is used when it is all there is");
+	// Any other name is a token match, so a series the code has never heard of still works.
+	assert.equal(resolveEntry("luna", a)?.key, "openai-codex/gpt-6-luna");
+	assert.equal(resolveEntry("glm", a)?.key, "openrouter/z-ai/glm-5.3");
+	assert.equal(resolveEntry("ol", a), undefined, "a fragment of a token is not a series");
 });
 
 test("a concrete preference entry has no series to upgrade within: it is exactly that model", () => {
