@@ -15,7 +15,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_CONFIG } from "../src/config.ts";
-import { JevClient, JevError } from "../src/jev.ts";
+import { HOSTED_JEV, JevClient, JevError, systemOneUrl } from "../src/jev.ts";
 import { routingQuestions } from "../src/state.ts";
 import { isRateLimit, isRetryable, JevJudge, RetryingJudge } from "../eval/candidates.ts";
 import { loadFleet } from "../eval/fleet.ts";
@@ -329,4 +329,87 @@ test("a rate limit is waited out, not backed off from", async () => {
 	assert.equal(delays.length, 2);
 	assert.ok(delays[0]! >= 5, `a 429 waited only ${delays[0]}ms, below the rate-limit floor`);
 	assert.ok(delays[1]! < 5, `a 503 waited ${delays[1]}ms, so it used the rate-limit floor it should not`);
+});
+
+test("Laya answers first and for free; a dead Laya falls through to TypeSafe, then the gateway, and is skipped afterwards", async () => {
+	const laya = await startFakeJev(() => ({ status: 200, body: routingAnswer("heavy", 0.6) }));
+	const typesafe = await startFakeJev(() => ({ status: 200, body: routingAnswer("standard", 0.9) }));
+	const gateway = await startFakeJev(() => ({ status: 200, body: routingAnswer("light", 0.9) }));
+	const cfg = {
+		...DEFAULT_CONFIG.jev,
+		layaUrl: laya.baseUrl,
+		apiKey: "ts-key",
+		baseUrl: typesafe.baseUrl,
+		gatewayApiKey: "vck",
+		gatewayBaseUrl: gateway.baseUrl,
+	};
+	try {
+		const first = await new JevClient(cfg).ask({ request: "x" }, routingQuestions());
+		assert.equal(first.transport, "laya");
+		assert.equal(first.costUsd, 0, "a local Laya costs nothing");
+		assert.equal(laya.requests[0]!.body.model, DEFAULT_CONFIG.jev.layaModel);
+		assert.equal(typesafe.requests.length, 0, "TypeSafe is not touched while Laya answers");
+
+		// Laya is a closed port: the call falls to TypeSafe, and the next call does not retry Laya.
+		const dead = new JevClient({ ...cfg, layaUrl: "http://127.0.0.1:9/v1" });
+		const second = await dead.ask({ request: "x" }, routingQuestions());
+		assert.equal(second.transport, "typesafe");
+		assert.deepEqual(dead.transports(), ["typesafe", "gateway"], "a failed Laya is left alone for a while");
+
+		// TypeSafe refuses too (the free-tier 403 seen in practice): the gateway still answers.
+		const refused = await startFakeJev(() => ({ status: 403, body: { error: { type: "no_providers_available", message: "free tier" } } }));
+		const chain = new JevClient({ ...cfg, layaUrl: "http://127.0.0.1:9/v1", baseUrl: refused.baseUrl });
+		try {
+			assert.equal((await chain.ask({ request: "x" }, routingQuestions())).transport, "gateway");
+		} finally {
+			await refused.close();
+		}
+
+		// Everything down: one error naming each hop, so the heuristic warning says why.
+		const none = new JevClient({ ...cfg, layaUrl: "http://127.0.0.1:9/v1", apiKey: "", gatewayApiKey: "" });
+		const err = await none.ask({ request: "x" }, routingQuestions()).then(
+			() => undefined,
+			(e: unknown) => e,
+		);
+		assert.ok(err instanceof JevError);
+		assert.match(err.message, /^Laya: /);
+
+		// An explicit transport never falls through to another.
+		const pinned = new JevClient({ ...cfg, transport: "laya", layaUrl: "http://127.0.0.1:9/v1" });
+		await assert.rejects(() => pinned.ask({ request: "x" }, routingQuestions()));
+		assert.equal(typesafe.requests.length, 1);
+	} finally {
+		await Promise.all([laya.close(), typesafe.close(), gateway.close()]);
+	}
+});
+
+test("systemOneUrl accepts a bare host, a /v1 base and a trailing slash", () => {
+	assert.equal(systemOneUrl("http://127.0.0.1:8787"), "http://127.0.0.1:8787/v1/systemone");
+	assert.equal(systemOneUrl("http://127.0.0.1:8787/v1/"), "http://127.0.0.1:8787/v1/systemone");
+	assert.equal(systemOneUrl("https://api.typesafe.ai/v1"), "https://api.typesafe.ai/v1/systemone");
+});
+
+test("the fan-out judge never goes to Laya: its answers are longer than a local Laya reads", async () => {
+	const laya = await startFakeJev(() => ({ status: 200, body: judgeAnswer("a", 0.9, ["a", "b"]) }));
+	const hosted = await startFakeJev(() => ({ status: 200, body: judgeAnswer("b", 0.8, ["a", "b"]) }));
+	const cfg = { ...DEFAULT_CONFIG.jev, layaUrl: laya.baseUrl, apiKey: "ts-key", baseUrl: hosted.baseUrl, gatewayApiKey: "", gatewayApiKeyEnv: "MR_TEST_NO_GW" };
+	try {
+		const client = new JevClient(cfg);
+		assert.deepEqual(client.transports(), ["laya", "typesafe"]);
+		assert.deepEqual(client.transports(Date.now(), HOSTED_JEV), ["typesafe"]);
+		const verdict = await new JevJudge(client, 6000).pick("q", [
+			{ label: "a", key: "m/a", text: "x", trueSkill: 0.5 },
+			{ label: "b", key: "m/b", text: "y", trueSkill: 0.5 },
+		]);
+		assert.equal(verdict.pick, "b", "answered by the hosted Jev");
+		assert.equal(laya.requests.length, 0, "Laya was never asked");
+
+		// With only Laya configured the judge is unavailable rather than quietly using it.
+		const onlyLaya = new JevClient({ ...cfg, apiKey: "", apiKeyEnv: "MR_TEST_NO_TS" });
+		assert.equal(onlyLaya.available(), true);
+		assert.equal(onlyLaya.available(HOSTED_JEV), false);
+		await assert.rejects(() => onlyLaya.ask({ request: "x" }, routingQuestions(), undefined, HOSTED_JEV), /No Jev credential/);
+	} finally {
+		await Promise.all([laya.close(), hosted.close()]);
+	}
 });

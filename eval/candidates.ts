@@ -12,7 +12,7 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { modelKey, type RouterConfig, TIERS } from "../src/config.ts";
-import { choiceConfidence, type JevChoiceAnswer, type JevClient, JevError, type JsonValue } from "../src/jev.ts";
+import { choiceConfidence, HOSTED_JEV, type JevChoiceAnswer, type JevClient, JevError, type JsonValue } from "../src/jev.ts";
 import type { Ledger } from "../src/ledger.ts";
 import { evaluateCandidate } from "../src/router.ts";
 import type { FleetModel } from "./types.ts";
@@ -266,7 +266,7 @@ export class JevJudge implements Judge {
 			responses: Object.fromEntries(candidates.map((c) => [c.label, (c.text ?? "").slice(0, this.maxChars)])),
 		};
 		const criteria = Object.fromEntries(candidates.map((c) => [c.label, JUDGE_CRITERION(c.label)]));
-		const res = await this.jev.ask(state, { best: { type: "choice", instructions: { question: JUDGE_QUESTION }, criteria } });
+		const res = await this.jev.ask(state, { best: { type: "choice", instructions: { question: JUDGE_QUESTION }, criteria } }, undefined, HOSTED_JEV);
 		const best = res.answers.best as JevChoiceAnswer | undefined;
 		if (!best) throw new Error("Jev judge returned no choice answer");
 		return { pick: best.choice, confidence: best.confidence, probabilities: best.probabilities, costUsd: res.costUsd, ms: res.ms };

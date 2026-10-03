@@ -121,7 +121,8 @@ test("tier with no usable model escalates to the next heavier tier", () => {
 });
 
 test("jev transport resolution: direct key first, then gateway key from pi auth", () => {
-	const base = { ...DEFAULT_CONFIG.jev, apiKeyEnv: "MR_TEST_TS_KEY", gatewayApiKeyEnv: "MR_TEST_GW_KEY" };
+	// layaUrl "" keeps this about the keyed transports; Laya has its own test below.
+	const base = { ...DEFAULT_CONFIG.jev, layaUrl: "", apiKeyEnv: "MR_TEST_TS_KEY", gatewayApiKeyEnv: "MR_TEST_GW_KEY" };
 	delete process.env.MR_TEST_TS_KEY;
 	delete process.env.MR_TEST_GW_KEY;
 	const none = new JevClient(base);
@@ -139,6 +140,29 @@ test("jev transport resolution: direct key first, then gateway key from pi auth"
 	assert.equal(new JevClient({ ...base, transport: "typesafe", gatewayApiKey: "vck_cfg" }).transport(), undefined);
 	assert.match(both.describe(), /api\.typesafe\.ai/);
 	assert.match(stored.describe(), /Vercel AI Gateway/);
+});
+
+test("jev transport order: Laya, then TypeSafe, then the gateway; pi's stored typesafe key counts", () => {
+	const base = { ...DEFAULT_CONFIG.jev, apiKeyEnv: "MR_TEST_TS_KEY", gatewayApiKeyEnv: "MR_TEST_GW_KEY" };
+	delete process.env.MR_TEST_TS_KEY;
+	delete process.env.MR_TEST_GW_KEY;
+	assert.equal(DEFAULT_CONFIG.jev.layaUrl, "http://127.0.0.1:8787", "Laya is the default classifier");
+
+	const laya = new JevClient(base);
+	assert.deepEqual(laya.transports(), ["laya"]);
+	assert.equal(laya.available(), true, "Laya needs no credential");
+
+	const all = new JevClient({ ...base, apiKey: "ts", gatewayApiKey: "vck" });
+	assert.deepEqual(all.transports(), ["laya", "typesafe", "gateway"]);
+	assert.match(all.describe(), /laya via http:\/\/127\.0\.0\.1:8787, then jev-latest via api\.typesafe\.ai, then .*Vercel AI Gateway/);
+
+	const stored = new JevClient(base);
+	stored.setStoredTypesafeKey("ts_from_pi");
+	assert.equal(stored.typesafeKey(), "ts_from_pi");
+	assert.deepEqual(stored.transports(), ["laya", "typesafe"]);
+
+	assert.deepEqual(new JevClient({ ...base, transport: "laya", apiKey: "ts" }).transports(), ["laya"]);
+	assert.deepEqual(new JevClient({ ...base, transport: "laya", layaUrl: "" }).transports(), []);
 });
 
 test("glob and heuristics", () => {

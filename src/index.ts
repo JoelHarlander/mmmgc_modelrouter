@@ -63,6 +63,11 @@ export default function modelRouter(pi: ExtensionAPI) {
 		} catch {
 			jev.setStoredGatewayKey(undefined);
 		}
+		try {
+			jev.setStoredTypesafeKey(await ctx.modelRegistry.getApiKeyForProvider("typesafe"));
+		} catch {
+			jev.setStoredTypesafeKey(undefined);
+		}
 	};
 
 	/**
@@ -317,7 +322,7 @@ export default function modelRouter(pi: ExtensionAPI) {
 		if (!enabled) return setStatus(ctx, "router off");
 		if (!lastDecision) {
 			if (sessionNote) return setStatus(ctx, `router ⇄ ${sessionNote}`);
-			return setStatus(ctx, jev.available() ? `router ready (${jev.transport()})` : "router (no Jev credential: heuristic)");
+			return setStatus(ctx, jev.available() ? `router ready (${jev.transport()})` : "router (no Laya or Jev: heuristic)");
 		}
 		const d = lastDecision;
 		const bits = [`${d.tier}${d.tier !== d.requestedTier ? `←${d.requestedTier}` : ""}`, `${(d.confidence * 100).toFixed(0)}%`];
@@ -335,8 +340,12 @@ export default function modelRouter(pi: ExtensionAPI) {
 	function showStatus(ctx: ExtensionCommandContext) {
 		const lines: string[] = [];
 		lines.push(releaseLine(releaseInfo(ctx)));
-		lines.push(`enabled: ${enabled}   jev: ${jev.describe()}   model: ${ctx.model ? "sticks until its subscription window is spent" : "none"}`);
+		lines.push(`enabled: ${enabled}   classifier: ${jev.describe()}   model: ${ctx.model ? "sticks until its subscription window is spent" : "none"}`);
 		lines.push(`preference: ${cfg.preference.join(" > ") || "(none)"}`);
+		if (cfg.gates.length > 0) {
+			lines.push(`gates: ${cfg.gates.map((g) => `${g.series} at ${Math.round(g.at * 100)}% > ${g.then ?? "next entry"}`).join(", ")}`);
+		}
+		if (cfg.backup) lines.push(`backup (pay-per-token, last resort): ${cfg.backup}`);
 		if (sessionNote) lines.push(sessionNote);
 		if (ctx.model) lines.push(`current: ${modelKey(ctx.model)} (${basisOf(ctx, ctx.model)})`);
 		for (const tier of TIERS) {

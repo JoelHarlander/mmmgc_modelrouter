@@ -12,7 +12,7 @@ import { convertToLlm } from "@earendil-works/pi-coding-agent";
 import { Container, matchesKey, Text } from "@earendil-works/pi-tui";
 import { assessBilling, describeBasis } from "./billing.ts";
 import { modelKey, type RouterConfig, TIERS } from "./config.ts";
-import type { JevChoiceAnswer, JevClient, JsonValue } from "./jev.ts";
+import { HOSTED_JEV, type JevChoiceAnswer, type JevClient, type JsonValue } from "./jev.ts";
 import type { Ledger } from "./ledger.ts";
 import { type Candidate, evaluateCandidate } from "./router.ts";
 import { contentToText, truncate } from "./state.ts";
@@ -225,22 +225,27 @@ export async function runParallel(args: RunParallelArgs): Promise<ParallelEntryD
 		return entry;
 	}
 
-	if (cfg.parallel.judge === "jev" && jev.available() && good.length >= 2) {
+	if (cfg.parallel.judge === "jev" && jev.available(HOSTED_JEV) && good.length >= 2) {
 		try {
 			const state: JsonValue = {
 				request: prompt,
 				responses: Object.fromEntries(good.map((r) => [r.label, truncate(r.text, cfg.parallel.maxResponseCharsForJudge)])),
 			};
 			const criteria = Object.fromEntries(good.map((r) => [r.label, `Response ${r.label} in \`responses\``]));
-			const res = await jev.ask(state, {
-				best: {
-					type: "choice",
-					instructions: {
-						question: "Which of `responses` best answers `request` for a software engineer? Prefer correctness, then completeness, then concision.",
+			const res = await jev.ask(
+				state,
+				{
+					best: {
+						type: "choice",
+						instructions: {
+							question: "Which of `responses` best answers `request` for a software engineer? Prefer correctness, then completeness, then concision.",
+						},
+						criteria,
 					},
-					criteria,
 				},
-			});
+				undefined,
+				HOSTED_JEV,
+			);
 			const best = res.answers.best as JevChoiceAnswer | undefined;
 			if (best) {
 				for (const r of good) r.judgeProbability = best.probabilities[r.label];

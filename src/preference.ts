@@ -19,11 +19,11 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { assessBilling, type BillingAssessment, billingLabel } from "./billing.ts";
-import { modelKey, type RouterConfig, type Tier } from "./config.ts";
+import { type Gate, globMatch, modelKey, type RouterConfig, type Tier } from "./config.ts";
 import type { Ledger } from "./ledger.ts";
 import { type Candidate, evaluateCandidate } from "./router.ts";
 
-export const SERIES = ["fable", "grok", "opus", "astra"] as const;
+export const SERIES = ["fable", "grok", "opus", "sonnet", "astra"] as const;
 export type SeriesName = (typeof SERIES)[number];
 
 /** Model-id test for each series. The provider is a separate tie-break. */
@@ -31,6 +31,7 @@ const SERIES_ID: Record<SeriesName, RegExp> = {
 	fable: /fable/i,
 	grok: /grok/i,
 	opus: /opus/i,
+	sonnet: /sonnet/i,
 	astra: /astra/i,
 };
 
@@ -42,6 +43,7 @@ const SERIES_PROVIDER: Record<SeriesName, readonly string[]> = {
 	fable: ["claude-bridge", "anthropic"],
 	grok: ["xai"],
 	opus: ["claude-bridge", "anthropic"],
+	sonnet: ["claude-bridge", "anthropic"],
 	astra: ["openai-codex", "openai"],
 };
 
@@ -58,6 +60,8 @@ export interface Resolved {
 	entry: string;
 	key: string;
 	model: Model<Api>;
+	/** Set when this is the configured pay-per-token backup rather than a preference entry. */
+	backup?: boolean;
 }
 
 export interface SessionPick extends Resolved {
@@ -92,14 +96,111 @@ export function subscriptionSpent(model: Model<Api>, args: PreferenceArgs): { sp
 	return { spent: false };
 }
 
-/** The model a new session should open on, or undefined when nothing in the list can be used. */
+/**
+ * The model a new session should open on, or undefined when nothing can be used. Three passes,
+ * so a gate is a preference and never a lockout: entries whose gate is open, then any usable
+ * entry (a gated subscription still beats paying), then the pay-per-token backup.
+ */
 export function sessionModel(args: PreferenceArgs): SessionPick | undefined {
 	for (const entry of args.cfg.preference) {
+		const pick = resolveThroughGates(entry, args);
+		if (pick) return { ...pick, reason: `session starts on ${pick.key} (${entry}, highest preference with quota left)` };
+	}
+	for (const entry of args.cfg.preference) {
 		const pick = resolveEntry(entry, args);
-		if (!pick) continue;
-		return { ...pick, reason: `session starts on ${pick.key} (${entry}, highest preference with quota left)` };
+		if (pick) return { ...pick, reason: `session starts on ${pick.key} (${entry}; every open entry is past its usage gate, so the least-gated one is used)` };
+	}
+	const backup = resolveBackup(args);
+	if (backup) return { ...backup, reason: `session starts on ${backup.key} (backup: no preference entry is usable)` };
+	return undefined;
+}
+
+/** A gate that has tripped for `model`: the highest governing window has reached `gate.at`. */
+export function gateTrip(model: Model<Api>, args: PreferenceArgs): { gate: Gate; used: number } | undefined {
+	const gate = args.cfg.gates.find((g) => entryCovers(g.series, model));
+	if (!gate) return undefined;
+	const used = args.ledger.assess(model.provider, modelKey(model), args.cfg, args.now ?? Date.now()).modelUtilization;
+	return used !== undefined && used >= gate.at ? { gate, used } : undefined;
+}
+
+function percent(n: number): string {
+	return `${Math.round(n * 100)}%`;
+}
+
+/**
+ * `resolveEntry`, but an entry past its usage gate hands over to the gate's `then` (itself gated
+ * in turn), or yields nothing so the caller tries the next preference entry. `seen` stops a loop.
+ */
+function resolveThroughGates(entry: string, args: PreferenceArgs, seen = new Set<string>()): Resolved | undefined {
+	const pick = resolveEntry(entry, args);
+	if (!pick) return undefined;
+	const trip = gateTrip(pick.model, args);
+	if (!trip) return pick;
+	if (seen.has(entry)) return undefined;
+	seen.add(entry);
+	return trip.gate.then ? resolveThroughGates(trip.gate.then, args, seen) : undefined;
+}
+
+/** Models the backup entry names: a glob over `provider/modelId`, a concrete key, or a series. */
+function backupCandidates(args: PreferenceArgs): Model<Api>[] {
+	const entry = args.cfg.backup;
+	if (!entry) return [];
+	if (entry.includes("*")) return args.models.filter((model) => globMatch(entry, modelKey(model)));
+	return candidatesFor(entry, args);
+}
+
+/** The newest usable backup model. A tie on version prefers the shorter id: `glm-5.3` over `glm-5.3-flash`. */
+export function resolveBackup(args: PreferenceArgs, exclude?: string): Resolved | undefined {
+	const usable = backupCandidates(args).filter((model) => modelKey(model) !== exclude && gate(model, args).ok);
+	usable.sort((a, b) => versionCompare(b.id, a.id) || a.id.length - b.id.length || modelKey(a).localeCompare(modelKey(b)));
+	const model = usable[0];
+	return model ? { entry: args.cfg.backup, key: modelKey(model), model, backup: true } : undefined;
+}
+
+/** True when `model` is the backup and no preference entry also claims it. */
+function onBackup(model: Model<Api>, args: PreferenceArgs): boolean {
+	if (args.cfg.preference.some((entry) => entryCovers(entry, model))) return false;
+	return backupCandidates(args).some((candidate) => modelKey(candidate) === modelKey(model));
+}
+
+/**
+ * A model change a still-unspent `current` should make: off the backup once any preference entry
+ * is usable again, or off a model past its usage gate. Undefined keeps `current`.
+ */
+function reroute(current: Model<Api>, args: PreferenceArgs): { next: Resolved; why: string } | undefined {
+	const currentKey = modelKey(current);
+	if (onBackup(current, args)) {
+		const back = firstUsable(args.cfg.preference, args, currentKey);
+		return back ? { next: back, why: `backup ${currentKey} is only for when nothing else is usable, and ${back.entry} is` } : undefined;
+	}
+	const trip = gateTrip(current, args);
+	if (!trip) return undefined;
+	const order = trip.gate.then ? [trip.gate.then, ...rotated(current, args)] : rotated(current, args);
+	for (const entry of order) {
+		const pick = resolveThroughGates(entry, args);
+		if (pick && pick.key !== currentKey) return { next: pick, why: `${trip.gate.series} gate: ${percent(trip.used)} used >= ${percent(trip.gate.at)}` };
 	}
 	return undefined;
+}
+
+/** First usable entry in `entries`, preferring open gates, never `exclude`. */
+function firstUsable(entries: readonly string[], args: PreferenceArgs, exclude?: string): Resolved | undefined {
+	for (const entry of entries) {
+		const pick = resolveThroughGates(entry, args);
+		if (pick && pick.key !== exclude) return pick;
+	}
+	for (const entry of entries) {
+		const pick = resolveEntry(entry, args);
+		if (pick && pick.key !== exclude) return pick;
+	}
+	return undefined;
+}
+
+/** The preference list starting at the entry that covers `current`, wrapping once. */
+function rotated(current: Model<Api>, args: PreferenceArgs): string[] {
+	const entries = args.cfg.preference;
+	const idx = entries.findIndex((entry) => entryCovers(entry, current));
+	return idx >= 0 ? [...entries.slice(idx), ...entries.slice(0, idx)] : [...entries];
 }
 
 /**
@@ -126,6 +227,8 @@ export function planTurn(args: PreferenceArgs & { tier: Tier; confidence: number
 
 	const spent = subscriptionSpent(current, args);
 	if (!spent.spent) {
+		const moved = reroute(current, args);
+		if (moved) return switchPlan(args, held, moved.next, `${moved.why}; ${currentKey} -> ${moved.next.key}`);
 		return {
 			requestedTier: tier,
 			tier,
@@ -155,15 +258,24 @@ export function planTurn(args: PreferenceArgs & { tier: Tier; confidence: number
 		};
 	}
 
+	return switchPlan(args, held, next, `subscription spent (${spent.reason}); ${currentKey} -> ${next.key}${next.backup ? " (backup)" : ""}`);
+}
+
+function switchPlan(
+	args: PreferenceArgs & { tier: Tier; confidence: number; current: Model<Api> | undefined; contextTokens?: number },
+	held: Candidate | undefined,
+	next: Resolved,
+	reason: string,
+): TurnPlan {
 	const chosen = evaluateCurrent(next.model, args);
 	return {
-		requestedTier: tier,
-		tier,
-		confidence,
+		requestedTier: args.tier,
+		tier: args.tier,
+		confidence: args.confidence,
 		model: next.model,
 		switched: true,
 		billing: chosen?.assessment,
-		reason: `subscription spent (${spent.reason}); ${currentKey} -> ${next.key}`,
+		reason,
 		candidates: [held, chosen].filter((c): c is Candidate => c !== undefined),
 	};
 }
@@ -195,15 +307,7 @@ function preferredPool(entry: string, models: Model<Api>[]): Model<Api>[] {
 }
 
 function nextUsable(current: Model<Api>, args: PreferenceArgs): Resolved | undefined {
-	const entries = args.cfg.preference;
-	const currentKey = modelKey(current);
-	const idx = entries.findIndex((entry) => entryCovers(entry, current));
-	const order = idx >= 0 ? [...entries.slice(idx), ...entries.slice(0, idx)] : [...entries];
-	for (const entry of order) {
-		const pick = resolveEntry(entry, args);
-		if (pick && pick.key !== currentKey) return pick;
-	}
-	return undefined;
+	return firstUsable(rotated(current, args), args, modelKey(current)) ?? resolveBackup(args, modelKey(current));
 }
 
 function candidatesFor(entry: string, args: PreferenceArgs): Model<Api>[] {

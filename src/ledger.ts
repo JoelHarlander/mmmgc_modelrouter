@@ -88,6 +88,8 @@ const REFUSAL_WINDOWS: Record<string, string> = {
 
 /** What the router needs to know about one provider/model pair right now. */
 export interface QuotaAssessment {
+	/** Highest utilization, 0..1, among live windows that govern this model: account-wide ones and scoped ones that match it. */
+	modelUtilization?: number;
 	/** Account-wide windows that are exhausted (the whole credential is spent). */
 	exhaustedAccount: ExhaustedWindow[];
 	/** Refusals the response attributed to no window of its own: the credential itself said no. */
@@ -317,14 +319,17 @@ export class Ledger {
 			}
 			const scope = scopeGlobs(cfg, scoped, id);
 			const spent = windowExhausted(w, cfg, now);
+			const live = w.utilization !== undefined && (w.resetAt === undefined || w.resetAt > now);
 			if (scope !== undefined) {
 				if (!(modelKey && anyGlobMatch(scope.globs, modelKey))) {
 					if (spent && !windowPlaceable(cfg, scoped, id)) out.unattributed.push({ id, reason: `${id} ${spent}` });
 					continue;
 				}
+				if (live) out.modelUtilization = Math.max(out.modelUtilization ?? 0, w.utilization!);
 				if (spent) out.exhaustedScoped.push({ id, reason: `${id} ${spent}` });
 				continue;
 			}
+			if (live) out.modelUtilization = Math.max(out.modelUtilization ?? 0, w.utilization!);
 			out.accountWindows.push(id);
 			out.accountWindowsAt = Math.max(out.accountWindowsAt ?? 0, w.lastSeen);
 			if (w.utilization !== undefined) out.accountUtilization = Math.max(out.accountUtilization ?? 0, w.utilization);

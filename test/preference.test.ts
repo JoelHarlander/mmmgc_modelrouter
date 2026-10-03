@@ -12,7 +12,7 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, loadConfig, mergeConfig, type RouterConfig } from "../src/config.ts";
 import { Ledger } from "../src/ledger.ts";
-import { planTurn, resolveEntry, sessionModel, versionCompare } from "../src/preference.ts";
+import { planTurn, resolveBackup, resolveEntry, sessionModel, versionCompare } from "../src/preference.ts";
 
 function model(provider: string, id: string, cost: Partial<Model<Api>["cost"]> = {}): Model<Api> {
 	return {
@@ -39,7 +39,13 @@ const opus55 = model("claude-bridge", "claude-opus-5-5");
 const astra = model("openai-codex", "gpt-6-astra");
 const fauxA = model("faux", "a", { input: 10, output: 50 });
 const fauxB = model("faux", "b", { input: 0.1, output: 0.4 });
-const CATALOG = [fable5, fable51, fableApi, grok46, grok47, opus5, opus55, astra, fauxA, fauxB];
+const sonnet5 = model("claude-bridge", "claude-sonnet-5");
+const sonnet55 = model("claude-bridge", "claude-sonnet-5-5");
+const sol = model("openai-codex", "gpt-6-sol");
+const glm52 = model("openrouter", "z-ai/glm-5.2", { input: 0.5, output: 1.8 });
+const glm53 = model("openrouter", "z-ai/glm-5.3", { input: 0.6, output: 2 });
+const glm53flash = model("openrouter", "z-ai/glm-5.3-flash", { input: 0.1, output: 0.4 });
+const CATALOG = [fable5, fable51, fableApi, grok46, grok47, opus5, opus55, sonnet5, sonnet55, astra, sol, glm52, glm53, glm53flash, fauxA, fauxB];
 
 function registry(unauthed: string[] = []): ModelRegistry {
 	return {
@@ -239,4 +245,130 @@ test("a new session opens on the highest preference even when pi started on anot
 	assert.deepEqual(await startSession("new", grok47), ["claude-bridge/claude-fable-5-1"]);
 	assert.deepEqual(await startSession("resume", grok47), []);
 	assert.deepEqual(await startSession("startup", fable51), []);
+});
+
+// ---- usage gates and the pay-per-token backup --------------------------------------------
+
+const GATED = mergeConfig(cfg, {
+	preference: ["opus", "sonnet"],
+	gates: [{ series: "opus", at: 0.5, then: "sonnet" }],
+	billing: { ...cfg.billing, allowPayPerToken: ["openrouter/*"] },
+});
+
+function gatedArgs(extra: { ledger?: Ledger; now?: number; cfg?: RouterConfig; unauthed?: string[] } = {}) {
+	return { cfg: extra.cfg ?? GATED, registry: registry(extra.unauthed), ledger: extra.ledger ?? ledger(), models: CATALOG, now: extra.now };
+}
+
+/** Opus's own weekly bucket at `used` (0..1), reset an hour out. */
+function opusUsed(l: Ledger, used: number, now: number) {
+	l.observeResponse(
+		"claude-bridge",
+		200,
+		{ "anthropic-ratelimit-unified-7d_opus-utilization": String(used), "anthropic-ratelimit-unified-7d_opus-reset": String(Math.floor(now / 1000) + 3600) },
+		cfg,
+		now,
+		undefined,
+		"claude-opus-5-5",
+	);
+}
+
+test("a gate keeps the model below its threshold and moves to the next series at it", () => {
+	const l = ledger();
+	const now = Date.now();
+	opusUsed(l, 0.49, now);
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now }))?.key, "claude-bridge/claude-opus-5-5");
+	assert.equal(planTurn({ ...gatedArgs({ ledger: l, now }), tier: "heavy", confidence: 0.9, current: opus55 }).switched, false);
+
+	opusUsed(l, 0.5, now);
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now }))?.key, "claude-bridge/claude-sonnet-5-5", "sonnet resolves to the latest");
+	const moved = planTurn({ ...gatedArgs({ ledger: l, now }), tier: "heavy", confidence: 0.9, current: opus55 });
+	assert.equal(moved.switched, true);
+	assert.equal(moved.model, sonnet55);
+	assert.match(moved.reason, /opus gate: 50% used >= 50%; claude-bridge\/claude-opus-5-5 -> claude-bridge\/claude-sonnet-5-5/);
+});
+
+test("a gate window that has reset says nothing", () => {
+	const l = ledger();
+	const now = Date.now();
+	opusUsed(l, 0.9, now);
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now: now + 2 * 3600_000 }))?.key, "claude-bridge/claude-opus-5-5");
+});
+
+test("a gate is soft: when nothing past it is usable, the gated subscription still beats paying", () => {
+	const l = ledger();
+	const now = Date.now();
+	opusUsed(l, 0.8, now);
+	const noSonnet = mergeConfig(GATED, { gates: [{ series: "opus", at: 0.5 }], preference: ["opus"], backup: "openrouter/z-ai/glm-*" });
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: noSonnet }))?.key, "claude-bridge/claude-opus-5-5");
+	const stay = planTurn({ ...gatedArgs({ ledger: l, now, cfg: noSonnet }), tier: "standard", confidence: 0.9, current: opus55 });
+	assert.equal(stay.switched, false, "no alternative, so the gated model is kept rather than paying");
+});
+
+test("astra gates to another series the same way, and a gate may name one concrete model", () => {
+	const l = ledger();
+	const now = Date.now();
+	l.observeResponse("openai-codex", 200, { "x-codex-primary-used-percent": "60", "x-codex-primary-reset-after-seconds": "3600" }, cfg, now, undefined, "gpt-6-astra");
+	const astraGate = mergeConfig(GATED, { preference: ["astra"], gates: [{ series: "astra", at: 0.5, then: "sol" }] });
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: astraGate }))?.key, "openai-codex/gpt-6-sol");
+
+	const pinned = mergeConfig(GATED, { preference: ["astra"], gates: [{ series: "astra", at: 0.5, then: "openai-codex/gpt-6-sol" }] });
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: pinned }))?.key, "openai-codex/gpt-6-sol");
+});
+
+test("a concrete preference entry has no series to upgrade within: it is exactly that model", () => {
+	const only = mergeConfig(GATED, { preference: ["claude-bridge/claude-opus-5"], gates: [] });
+	assert.equal(sessionModel(gatedArgs({ cfg: only }))?.key, "claude-bridge/claude-opus-5", "opus-5-5 exists but is not chosen");
+});
+
+test("gates loop-protect and malformed gates are dropped", () => {
+	const loop = mergeConfig(GATED, {
+		preference: ["opus", "sonnet"],
+		gates: [
+			{ series: "opus", at: 0.1, then: "sonnet" },
+			{ series: "sonnet", at: 0.1, then: "opus" },
+		],
+	});
+	const l = ledger();
+	const now = Date.now();
+	opusUsed(l, 0.9, now);
+	assert.ok(sessionModel(gatedArgs({ ledger: l, now, cfg: loop })), "a cycle still lands on something usable");
+
+	const dropped = mergeConfig(DEFAULT_CONFIG, { gates: [{ series: "", at: 0.5 }, { series: "opus", at: 0 }, { series: "opus", at: 2 }, { series: "opus", at: 0.5, then: "sonnet" }, 7] as never });
+	assert.deepEqual(dropped.gates, [{ series: "opus", at: 0.5, then: "sonnet" }]);
+	const projectTry = mergeConfig(DEFAULT_CONFIG, { gates: [{ series: "opus", at: 0.5 }], backup: "openrouter/x" } as never, "project");
+	assert.deepEqual([projectTry.gates, projectTry.backup], [[], ""], "a repository cannot set gates or the backup");
+});
+
+test("the backup is the newest matching pay-per-token model, used only when no preference entry is", () => {
+	const backupCfg = mergeConfig(GATED, { preference: ["opus"], gates: [], backup: "openrouter/z-ai/glm-*" });
+	assert.equal(sessionModel(gatedArgs({ cfg: backupCfg }))?.key, "claude-bridge/claude-opus-5-5", "subscriptions first");
+	assert.equal(resolveBackup(gatedArgs({ cfg: backupCfg }))?.key, "openrouter/z-ai/glm-5.3", "newest version, plain id over -flash");
+
+	const l = ledger();
+	const now = Date.now();
+	l.observeResponse("claude-bridge", 0, {}, backupCfg, now, { rateLimitType: "seven_day_opus", resetsAt: Math.floor(now / 1000) + 3600 });
+	const session = sessionModel(gatedArgs({ ledger: l, now, cfg: backupCfg }));
+	assert.equal(session?.key, "openrouter/z-ai/glm-5.3");
+	assert.match(session!.reason, /backup/);
+	const spent = planTurn({ ...gatedArgs({ ledger: l, now, cfg: backupCfg }), tier: "standard", confidence: 0.9, current: opus55 });
+	assert.equal(spent.model?.id, "z-ai/glm-5.3");
+	assert.match(spent.reason, /\(backup\)/);
+
+	// The subscription reopens: the session leaves the pay-per-token model on the next turn.
+	const back = planTurn({ ...gatedArgs({ cfg: backupCfg }), tier: "standard", confidence: 0.9, current: glm53 });
+	assert.equal(back.switched, true);
+	assert.equal(back.model, opus55);
+	assert.match(back.reason, /backup openrouter\/z-ai\/glm-5\.3 is only for when nothing else is usable/);
+});
+
+test("the backup follows the config: any provider, a concrete model, or none", () => {
+	const l = ledger();
+	const now = Date.now();
+	l.observeResponse("claude-bridge", 0, {}, cfg, now, { rateLimitType: "seven_day_opus", resetsAt: Math.floor(now / 1000) + 3600 });
+	const base = { preference: ["opus"], gates: [] };
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: mergeConfig(GATED, { ...base, backup: "openrouter/z-ai/glm-5.2" }) }))?.key, "openrouter/z-ai/glm-5.2");
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: mergeConfig(GATED, { ...base, backup: "" }) })), undefined);
+	// A backup the billing gate excludes is never used.
+	const blocked = mergeConfig(GATED, { ...base, backup: "openrouter/z-ai/glm-*", billing: { ...GATED.billing, allowPayPerToken: [] } });
+	assert.equal(sessionModel(gatedArgs({ ledger: l, now, cfg: blocked })), undefined);
 });

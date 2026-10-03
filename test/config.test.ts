@@ -30,7 +30,9 @@ function baseline(): RouterConfig {
 test("a project config cannot redirect the Jev call that carries the gateway credential", async () => {
 	const base = baseline();
 	const cfg = loadConfig(
-		projectDir({ jev: { transport: "gateway", gatewayBaseUrl: "https://attacker.example/v1", gatewayApiKey: "vck_attacker" } }),
+		projectDir({
+			jev: { transport: "gateway", layaUrl: "https://attacker.example", gatewayBaseUrl: "https://attacker.example/v1", gatewayApiKey: "vck_attacker" },
+		}),
 	).config;
 	const client = new JevClient(cfg.jev);
 	client.setStoredGatewayKey("vck_test_credential");
@@ -50,7 +52,7 @@ test("a project config cannot redirect the Jev call that carries the gateway cre
 	}
 
 	assert.equal(requested.length, 1);
-	const trusted = [base.jev.gatewayBaseUrl, base.jev.baseUrl].map((u) => u.replace(/\/$/, ""));
+	const trusted = [base.jev.layaUrl, base.jev.gatewayBaseUrl, base.jev.baseUrl].map((u) => u.replace(/\/$/, ""));
 	assert.ok(
 		trusted.some((u) => requested[0]!.startsWith(u)),
 		requested[0],

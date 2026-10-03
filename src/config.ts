@@ -42,12 +42,33 @@ export interface ModelOverride {
 	capability?: number;
 }
 
+/**
+ * A usage gate: once a model in `series` has used `at` (0..1) of the highest window that governs
+ * it, the session moves to `then` (a series name or a concrete `provider/modelId`), or to the next
+ * preference entry when `then` is absent. Soft by design: a tripped gate only demotes, so a gated
+ * subscription still beats paying when nothing else is usable. Global config only.
+ */
+export interface Gate {
+	series: string;
+	at: number;
+	then?: string;
+}
+
 export interface RouterConfig {
 	enabled: boolean;
 	notifyOnSwitch: boolean;
 	jev: {
-		/** auto = direct TypeSafe key if present, else Vercel AI Gateway key (pi's vercel-ai-gateway auth or env). */
-		transport: "auto" | "typesafe" | "gateway";
+		/**
+		 * auto = a local Laya server first, then a direct TypeSafe key, then a Vercel AI Gateway key
+		 * (pi's vercel-ai-gateway auth or env). A transport that fails hands the call to the next.
+		 */
+		transport: "auto" | "laya" | "typesafe" | "gateway";
+		/** Laya server speaking the Jev wire (`laya-serve`). Empty disables it. */
+		layaUrl: string;
+		layaModel: string;
+		layaApiKeyEnv: string;
+		layaApiKey?: string;
+		layaTimeoutMs: number;
 		model: string;
 		baseUrl: string;
 		apiKeyEnv: string;
@@ -69,6 +90,14 @@ export interface RouterConfig {
 	 * current model's subscription window is spent. The tier lists do not choose the model.
 	 */
 	preference: string[];
+	/** Usage gates, checked against live quota windows. See `Gate`. */
+	gates: Gate[];
+	/**
+	 * The one pay-per-token route kept for when no preference entry is usable: a series name, a
+	 * concrete `provider/modelId`, or a glob such as `openrouter/z-ai/glm-*` that resolves to the
+	 * newest match. Empty means none. The session leaves it as soon as a subscription reopens.
+	 */
+	backup: string;
 	thinking: Partial<Record<Tier, ThinkingLevel>>;
 	models: Record<string, ModelOverride>;
 	plan: {
@@ -130,6 +159,10 @@ export const DEFAULT_CONFIG: RouterConfig = {
 	notifyOnSwitch: true,
 	jev: {
 		transport: "auto",
+		layaUrl: "http://127.0.0.1:8787",
+		layaModel: "laya",
+		layaApiKeyEnv: "LAYA_API_KEY",
+		layaTimeoutMs: 3000,
 		model: "jev-latest",
 		baseUrl: "https://api.typesafe.ai/v1",
 		apiKeyEnv: "TYPESAFE_API_KEY",
@@ -149,6 +182,8 @@ export const DEFAULT_CONFIG: RouterConfig = {
 	thinking: { light: "low", standard: "medium", heavy: "high" },
 	// Series names, not pinned versions: each resolves to the best model pi can use in that series.
 	preference: ["fable", "grok", "opus", "astra"],
+	gates: [],
+	backup: "",
 	models: {
 		// The OAuth-backed subscription routes. `anthropic/*` and `xai/*` carry no label: whether
 		// they are a plan or an API key is pi's own auth evidence to answer, not this file's - and
@@ -289,6 +324,8 @@ export function mergeConfig(base: RouterConfig, rawPatch: Partial<RouterConfig>,
 		jev: { ...base.jev, ...(patch.jev ?? {}) },
 		tiers: patch.tiers ? { ...base.tiers, ...patch.tiers } : base.tiers,
 		preference: preferenceList(patch.preference, base.preference),
+		gates: gateList(patch.gates, base.gates),
+		backup: typeof patch.backup === "string" ? patch.backup.trim() : base.backup,
 		thinking: { ...base.thinking, ...(patch.thinking ?? {}) },
 		models: { ...base.models, ...(patch.models ?? {}) },
 		plan: { ...base.plan, ...(patch.plan ?? {}) },
@@ -344,7 +381,7 @@ export function credentialOf(cfg: RouterConfig, provider: string): string {
 
 /** Every concrete model key the config names, from the tiers, the fan-out list, and preference. */
 export function routableModels(cfg: RouterConfig): string[] {
-	const named = cfg.preference.filter((entry) => entry.includes("/"));
+	const named = [...cfg.preference, cfg.backup, ...cfg.gates.map((g) => g.then ?? "")].filter((entry) => entry.includes("/"));
 	return [...new Set([...Object.values(cfg.tiers).flat(), ...cfg.parallel.models, ...named])];
 }
 
@@ -352,6 +389,22 @@ export function routableModels(cfg: RouterConfig): string[] {
 function preferenceList(patch: RouterConfig["preference"] | undefined, base: string[]): string[] {
 	if (!Array.isArray(patch)) return base;
 	return patch.filter((entry) => typeof entry === "string" && entry.trim() !== "");
+}
+
+/** Gates replace wholesale. An entry that is not `{ series, at in (0, 1], then? }` is dropped, never guessed at. */
+function gateList(patch: unknown, base: Gate[]): Gate[] {
+	if (!Array.isArray(patch)) return base;
+	const out: Gate[] = [];
+	for (const raw of patch as unknown[]) {
+		if (!isRecord(raw)) continue;
+		const { series, at, then } = raw;
+		if (typeof series !== "string" || series.trim() === "") continue;
+		if (typeof at !== "number" || !Number.isFinite(at) || at <= 0 || at > 1) continue;
+		const gate: Gate = { series: series.trim(), at };
+		if (typeof then === "string" && then.trim() !== "") gate.then = then.trim();
+		out.push(gate);
+	}
+	return out;
 }
 
 /** True when any glob in `patterns` matches `modelKey`. */
