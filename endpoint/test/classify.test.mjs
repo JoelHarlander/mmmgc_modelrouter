@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { once } from "node:events";
-import { classify, systemOneUrl, warmLaya } from "../src/laya.mjs";
+import { classify, createBreakers, systemOneUrl, warmLaya } from "../src/classifier.mjs";
 
 async function fakeSystemOne(tier, seen) {
   const server = createServer((req, res) => {
@@ -74,6 +74,49 @@ test("warming Laya retries until it answers, never asks the hosted Jev, and give
   } finally {
     delete process.env.TYPESAFE_API_KEY;
     flaky.close();
+    jev.server.close();
+  }
+});
+
+test("a classifier that failed is skipped for a while, so a dead Laya and a slow Jev do not tax every turn", async () => {
+  process.env.TYPESAFE_API_KEY = "ts-test";
+  const hosted = [];
+  const jev = await fakeSystemOne("standard", hosted);
+  const breakers = createBreakers();
+  let clock = 1_000_000;
+  const opts = { layaUrl: "http://127.0.0.1:9/v1", typesafeUrl: jev.url, authPath: "/none", breakers, now: () => clock };
+  try {
+    const first = await classify("hi", opts);
+    assert.equal(first.via, "typesafe:jev");
+    assert.match(first.errors[0], /^laya: (?!skipped)/, "the first failure is a real attempt");
+
+    clock += 5_000;
+    const second = await classify("hi", opts);
+    assert.equal(second.via, "typesafe:jev");
+    assert.match(second.errors[0], /^laya: skipped, failed recently \(retry in 25s\)$/, "Laya is not tried again inside its window");
+
+    clock += 31_000;
+    const third = await classify("hi", opts);
+    assert.match(third.errors[0], /^laya: (?!skipped)/, "after the window it is tried again");
+
+    // The hosted Jev fails too: heuristic immediately, then no repeat attempts inside its window.
+    const failing = { ...opts, typesafeUrl: "http://127.0.0.1:9/v1", breakers: createBreakers() };
+    const a = await classify("hi", failing);
+    assert.equal(a.via, "heuristic");
+    assert.match(a.errors.join(" "), /laya: .*typesafe:jev: /);
+    const b = await classify("hi", failing);
+    assert.match(b.errors.join(" "), /laya: skipped.*typesafe:jev: skipped/, "nothing is attempted, so the heuristic answers at once");
+
+    // A success clears the breaker.
+    breakers.laya = clock + 99_000;
+    const healed = await fakeSystemOne("heavy", []);
+    breakers.laya = 0;
+    const ok = await classify("hi", { ...opts, layaUrl: healed.url, breakers });
+    assert.equal(ok.via, "laya");
+    assert.equal(breakers.laya, 0);
+    healed.server.close();
+  } finally {
+    delete process.env.TYPESAFE_API_KEY;
     jev.server.close();
   }
 });

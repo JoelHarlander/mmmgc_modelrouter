@@ -11,6 +11,10 @@ import { applyWindows } from "./usage.mjs";
  *   { ok: true, kind: "http", res }         an OpenAI-compatible reply to pass straight through
  *   { ok: true, kind: "buffered", json }    an OpenAI-compatible reply the caller must translate
  * A refusal is always reported before anything is sent, which is what lets the caller fail over.
+ * @param {import("./types.js").Account} account
+ * @param {{ protocol: import("./types.js").Protocol, body: any, series: string, model: string, tier?: string, signal?: AbortSignal,
+ *           fetchImpl: typeof fetch, authPath: string, spawnImpl?: any }} ctx
+ * @returns {Promise<import("./types.js").DispatchResult>}
  */
 export async function dispatch(account, ctx) {
   if (account.kind === "echo") return echo(account, ctx);
@@ -20,6 +24,7 @@ export async function dispatch(account, ctx) {
 }
 
 /** A stand-in that needs no credential, for trying the plumbing. */
+/** @returns {Promise<import("./types.js").DispatchResult>} */
 async function echo(account, ctx) {
   const text = `pong from ${account.id} (${ctx.series}/${ctx.model}, tier ${ctx.tier})`;
   async function* events() {
@@ -29,6 +34,7 @@ async function echo(account, ctx) {
   return { ok: true, kind: "events", events: events() };
 }
 
+/** @returns {Promise<import("./types.js").DispatchResult>} */
 async function claude(account, ctx) {
   const out = await runClaude(account, {
     model: ctx.model,
@@ -42,6 +48,7 @@ async function claude(account, ctx) {
   return { ...out, cooldownMs: out.resetAt ? Math.max(0, out.resetAt - Date.now()) : undefined };
 }
 
+/** @returns {Promise<import("./types.js").DispatchResult>} */
 async function openai(account, ctx) {
   let upstream;
   try {

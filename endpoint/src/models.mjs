@@ -24,7 +24,12 @@ export function upstreamOf(account, authPath) {
   return { base: account.baseUrl.replace(/\/$/, ""), token: account.apiKey };
 }
 
-/** Ids an OpenAI-compatible account lists, or none when it cannot. Never throws. */
+/**
+ * Ids an OpenAI-compatible account lists, or none when it cannot. Never throws.
+ * @param {import("./types.js").Account} account
+ * @param {{ fetchImpl?: typeof fetch, authPath?: string, now?: number }} [opts]
+ * @returns {Promise<string[]>}
+ */
 export async function listModels(account, { fetchImpl = fetch, authPath, now = Date.now() } = {}) {
   const hit = listings.get(account.id);
   if (hit && now - hit.at < TTL_MS) return hit.ids;
@@ -35,7 +40,7 @@ export async function listModels(account, { fetchImpl = fetch, authPath, now = D
       headers: { accept: "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
       signal: AbortSignal.timeout(6000),
     });
-    if (res.ok) ids = (await res.json()).data.map((m) => m.id);
+    if (res.ok) ids = /** @type {any} */ (await res.json()).data.map((/** @type {{ id: string }} */ m) => m.id);
   } catch {
     ids = [];
   }
@@ -49,6 +54,10 @@ export async function listModels(account, { fetchImpl = fetch, authPath, now = D
  *   alias    a Claude subscription account: the series name, which the CLI maps to the newest model
  *   latest   the newest listed id matching the series, or `account.modelGlob` when set; `:variant` ids are skipped
  * `account.latest: false` forbids the last two, so an account with no pin is an error rather than a guess.
+ * @param {import("./types.js").Account} account
+ * @param {string} series
+ * @param {{ fetchImpl?: typeof fetch, authPath?: string }} [opts]
+ * @returns {Promise<{ model: string, how: "pinned" | "alias" | "latest" }>}
  */
 export async function resolveModel(account, series, opts = {}) {
   const pinned = account.models?.[series];

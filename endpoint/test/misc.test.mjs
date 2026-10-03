@@ -103,3 +103,17 @@ test("a bad state file makes the service fail loudly, not exit 0", async () => {
   assert.equal(out.status, 1);
   assert.match(out.stderr, /not valid JSON.*will not be overwritten/);
 });
+
+import { createLogger } from "../src/log.mjs";
+
+test("the log is one line per event, quotes only what needs it, and drops empty fields", () => {
+  const lines = [];
+  const log = createLogger({ out: { write: (l) => lines.push(l) }, enabled: true, now: () => new Date("2026-10-03T12:00:00Z") });
+  log.info("turn", { account: "claude-main", route: "gate:opus>sonnet", error: 'bad "thing" happened', skipped: undefined, empty: "", ms: 12 });
+  log.warn("refused", { error: "x".repeat(400) });
+  assert.equal(lines[0], '2026-10-03T12:00:00.000Z info turn account=claude-main route=gate:opus>sonnet error="bad \\"thing\\" happened" ms=12\n');
+  assert.ok(lines[1].length < 400, "long values are cut");
+  const off = [];
+  createLogger({ out: { write: (l) => off.push(l) }, enabled: false }).info("turn", { a: 1 });
+  assert.deepEqual(off, [], "ROUTER_LOG=0 silences it");
+});

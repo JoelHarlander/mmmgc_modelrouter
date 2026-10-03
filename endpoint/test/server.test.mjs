@@ -264,6 +264,10 @@ test("the admin API validates accounts, edits policy, and deletes", async () => 
     assert.equal((await post("/api/accounts", { id: "a", kind: "claude-code", series: ["opus"] })).status, 400, "claude-code needs a config dir");
     assert.equal((await post("/api/accounts", { id: "a", kind: "pi-auth", series: ["opus"] })).status, 400, "pi-auth needs a provider");
     assert.equal((await post("/api/accounts", { id: "a", kind: "claude-code", configDir: "/x" })).status, 400, "series or backup required");
+    const exfil = await post("/api/accounts", { id: "x", kind: "pi-auth", provider: "openrouter", backup: true, baseUrl: "http://attacker.example/v1" });
+    assert.equal(exfil.status, 400, "the API cannot point a pi-auth account (which sends pi's stored token) at another host");
+    assert.match((await exfil.json()).error, /provider's own URL/);
+    assert.equal(t.state.accounts.some((a) => a.id === "x"), false);
     const ok = await post("/api/accounts", { id: "a", kind: "claude-code", configDir: "/x", series: ["opus"], apiKey: "secret-key-value" });
     assert.equal(ok.status, 200);
     assert.equal(JSON.stringify(await ok.json()).includes("secret-key-value"), false, "keys are write-only");
@@ -272,6 +276,9 @@ test("the admin API validates accounts, edits policy, and deletes", async () => 
 
     assert.equal((await post("/api/policy", { preference: [] })).status, 400);
     assert.equal((await post("/api/policy", { gates: [{ series: "opus", at: 3 }] })).status, 400);
+    for (const bad of [{ light: "sonnet" }, { fast: ["sonnet"] }, { light: [] }, { light: [1] }, ["sonnet"], null]) {
+      assert.equal((await post("/api/policy", { tiers: bad })).status, 400, `tiers ${JSON.stringify(bad)}`);
+    }
     const policy = await post("/api/policy", { preference: ["sonnet", "opus"], gates: [{ series: "opus", at: 0.5, then: "sonnet" }], tiers: { light: ["sonnet"] } });
     assert.equal(policy.status, 200);
     assert.deepEqual(t.state.preference, ["sonnet", "opus"]);
@@ -282,6 +289,43 @@ test("the admin API validates accounts, edits policy, and deletes", async () => 
     assert.equal((await post("/api/accounts/delete", { id: "nope" })).status, 404);
     assert.equal((await post("/api/accounts/delete", { id: "a" })).status, 200);
     assert.equal(t.state.accounts.some((a) => a.id === "a"), false);
+  } finally {
+    t.close();
+  }
+});
+
+test("every turn logs one line saying how it was routed, and no log line carries a prompt or a secret", async () => {
+  const lines = [];
+  const state = { host: "127.0.0.1", port: 0, token: TOKEN, layaUrl: "", preference: ["opus"], gates: [], tiers: {}, cooldownFallbackMs: 1000, rr: {}, decisions: [],
+    accounts: [claude("a", ["opus"], { apiKey: "SECRET-KEY-123" })] };
+  const { createLogger } = await import("../src/log.mjs");
+  const app = createApp({ state, persist: false, authPath: "/none", log: createLogger({ out: { write: (l) => lines.push(l) }, enabled: true }) });
+  app.server.listen(0, "127.0.0.1");
+  await once(app.server, "listening");
+  try {
+    const base = `http://127.0.0.1:${app.server.address().port}`;
+    const headers = { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" };
+    await fetch(`${base}/v1/chat/completions`, { method: "POST", headers, body: JSON.stringify(chat("a very private prompt")) });
+    await fetch(`${base}/api/accounts`, { method: "POST", headers, body: JSON.stringify({ id: "z", kind: "echo", series: ["opus"], apiKey: "SECRET-KEY-456" }) });
+    const all = lines.join("");
+    assert.match(lines.find((l) => l.includes(" turn ")), /info turn account=a series=opus model=opus route=open tier=\w+ via=\S+ ms=\d+/);
+    assert.match(all, /account saved id=z kind=echo/);
+    for (const secret of ["private prompt", "SECRET-KEY", TOKEN]) assert.equal(all.includes(secret), false, `the log must not contain ${secret}`);
+  } finally {
+    app.server.close();
+  }
+});
+
+test("an internal error is logged, but the client gets no detail", async () => {
+  const t = await boot([claude("a", ["opus"])]);
+  try {
+    t.state.accounts = null; // a corrupted state: pick will throw
+    const res = await t.call("/v1/chat/completions", chat("hi"));
+    assert.equal(res.status, 500);
+    assert.equal((await res.json()).error.message, "internal error");
+    const admin = await t.call("/api/status");
+    assert.equal(admin.status, 500);
+    assert.equal((await admin.json()).error, "internal error");
   } finally {
     t.close();
   }

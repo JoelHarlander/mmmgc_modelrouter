@@ -37,7 +37,9 @@ const sse = (event, data) => (event ? `event: ${event}\ndata: ${JSON.stringify(d
 
 // ---- OpenAI ----------------------------------------------------------------
 
-export function openaiCompletion(text, model, { toolCalls, usage } = {}) {
+/** @param {{ toolCalls?: any[], usage?: import("./types.js").Usage1 }} [extra] */
+export function openaiCompletion(text, model, extra = {}) {
+  const { toolCalls, usage } = extra;
   const message = { role: "assistant", content: toolCalls?.length ? (text || null) : text };
   if (toolCalls?.length) message.tool_calls = toolCalls;
   const u = usage ?? { input_tokens: 0, output_tokens: 0 };
@@ -68,7 +70,9 @@ export function openaiStream(model) {
 
 // ---- Anthropic -------------------------------------------------------------
 
-export function anthropicMessage(text, model, { toolUses, usage } = {}) {
+/** @param {{ toolUses?: any[], usage?: import("./types.js").Usage1 }} [extra] */
+export function anthropicMessage(text, model, extra = {}) {
+  const { toolUses, usage } = extra;
   const content = [];
   if (text) content.push({ type: "text", text });
   for (const use of toolUses ?? []) content.push(use);

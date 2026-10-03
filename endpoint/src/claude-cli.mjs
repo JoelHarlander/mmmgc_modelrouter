@@ -94,6 +94,9 @@ const gate = new Semaphore(Number(process.env.ROUTER_CLAUDE_CONCURRENCY || 3));
  *   { ok: false, ... }                         refused or failed, nothing was sent
  *   { ok: true, events, windows }              `events` yields { text } then { done, usage }
  * `onWindows(windows)` fires whenever the CLI reports utilization, including on a refusal.
+ * @param {import("./types.js").Account} account
+ * @param {{ model: string, body: any, protocol: import("./types.js").Protocol, signal?: AbortSignal, onWindows?: (w: Record<string, import("./types.js").UsageWindow>) => void, spawnImpl?: any }} opts
+ * @returns {Promise<import("./types.js").Failure | { ok: true, events: AsyncIterable<import("./types.js").StreamEvent> }>}
  */
 export async function runClaude(account, { model, body, protocol, signal, onWindows, spawnImpl = spawn }) {
   await gate.acquire();
@@ -181,9 +184,10 @@ export async function runClaude(account, { model, body, protocol, signal, onWind
   return { ok: true, events: events() };
 }
 
+/** @returns {import("./types.js").Failure} */
 function failure(info, first) {
-  const text = info?.message || first?.error || "claude refused the request";
-  const quota = info?.status === 429 || first?.status === 429 || info?.rejected === true;
+  const text = first?.error || "claude refused the request";
+  const quota = info?.status === 429 || first?.status === 429;
   return {
     ok: false,
     status: quota ? 429 : first?.status || 0,
@@ -194,26 +198,27 @@ function failure(info, first) {
   };
 }
 
-/** One stream-json line -> { text } | { done, ... } | { refusal } | undefined. */
+/** Windows that bound the whole account. A refusal about any other window, or about a model's entitlement, is that model's. */
+const ACCOUNT_WINDOWS = new Set(["five_hour", "seven_day"]);
+
+/**
+ * One stream-json line -> `{ text }`, `{ done, ... }`, `{ refusal }`, or nothing for lines that carry no
+ * routing information. A `refusal` arrives before any text and is what lets the caller fail over.
+ */
 function interpret(e, onWindows) {
   if (e.type === "rate_limit_event") {
     const info = e.rate_limit_info ?? {};
     const windows = windowsOf(info);
     if (Object.keys(windows).length > 0) onWindows?.(windows);
-    if (info.status === "rejected") {
-      // A model entitlement refusal (credits required) is that model's, not the account's.
-      const modelScoped = info.errorCode === "credits_required" || /opus|sonnet|fable|oi/.test(String(info.rateLimitType ?? ""));
-      return {
-        refusal: {
-          rejected: true,
-          status: 429,
-          resetAt: typeof info.resetsAt === "number" ? info.resetsAt * 1000 : undefined,
-          scope: modelScoped ? "series" : "account",
-          message: undefined,
-        },
-      };
-    }
-    return undefined;
+    if (info.status !== "rejected") return undefined;
+    const accountWide = !info.errorCode && (info.rateLimitType === undefined || ACCOUNT_WINDOWS.has(info.rateLimitType));
+    return {
+      refusal: {
+        status: 429,
+        resetAt: typeof info.resetsAt === "number" ? info.resetsAt * 1000 : undefined,
+        scope: accountWide ? "account" : "series",
+      },
+    };
   }
   if (e.type === "stream_event" && e.event?.type === "content_block_delta" && e.event.delta?.type === "text_delta") {
     return { text: e.event.delta.text };
@@ -224,10 +229,7 @@ function interpret(e, onWindows) {
       isError: e.is_error === true,
       status: e.api_error_status ?? undefined,
       error: e.is_error ? e.result : undefined,
-      message: e.is_error ? e.result : undefined,
-      text: undefined,
       usage: usageOf(e),
-      result: e.result,
     };
   }
   return undefined;

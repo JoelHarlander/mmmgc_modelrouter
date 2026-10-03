@@ -27,12 +27,15 @@ export function supportsTools(account) {
  * Whether an account may take this turn: enabled, not already tried (`exclude` holds account ids,
  * or `id:series` for a refusal that was one series'), not cooling account-wide, and not cooling for
  * `series` (a model entitlement refusal cools one series, not the account).
+ * @param {import("./types.js").Account | undefined} account
+ * @param {number} now
+ * @param {{ exclude?: Set<string>, series?: string, needsTools?: boolean }} [opts]
  */
 export function accountUsable(account, now, { exclude = new Set(), series, needsTools = false } = {}) {
   if (!account || account.enabled === false || exclude.has(account.id) || exclude.has(`${account.id}:${series}`)) return false;
   if (needsTools && !supportsTools(account)) return false;
   if (account.cooldownUntil && account.cooldownUntil > now) return false;
-  return !(series && account.coolSeries?.[series] > now);
+  return !(series && (account.coolSeries?.[series] ?? 0) > now);
 }
 
 export function gateFor(state, series) {
@@ -53,6 +56,7 @@ export function preferenceFor(state, tier) {
   return state.preference?.length ? state.preference : DEFAULT_PREFERENCE;
 }
 
+/** @param {{ exclude?: Set<string>, needsTools?: boolean }} opts */
 function subscriptionAccounts(state, series, now, opts) {
   return (state.accounts ?? []).filter((a) => !a.backup && a.series?.includes(series) && accountUsable(a, now, { ...opts, series }));
 }
@@ -64,6 +68,7 @@ function takeTurn(state, series, candidates) {
   return candidates[cursor % candidates.length];
 }
 
+/** @param {{ exclude?: Set<string>, needsTools?: boolean }} opts @param {Set<string>} seen */
 function resolveGated(state, series, now, opts, seen) {
   const all = subscriptionAccounts(state, series, now, opts);
   if (all.length === 0) return undefined;
@@ -79,6 +84,9 @@ function resolveGated(state, series, now, opts, seen) {
 /**
  * Next account for a turn of `tier`. `exclude` holds accounts that already failed this request.
  * Returns `{ account, series, via }`, or undefined when nothing can serve it.
+ * @param {import("./types.js").State} state
+ * @param {{ tier?: import("./types.js").Tier, now?: number, exclude?: Set<string>, needsTools?: boolean }} [opts]
+ * @returns {{ account: import("./types.js").Account, series: string, via: string } | undefined}
  */
 export function pickAccount(state, { tier, now = Date.now(), exclude = new Set(), needsTools = false } = {}) {
   const order = preferenceFor(state, tier);
@@ -123,7 +131,10 @@ export function isQuotaFailure(status, text) {
   return /rate limit|usage credits|no_providers_available|insufficient_quota|overloaded/i.test(text);
 }
 
-/** Classifier used when Laya and Jev are both unavailable. Low confidence on purpose. */
+/**
+ * Classifier used when Laya and Jev are both unavailable. Low confidence on purpose.
+ * @returns {{ tier: import("./types.js").Tier, confidence: number, via: string }}
+ */
 export function heuristicTier(prompt) {
   const p = String(prompt ?? "").trim();
   const words = p ? p.split(/\s+/).length : 0;

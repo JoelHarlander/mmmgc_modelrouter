@@ -68,6 +68,10 @@ configured like any other account, so it can be any provider.
 `TYPESAFE_API_KEY` or the `typesafe` entry in pi's `auth.json`; if that is missing or fails, a low-confidence heuristic.
 Every decision records which one answered and why the earlier ones did not (the UI's *Recent turns*).
 
+A classifier that failed is skipped for a while (Laya 30 s, the hosted Jev 60 s), so a stopped Laya and a slow Jev cost
+one failure rather than seconds on every turn. At start the router warms Laya in the background, retrying until it
+answers, because Laya's first prediction is slow and the two services start together at boot.
+
 ## Clients
 
 The UI prints these with your token filled in.
@@ -122,6 +126,11 @@ What it adapts to:
 `--dry-run` prints every file it would write; `--stage DIR` writes under `DIR` and touches no service manager.
 The test suite drives the script through 13 distro fixtures and every init profile this way.
 
+Logs go to stdout, one line per event (`journalctl --user -u router-endpoint -f`): which account and model answered a turn
+and why (`turn account=claude-main series=sonnet model=sonnet route=gate:opus>sonnet tier=light via=laya ms=1208`),
+refusals with their cooldown, and admin edits. A line never carries a prompt, a response or a credential.
+`ROUTER_LOG=0` silences it.
+
 State (accounts, the token) is `~/.pi/agent/router-endpoint.json`, mode 0600, never overwritten if it cannot be parsed.
 Secrets are read from where they already live (pi's `auth.json`, each Claude config dir) and are never copied, echoed
 by the API, or logged. The service binds `127.0.0.1` only; `/api/*` and `/v1/*` need the bearer token.
@@ -140,6 +149,21 @@ by the API, or logged. The service binds `127.0.0.1` only; `/api/*` and `/v1/*` 
   untouched, so its `model` field names the upstream model, not `auto` (the `x-router-model` header says the same).
 - Requests carrying only the last user turn's worth of history to a Claude account are sent as a transcript, since the
   CLI takes one prompt.
+
+## Layout
+
+| file | job |
+| --- | --- |
+| `src/main.mjs` | the service entry point |
+| `src/server.mjs` | wiring: auth, routing, the HTTP server, shutdown |
+| `src/turn.mjs` | one turn: classify, pick, call, fail over |
+| `src/select.mjs` | which account: preference, tiers, gates, round-robin, cooldowns (pure) |
+| `src/dispatch.mjs`, `src/claude-cli.mjs` | calling an account: OpenAI-compatible HTTP, or the Claude CLI |
+| `src/models.mjs`, `src/versions.mjs`, `src/series.mjs` | which model: pinned, alias, or newest listed |
+| `src/classifier.mjs` | Laya, then Jev, then a heuristic, with circuit breakers |
+| `src/respond.mjs`, `src/protocol.mjs`, `src/http.mjs` | the two wire formats, streaming, errors |
+| `src/admin.mjs`, `src/store.mjs`, `src/usage.mjs`, `src/log.mjs`, `src/auth.mjs` | admin API, state file, quota windows, logs, pi credentials |
+| `src/types.d.ts` | the shared shapes, checked by `tsc -p endpoint/tsconfig.json` (part of `npm run check`) |
 
 ## Development
 
