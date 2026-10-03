@@ -137,12 +137,18 @@ by the API, or logged. The service binds `127.0.0.1` only; `/api/*` and `/v1/*` 
 
 ## Limits you should know about
 
-- **Claude accounts answer text-only requests.** An agent such as OpenCode sends tool definitions on nearly every turn, so
-  with only Claude accounts and a pay-per-token backup configured, *its agent turns land on the backup*, not on your
-  subscriptions. (Titles, summaries and one-shot questions, which carry no tools, do use them.) If that is not what you
-  want: add a tool-capable account (an API-key provider), leave the backup off for tool use by using pi with the extension
-  (which keeps pi-claude-bridge and its tool bridging), or watch `x-router-route: backup` in the UI's recent turns.
-  Bridging a client's tools through the CLI the way pi-claude-bridge does is possible but is a project of its own.
+- **Claude accounts answer text-only requests.** Coding agents send tool definitions on nearly every turn (pi and OpenCode
+  both do, including in headless mode), so with only Claude accounts and a pay-per-token backup configured, **their agent
+  turns land on the backup and spend its credits**, not your subscriptions. Titles, summaries and one-shot questions, which
+  carry no tools, do use the subscriptions. Ways to get what you want:
+  - in **pi**, use the extension in the parent directory instead of this endpoint: it keeps pi-claude-bridge and its tool
+    bridging, so Claude turns stay on the subscription;
+  - add a tool-capable account the endpoint can use (an API-key provider);
+  - or take the backup out of the endpoint if you would rather it refuse than spend: `x-router-route: backup` in a response
+    (and `route=backup` in the journal) marks every such turn.
+
+  Bridging a client's tools through the CLI the way pi-claude-bridge does would lift this, but it is a project of its own
+  (a session that stays alive across HTTP requests, so a tool result can reach the model that asked for it).
 - `openai-codex` is not proxied: its subscription protocol is not `chat/completions`. Keep it as a pi provider.
 - A gate learns an account's usage on that account's first turn; it cannot see usage from other tools until then.
 - Streams from a Claude account are real, token by token. A stream from an OpenAI-compatible account is passed through
