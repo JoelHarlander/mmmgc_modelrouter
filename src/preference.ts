@@ -19,23 +19,15 @@
 import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import { assessBilling, type BillingAssessment, billingLabel } from "./billing.ts";
-import { type Gate, globMatch, modelKey, type RouterConfig, type Tier } from "./config.ts";
+import { type Gate, modelKey, type RouterConfig, type Tier } from "./config.ts";
+import { globMatch, idMatches, versionCompare } from "./policy.ts";
+
+export { versionCompare };
 import type { Ledger } from "./ledger.ts";
 import { type Candidate, evaluateCandidate } from "./router.ts";
 
 export const SERIES = ["fable", "grok", "opus", "sonnet", "astra", "sol"] as const;
 export type SeriesName = (typeof SERIES)[number];
-
-/** Model-id test for each series. The provider is a separate tie-break. */
-const SERIES_ID: Record<SeriesName, RegExp> = {
-	fable: /fable/i,
-	grok: /grok/i,
-	opus: /opus/i,
-	sonnet: /sonnet/i,
-	astra: /astra/i,
-	// A whole token: `sol` is gpt-6.1-sol, not upstage/solar-pro-3.
-	sol: /(^|[^a-z0-9])sol([^a-z0-9]|$)/i,
-};
 
 /**
  * When two models in a series have the same version, prefer the subscription provider
@@ -375,13 +367,7 @@ function entryCovers(entry: string, model: Model<Api>): boolean {
 	return idMatches(model.id, entry);
 }
 
-/** A built-in series by its pattern; any other name by whole tokens, so `glm` is glm-5.3 and `sol` is not solar. */
-function idMatches(id: string, entry: string): boolean {
-	const named = SERIES_ID[entry.toLowerCase() as SeriesName];
-	if (named) return named.test(id);
-	const token = entry.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	return new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`, "i").test(id);
-}
+
 
 /** Newer version first; a tied version prefers the series' subscription provider. */
 function compareModels(entry: string, a: Model<Api>, b: Model<Api>): number {
@@ -397,33 +383,6 @@ function providerRank(entry: string, provider: string): number {
 	if (!list) return 100;
 	const at = list.indexOf(provider);
 	return at === -1 ? 50 : at;
-}
-
-/** Positive when `a` is a newer version than `b`. A missing trailing component loses to an explicit one (`5` < `5-1`). */
-export function versionCompare(a: string, b: string): number {
-	const pa = versionParts(a);
-	const pb = versionParts(b);
-	const n = Math.max(pa.length, pb.length);
-	for (let i = 0; i < n; i++) {
-		const da = pa[i] ?? -1;
-		const db = pb[i] ?? -1;
-		if (da !== db) return da - db;
-	}
-	return 0;
-}
-
-/**
- * Numeric components up to the first date-like one (4+ digits: `0709`, `20250514`), which is a snapshot, not a
- * version. A component after a dot is a decimal fraction: xAI's grok-4.20 came before grok-4.3 and grok-4.7, as
- * glm-5.3 follows glm-5.2. Components after a dash stay whole numbers (claude-opus-5-5).
- */
-function versionParts(id: string): number[] {
-	const parts: number[] = [];
-	for (const m of id.matchAll(/\d+/g)) {
-		if (m[0].length >= 4) break;
-		parts.push(id[m.index - 1] === "." ? Number(`0.${m[0]}`) : Number(m[0]));
-	}
-	return parts;
 }
 
 function gate(model: Model<Api>, args: PreferenceArgs): { ok: true } | { ok: false; why: string } {

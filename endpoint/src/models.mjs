@@ -1,6 +1,6 @@
 import { knownBaseUrl, piToken } from "./auth.mjs";
-import { matcherFor } from "./series.mjs";
-import { globMatch, newestFirst } from "./versions.mjs";
+import { seriesPattern as matcherFor } from "../../src/policy.mjs";
+import { globMatch, newestFirst } from "../../src/policy.mjs";
 
 const TTL_MS = 60 * 60 * 1000;
 /** Model ids by account, listed once an hour. A failure is cached too, so a dead listing is not retried per turn. */
@@ -71,7 +71,8 @@ export async function resolveModel(account, series, opts = {}) {
   if (account.latest === false) throw new Error(`${account.id}: latest is off and no model is pinned for ${series}`);
   if (account.kind === "claude-code") return { model: series, how: "alias" };
   const ids = await listModels(account, opts);
-  const wanted = account.modelGlob ? (id) => globMatch(account.modelGlob, id) : (id) => matcherFor(series).test(id);
+  const glob = account.modelGlob;
+  const wanted = glob ? (id) => globMatch(glob, id) : (id) => matcherFor(series).test(id);
   // `:batch`, `:free`, `:thinking` and the like are routes to a model, not a newer model: skip them unless asked for.
   const asked = (account.modelGlob ?? "").includes(":");
   const best = ids.filter((id) => wanted(id) && (asked || !id.includes(":"))).sort(newestFirst)[0];

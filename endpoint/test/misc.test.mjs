@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { forgetListings, resolveModel, upstreamOf } from "../src/models.mjs";
 import { loadState, normalize, normalizeGates } from "../src/store.mjs";
-import { matcherFor } from "../src/series.mjs";
-import { globMatch, newestFirst, versionCompare } from "../src/versions.mjs";
+import { seriesPattern as matcherFor } from "../../src/policy.mjs";
+import { globMatch, newestFirst, versionCompare } from "../../src/policy.mjs";
 
 test("version ordering matches the pi extension: newest first, dated snapshots are not versions, shorter id wins a tie", () => {
   assert.ok(versionCompare("claude-opus-5-5", "claude-opus-5") > 0);

@@ -173,7 +173,7 @@ by the API, or logged. The service binds `127.0.0.1` only; `/api/*` and `/v1/*` 
 | `src/turn.mjs` | one turn: classify, pick, call, fail over |
 | `src/select.mjs` | which account: preference, tiers, gates, round-robin, cooldowns (pure) |
 | `src/dispatch.mjs`, `src/claude-cli.mjs` | calling an account: OpenAI-compatible HTTP, or the Claude CLI |
-| `src/models.mjs`, `src/versions.mjs`, `src/series.mjs` | which model: pinned, alias, or newest listed |
+| `src/models.mjs`, `src/series.mjs`, `../src/policy.mjs` | which model: pinned, alias, or newest listed; ordering shared with the pi extension |
 | `src/classifier.mjs` | Laya, then Jev, then a heuristic, with circuit breakers |
 | `src/respond.mjs`, `src/protocol.mjs`, `src/http.mjs` | the two wire formats, streaming, errors |
 | `src/admin.mjs`, `src/store.mjs`, `src/usage.mjs`, `src/log.mjs`, `src/auth.mjs` | admin API, state file, quota windows, logs, pi credentials |

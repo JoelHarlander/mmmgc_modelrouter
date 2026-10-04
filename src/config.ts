@@ -240,14 +240,9 @@ export const DEFAULT_CONFIG: RouterConfig = {
 };
 
 /** Minimal glob: only `*` is special. */
-export function globMatch(pattern: string, value: string): boolean {
-	const re = new RegExp(`^${pattern.split("*").map(escapeRegExp).join(".*")}$`);
-	return re.test(value);
-}
+import { globMatch } from "./policy.ts";
+export { globMatch };
 
-function escapeRegExp(s: string): string {
-	return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 export function overrideFor(cfg: RouterConfig, modelKey: string): ModelOverride {
 	let out: ModelOverride = {};
