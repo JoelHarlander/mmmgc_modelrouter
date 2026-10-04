@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { forgetListings, resolveModel, upstreamOf } from "../src/models.mjs";
 import { loadState, normalize, normalizeGates } from "../src/store.mjs";
-import { seriesPattern as matcherFor } from "../../src/policy.mjs";
-import { globMatch, newestFirst, versionCompare } from "../../src/policy.mjs";
+import { seriesPattern as matcherFor } from "../src/policy.mjs";
+import { globMatch, newestFirst, versionCompare } from "../src/policy.mjs";
 
 test("version ordering matches the pi extension: newest first, dated snapshots are not versions, shorter id wins a tie", () => {
   assert.ok(versionCompare("claude-opus-5-5", "claude-opus-5") > 0);
@@ -149,16 +149,24 @@ test("a series the code has never heard of matches whole tokens, like the pi ext
   assert.ok(matcherFor("c++").test("tool/c++-1") && !matcherFor("c++").test("cxx"), "regex characters in a name are literal");
 });
 
-import { withEffort } from "../src/dispatch.mjs";
+import { effortCacheSafe, withEffort } from "../src/dispatch.mjs";
 
 test("effort goes out in each upstream's own spelling, and a client's own setting always wins", () => {
   const body = { model: "m", messages: [] };
+  assert.equal(effortCacheSafe({ kind: "claude-code" }), true);
+  assert.equal(effortCacheSafe({ provider: "xai" }), true);
+  assert.equal(effortCacheSafe({ provider: "openai" }), false, "OpenAI's top-level effort rewrites the cached prefix");
+  assert.equal(effortCacheSafe({ provider: "openrouter" }), false);
+  assert.equal(effortCacheSafe({ provider: "openai", effortCacheSafe: true }), true, "an account can say it handles the change");
   assert.deepEqual(withEffort({ provider: "xai" }, body, "low").reasoning_effort, "low");
-  assert.deepEqual(withEffort({ provider: "openrouter" }, body, "high").reasoning, { effort: "high" });
-  assert.deepEqual(withEffort({ provider: "openrouter" }, body, "off").reasoning, { enabled: false });
+  assert.equal(withEffort({ provider: "openrouter" }, body, "high"), body, "an unknown cache interaction means no effort");
+  const safe = { provider: "openrouter", effortCacheSafe: true };
+  assert.deepEqual(withEffort(safe, body, "high").reasoning, { effort: "high" });
+  assert.deepEqual(withEffort(safe, body, "off").reasoning, { enabled: false });
   assert.equal(withEffort({ provider: "xai" }, body, "max").reasoning_effort, "high", "Claude-only levels map to high elsewhere");
   assert.equal(withEffort({ kind: "openai", baseUrl: "http://x" }, body, "high"), body, "an unknown upstream gets nothing: an unexpected field can be a 400");
-  assert.equal(withEffort({ kind: "openai", effortParam: "reasoning_effort" }, body, "medium").reasoning_effort, "medium", "unless the account says how");
+  assert.equal(withEffort({ kind: "openai", effortParam: "reasoning_effort" }, body, "medium"), body, "effort stays off where it would bust the cache");
+  assert.equal(withEffort({ kind: "openai", effortParam: "reasoning_effort", effortCacheSafe: true }, body, "medium").reasoning_effort, "medium", "unless the account says the change is safe");
   const mine = { ...body, reasoning_effort: "minimal" };
   assert.equal(withEffort({ provider: "xai" }, mine, "high"), mine, "the client chose; leave it");
   assert.equal(withEffort({ provider: "xai" }, body, undefined), body);

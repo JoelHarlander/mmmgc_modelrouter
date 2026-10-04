@@ -36,6 +36,11 @@ export interface Account {
   latest?: boolean;
   /** How this upstream takes an effort: `reasoning_effort`, OpenRouter's `reasoning`, or `none`. Defaults by provider. */
   effortParam?: "reasoning_effort" | "reasoning" | "none";
+  /**
+   * Whether changing effort mid-conversation keeps the prompt cache. Defaults by provider: true for
+   * Claude and xAI, false otherwise. OpenAI's top-level `reasoning.effort` rewrites the hidden prefix.
+   */
+  effortCacheSafe?: boolean;
   /** Overrides the default: a claude-code account cannot return tool calls, the others can. */
   tools?: boolean;
   planUsd?: number;

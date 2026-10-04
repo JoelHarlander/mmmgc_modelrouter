@@ -1,7 +1,7 @@
 import { classify } from "./classifier.mjs";
 import { dispatch } from "./dispatch.mjs";
 import { resolveModel } from "./models.mjs";
-import { hasTools, lastUserText } from "./protocol.mjs";
+import { hasTools, routingState } from "./protocol.mjs";
 import { coolAccount, pickAccount } from "./select.mjs";
 import { remember } from "./store.mjs";
 
@@ -23,7 +23,7 @@ const MAX_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 export async function runTurn(app, protocol, body, signal) {
   const { state, log } = app;
   const started = Date.now();
-  const classified = await classify(lastUserText(body), {
+  const classified = await classify(routingState(body), {
     layaUrl: state.layaUrl,
     authPath: app.authPath,
     typesafeUrl: app.typesafeUrl,

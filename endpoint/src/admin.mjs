@@ -52,6 +52,7 @@ function upsertAccount(state, body) {
     provider: body.provider || previous?.provider,
     modelGlob: body.modelGlob || previous?.modelGlob,
     effortParam: ["reasoning_effort", "reasoning", "none"].includes(body.effortParam) ? body.effortParam : previous?.effortParam,
+    effortCacheSafe: typeof body.effortCacheSafe === "boolean" ? body.effortCacheSafe : previous?.effortCacheSafe,
     apiKey: body.apiKey || previous?.apiKey,
     note: body.note ?? previous?.note ?? "",
     served: previous?.served ?? 0,

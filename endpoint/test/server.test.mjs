@@ -319,7 +319,7 @@ test("the classified tier sets the effort: the CLI gets --effort, the response s
 });
 
 test("an OpenAI-compatible upstream gets the effort in its own field, unless the client set one", async () => {
-  const t = await boot([{ id: "x", kind: "openai", enabled: true, series: ["opus"], baseUrl: upstream.base, models: { opus: "grok-x" }, effortParam: "reasoning_effort" }], {
+  const t = await boot([{ id: "x", kind: "openai", enabled: true, series: ["opus"], baseUrl: upstream.base, models: { opus: "grok-x" }, effortParam: "reasoning_effort", effortCacheSafe: true }], {
     thinking: { light: "low", standard: "medium", heavy: "high" },
   });
   try {
@@ -333,7 +333,7 @@ test("an OpenAI-compatible upstream gets the effort in its own field, unless the
 });
 
 test("a model that refuses the effort parameter is asked again without it, not handed to the backup", async () => {
-  const t = await boot([{ id: "x", kind: "openai", enabled: true, series: ["opus"], baseUrl: upstream.base, models: { opus: "picky" }, effortParam: "reasoning_effort" }, backup()], {
+  const t = await boot([{ id: "x", kind: "openai", enabled: true, series: ["opus"], baseUrl: upstream.base, models: { opus: "picky" }, effortParam: "reasoning_effort", effortCacheSafe: true }, backup()], {
     thinking: { light: "low", standard: "medium", heavy: "high" },
   });
   try {

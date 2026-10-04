@@ -1,6 +1,6 @@
 import { knownBaseUrl, piToken } from "./auth.mjs";
-import { seriesPattern as matcherFor } from "../../src/policy.mjs";
-import { globMatch, newestFirst } from "../../src/policy.mjs";
+import { seriesPattern as matcherFor } from "./policy.mjs";
+import { globMatch, newestFirst } from "./policy.mjs";
 
 const TTL_MS = 60 * 60 * 1000;
 /** Model ids by account, listed once an hour. A failure is cached too, so a dead listing is not retried per turn. */

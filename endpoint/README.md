@@ -67,7 +67,9 @@ configured like any other account, so it can be any provider.
 The classifier's tier sets the reasoning effort, as it does in the pi extension: `thinking` maps light, standard and heavy
 to `low`, `medium` and `high` by default (any of `off low medium high xhigh max`). It goes to the Claude CLI as `--effort`, to xAI
 and OpenAI as `reasoning_effort`, and to OpenRouter as `reasoning.effort`; an upstream whose spelling is unknown gets none
-unless the account sets `effortParam`. A client that sets its own effort keeps it. A model that refuses the parameter is
+unless the account sets `effortParam`. It is only sent where changing effort mid-conversation is known to keep the
+prompt cache: Claude and xAI by default, anything else only when the account sets `effortCacheSafe: true`. OpenAI's
+top-level `reasoning.effort` rewrites the hidden prefix, so it stays off. A client that sets its own effort keeps it. A model that refuses the parameter is
 asked again without it rather than failing over. `x-router-effort` says what was sent.
 
 ## Classifier
@@ -173,7 +175,7 @@ by the API, or logged. The service binds `127.0.0.1` only; `/api/*` and `/v1/*` 
 | `src/turn.mjs` | one turn: classify, pick, call, fail over |
 | `src/select.mjs` | which account: preference, tiers, gates, round-robin, cooldowns (pure) |
 | `src/dispatch.mjs`, `src/claude-cli.mjs` | calling an account: OpenAI-compatible HTTP, or the Claude CLI |
-| `src/models.mjs`, `src/series.mjs`, `../src/policy.mjs` | which model: pinned, alias, or newest listed; ordering shared with the pi extension |
+| `src/models.mjs`, `src/series.mjs`, `policy.mjs` | which model: pinned, alias, or newest listed; ordering shared with the pi extension |
 | `src/classifier.mjs` | Laya, then Jev, then a heuristic, with circuit breakers |
 | `src/respond.mjs`, `src/protocol.mjs`, `src/http.mjs` | the two wire formats, streaming, errors |
 | `src/admin.mjs`, `src/store.mjs`, `src/usage.mjs`, `src/log.mjs`, `src/auth.mjs` | admin API, state file, quota windows, logs, pi credentials |

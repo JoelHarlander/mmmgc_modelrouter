@@ -158,7 +158,7 @@ export function routingQuestions() {
       type: "choice",
       instructions: {
         question: "Which model tier should handle this turn for a terminal coding agent?",
-        note: "Judge the difficulty of the requested work, not the length of the message.",
+        note: "Judge the difficulty of the work in progress, not the length of the latest message. `recent` is the conversation so far; a short `request` often continues it.",
       },
       criteria: {
         light: "A small, well-specified step, a greeting, or a factual answer. A fast model will do this correctly.",

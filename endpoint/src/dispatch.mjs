@@ -95,8 +95,19 @@ async function openai(account, ctx) {
  * Add the turn's effort in the upstream's own spelling, unless the client already asked for one (the
  * client's choice wins). An upstream whose spelling is unknown gets none: an unexpected field can be a 400.
  */
+/**
+ * Providers where a per-turn effort change is known not to bust the prompt cache. xAI matches the cache on
+ * the messages array and `reasoning_effort` is not part of it (measured on grok-4.7). Claude's newer models
+ * take effort as output config. OpenAI's top-level `reasoning.effort` rewrites the hidden system instructions,
+ * so it is off unless the account says otherwise. See docs/research/prompt-cache-and-effort.md.
+ */
+export function effortCacheSafe(account) {
+  if (typeof account.effortCacheSafe === "boolean") return account.effortCacheSafe;
+  return account.kind === "claude-code" || account.provider === "xai";
+}
+
 export function withEffort(account, body, effort) {
-  if (!effort || body.reasoning_effort !== undefined || body.reasoning !== undefined) return body;
+  if (!effort || !effortCacheSafe(account) || body.reasoning_effort !== undefined || body.reasoning !== undefined) return body;
   const param = account.effortParam ?? { openrouter: "reasoning", xai: "reasoning_effort", openai: "reasoning_effort" }[account.provider ?? ""] ?? "none";
   if (param === "none") return body;
   if (effort === "off") return param === "reasoning" ? { ...body, reasoning: { enabled: false } } : body;

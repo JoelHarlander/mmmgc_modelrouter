@@ -18,7 +18,33 @@ export function contentText(content) {
     .join("\n");
 }
 
-/** The latest user message, which is what the classifier reads. */
+/**
+ * What the classifier reads: the latest user message as `request`, and the turns before it as `recent`.
+ * A short steer ("commit") is only classifiable against the work it refers to, and that work is in the
+ * earlier turns. Mirrors the pi extension's routing state, trimmed so the payload stays small.
+ * @param {any} body
+ * @param {{ recentMessages?: number, maxChars?: number }} [opts]
+ * @returns {{ request: string, recent: { role: string, text: string }[] }}
+ */
+export function routingState(body, { recentMessages = 6, maxChars = 500 } = {}) {
+  const messages = body?.messages ?? [];
+  let requestAt = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user" && contentText(messages[i].content).trim()) { requestAt = i; break; }
+  }
+  const request = requestAt < 0 ? "" : contentText(messages[requestAt].content).slice(0, 6000);
+  const recent = [];
+  for (let i = requestAt - 1; i >= 0 && recent.length < recentMessages; i--) {
+    const message = messages[i];
+    if (message.role !== "user" && message.role !== "assistant") continue;
+    const text = contentText(message.content).trim();
+    if (!text) continue;
+    recent.unshift({ role: message.role, text: text.length > maxChars ? `${text.slice(0, maxChars)} …` : text });
+  }
+  return { request, recent };
+}
+
+/** The latest user message. */
 export function lastUserText(body) {
   for (let i = (body.messages ?? []).length - 1; i >= 0; i--) {
     const message = body.messages[i];

@@ -120,3 +120,45 @@ test("a classifier that failed is skipped for a while, so a dead Laya and a slow
     jev.server.close();
   }
 });
+
+import { routingState } from "../src/protocol.mjs";
+
+test("the classifier sees the recent turns, not only the latest line", async () => {
+  const seen = [];
+  const server = createServer((req, res) => {
+    let raw = "";
+    req.on("data", (c) => (raw += c));
+    req.on("end", () => {
+      seen.push(JSON.parse(raw).state);
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ model: "fake", answers: { tier: { type: "choice", choice: "heavy", confidence: 0.8 } } }));
+    });
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    const state = routingState({ messages: [
+      { role: "user", content: "review the code and seek opportunities for refactor" },
+      { role: "assistant", content: "I would extract the duplicated policy into one module." },
+      { role: "user", content: "commit" },
+    ] });
+    assert.equal(state.request, "commit");
+    assert.equal(state.recent.length, 2, "the earlier turns travel with the request");
+    const out = await classify(state, { layaUrl: `http://127.0.0.1:${server.address().port}/v1` });
+    assert.equal(out.tier, "heavy");
+    assert.equal(seen[0].request, "commit");
+    assert.equal(seen[0].recent.length, 2, "recent turns are sent to the classifier");
+    assert.equal(seen[0].recent[0].text.includes("refactor"), true);
+  } finally { server.close(); }
+});
+
+test("a long history is capped, and tool results count as text", () => {
+  const messages = [];
+  for (let i = 0; i < 20; i++) messages.push({ role: i % 2 ? "assistant" : "user", content: `turn ${i} ${"x".repeat(2000)}` });
+  messages.push({ role: "user", content: [{ type: "tool_result", content: "done" }] });
+  const state = routingState({ messages });
+  assert.equal(state.request, "done");
+  assert.equal(state.recent.length, 6);
+  assert.ok(state.recent.every((m) => m.text.length <= 502));
+  assert.equal(state.recent.at(-1).text.startsWith("turn 19"), true, "the most recent turns survive the cap");
+});
