@@ -221,6 +221,21 @@ test("re-running keeps a hand-edited env file; --force-env rewrites it; --no-lay
   assert.equal(back.status, 0);
 });
 
+test("--ref deploys that committed revision, not the working tree, and records what it deployed", () => {
+  const home = mkdtempSync(join(root, "home-"));
+  const dir = mkdtempSync(join(root, "stage-"));
+  const bad = run(["install", "--stage", dir, "--ref", "no-such-ref"], { home });
+  assert.notEqual(bad.status, 0);
+  assert.match(bad.all, /not a commit/);
+  const ok = run(["install", "--stage", dir, "--ref", "HEAD"], { home });
+  assert.equal(ok.status, 0, ok.all);
+  assert.match(ok.all, /fresh checkout/);
+  const deployed = readFileSync(join(dir, home, ".local", "share", "router-endpoint", "app", "DEPLOYED"), "utf8");
+  assert.match(deployed, /^ref=HEAD$/m);
+  assert.match(deployed, /^commit=[0-9a-f]{7,}$/m);
+  assert.ok(existsSync(join(dir, home, ".local", "share", "router-endpoint", "app", "src", "main.mjs")));
+});
+
 test("--dry-run prints the files and changes nothing", () => {
   const home = mkdtempSync(join(root, "home-"));
   const r = run(["install", "--dry-run"], { home });

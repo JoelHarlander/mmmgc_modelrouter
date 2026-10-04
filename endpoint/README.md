@@ -134,6 +134,17 @@ What it adapts to:
 | missing or old Node | stops before writing anything, with the install command for the detected package manager |
 
 `--dry-run` prints every file it would write; `--stage DIR` writes under `DIR` and touches no service manager.
+
+A plain install copies the working tree, which is what you want while developing. A running service is updated from a
+committed revision instead, so uncommitted work never reaches it:
+
+```bash
+endpoint/deploy/install.sh install --ref main     # prod: the released branch, checked out fresh
+endpoint/deploy/install.sh install --ref v0.2.0   # or a tag
+```
+
+The deployed copy records what it is running in `DEPLOYED` next to the app (`install.sh status` does not need it; read
+the file). This checkout is the dev area and is never what the service executes.
 The test suite drives the script through 13 distro fixtures and every init profile this way.
 
 Logs go to stdout, one line per event (`journalctl --user -u router-endpoint -f`): which account and model answered a turn

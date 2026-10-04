@@ -21,6 +21,8 @@
 #   --force-env         rewrite the env file even though one exists
 #   --purge             with uninstall: also remove config, the app copy and the Laya venv
 #   --dry-run           print everything that would be written, change nothing
+#   --ref REF           deploy the committed revision REF (a branch, tag or commit), checked out fresh,
+#                       instead of the working tree. This is how prod is updated: dev edits never reach it.
 #   --stage DIR         write files under DIR and touch no service manager (for packaging, tests)
 #   -h, --help
 #
@@ -70,6 +72,7 @@ while [ $# -gt 0 ]; do
     --force-env) FORCE_ENV=1 ;;
     --purge) PURGE=1 ;;
     --dry-run) DRY_RUN=1 ;;
+    --ref) DEPLOY_REF="${2:?--ref needs a branch, tag or commit}"; shift ;;
     --stage) STAGE="${2:?--stage needs a directory}"; shift ;;
     -h | --help) sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d' | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option: $1 (try --help)" ;;
@@ -504,20 +507,39 @@ install_laya() {
 
 # ---- install -----------------------------------------------------------------------------------
 
+# The tree an install copies from. Without --ref that is this checkout's endpoint/, working tree and
+# all, which is what a dev machine wants. With --ref it is that committed revision, checked out fresh, so
+# uncommitted work and the wrong branch cannot reach a running service.
+deploy_source() {
+  [ -n "${DEPLOY_REF:-}" ] || { printf '%s\n' "$ENDPOINT_DIR"; return 0; }
+  local repo rev dest
+  repo="$(cd "$ENDPOINT_DIR/.." && pwd)"
+  git -C "$repo" cat-file -e "$DEPLOY_REF^{commit}" 2>/dev/null || die "--ref $DEPLOY_REF is not a commit in $repo"
+  rev="$(git -C "$repo" rev-parse --short "$DEPLOY_REF^{commit}")"
+  if [ "$DRY_RUN" = 1 ]; then printf '%s\n' "$ENDPOINT_DIR"; return 0; fi
+  dest="$(mktemp -d)"
+  git -C "$repo" archive "$DEPLOY_REF" endpoint | tar -x -C "$dest"
+  printf '%s\n%s\n' "$dest/endpoint" "$rev"
+}
+
 copy_app() {
-  local target
+  local target source rev
+  source="$(deploy_source)"
+  rev="$(printf '%s' "$source" | tail -n 1)"; source="$(printf '%s' "$source" | head -n 1)"
   target="$(at "$APP_DIR")"
   if [ "$DRY_RUN" = 1 ]; then
-    log "app: would copy $ENDPOINT_DIR/src to $APP_DIR/src"
+    log "app: would copy $source/src to $APP_DIR/src"
     return 0
   fi
   mkdir -p "$target"
   rm -rf "$target/src.new"
-  cp -R "$ENDPOINT_DIR/src" "$target/src.new"
-  cp "$ENDPOINT_DIR/package.json" "$target/package.json"
+  cp -R "$source/src" "$target/src.new"
+  cp "$source/package.json" "$target/package.json"
   rm -rf "$target/src"
   mv "$target/src.new" "$target/src"
-  log "app: copied to $APP_DIR"
+  if [ "$rev" != "$source" ]; then printf 'ref=%s\ncommit=%s\ndeployed=%s\n' "$DEPLOY_REF" "$rev" "$(date -u +%FT%TZ)" > "$target/DEPLOYED"; fi
+  log "app: copied to $APP_DIR$([ "$rev" != "$source" ] && printf ' (deployed %s @ %s from a fresh checkout, not the working tree)' "$DEPLOY_REF" "$rev")"
+  [ "$source" = "$ENDPOINT_DIR" ] || rm -rf "$(dirname "$source")"
 }
 
 activate_systemd() {
