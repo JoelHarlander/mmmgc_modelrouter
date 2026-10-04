@@ -438,3 +438,13 @@ test("gateReadings says what each gate sees, and flags a gate that has no eviden
 	assert.deepEqual([opus!.used, opus!.tripped], [0.55, true]);
 	assert.deepEqual([astraGate!.used, astraGate!.tripped], [0.2, false]);
 });
+
+test("a dotted minor version is a decimal: grok-4.7 is newer than grok-4.20, as xAI dates them", () => {
+	assert.ok(versionCompare("grok-4.7", "grok-4.20-0309-reasoning") > 0);
+	assert.ok(versionCompare("grok-4.3", "grok-4.20-0309-reasoning") > 0);
+	assert.ok(versionCompare("glm-5.3", "glm-5.2") > 0);
+	assert.ok(versionCompare("gpt-6.1-sol", "gpt-6-sol") > 0);
+	assert.ok(versionCompare("claude-opus-5-5", "claude-opus-5-10") < 0, "dash-separated parts stay whole numbers");
+	const old = model("xai", "grok-4.20-0309-reasoning");
+	assert.equal(resolveEntry("grok", args({ models: [old, grok47, grok46] }))?.key, "xai/grok-4.7");
+});

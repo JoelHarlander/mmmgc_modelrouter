@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { once } from "node:events";
 import { tmpdir } from "node:os";
@@ -25,6 +25,10 @@ async function startUpstream() {
       if (req.url === "/v1/models") {
         res.setHeader("content-type", "application/json");
         return res.end(JSON.stringify({ data: ["z-ai/glm-5.2", "z-ai/glm-5.3", "z-ai/glm-5.3-flash", "other/model-9"].map((id) => ({ id })) }));
+      }
+      if (body.model === "picky" && (body.reasoning_effort !== undefined || body.reasoning !== undefined)) {
+        res.writeHead(400, { "content-type": "application/json" });
+        return res.end(JSON.stringify({ code: "invalid-argument", error: "Model picky does not support parameter reasoningEffort." }));
       }
       if (body.model === "fail-429") {
         res.writeHead(429, { "content-type": "application/json", "retry-after": "120" });
@@ -289,6 +293,71 @@ test("the admin API validates accounts, edits policy, and deletes", async () => 
     assert.equal((await post("/api/accounts/delete", { id: "nope" })).status, 404);
     assert.equal((await post("/api/accounts/delete", { id: "a" })).status, 200);
     assert.equal(t.state.accounts.some((a) => a.id === "a"), false);
+  } finally {
+    t.close();
+  }
+});
+
+test("the classified tier sets the effort: the CLI gets --effort, the response says which", async () => {
+  const log = join(mkdtempSync(join(tmpdir(), "router-log-")), "calls.jsonl");
+  process.env.FAKE_CLAUDE_LOG = log;
+  const t = await boot([claude("a", ["opus"])], { thinking: { light: "low", standard: "medium", heavy: "max" } });
+  try {
+    // No Laya or Jev here, so the heuristic classifies: a short request is light, "debug ... race" is heavy.
+    const light = await t.call("/v1/chat/completions", chat("hi"));
+    assert.equal(light.headers.get("x-router-effort"), "low");
+    const heavy = await t.call("/v1/chat/completions", chat("debug why this race condition deadlocks the worker pool under load"));
+    assert.equal(heavy.headers.get("x-router-effort"), "max");
+    const calls = readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const effortOf = (c) => c.argv[c.argv.indexOf("--effort") + 1];
+    assert.deepEqual(calls.map(effortOf), ["low", "max"]);
+    assert.equal(t.state.decisions[0].effort, "max");
+  } finally {
+    delete process.env.FAKE_CLAUDE_LOG;
+    t.close();
+  }
+});
+
+test("an OpenAI-compatible upstream gets the effort in its own field, unless the client set one", async () => {
+  const t = await boot([{ id: "x", kind: "openai", enabled: true, series: ["opus"], baseUrl: upstream.base, models: { opus: "grok-x" }, effortParam: "reasoning_effort" }], {
+    thinking: { light: "low", standard: "medium", heavy: "high" },
+  });
+  try {
+    await t.call("/v1/chat/completions", chat("hi"));
+    assert.equal(upstream.calls.at(-1).body.reasoning_effort, "low");
+    await t.call("/v1/chat/completions", chat("hi", { reasoning_effort: "high" }));
+    assert.equal(upstream.calls.at(-1).body.reasoning_effort, "high", "the client's own choice is passed through");
+  } finally {
+    t.close();
+  }
+});
+
+test("a model that refuses the effort parameter is asked again without it, not handed to the backup", async () => {
+  const t = await boot([{ id: "x", kind: "openai", enabled: true, series: ["opus"], baseUrl: upstream.base, models: { opus: "picky" }, effortParam: "reasoning_effort" }, backup()], {
+    thinking: { light: "low", standard: "medium", heavy: "high" },
+  });
+  try {
+    const before = upstream.calls.length;
+    const res = await t.call("/v1/chat/completions", chat("hi"));
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get("x-router-account"), "x", "the same account answered");
+    const sent = upstream.calls.slice(before).filter((c) => c.url === "/v1/chat/completions");
+    assert.equal(sent.length, 2);
+    assert.equal(sent[0].body.reasoning_effort, "low");
+    assert.equal(sent[1].body.reasoning_effort, undefined, "the retry drops only what the endpoint added");
+  } finally {
+    t.close();
+  }
+});
+
+test("thinking is editable through the policy API and validated", async () => {
+  const t = await boot([], { thinking: { light: "low", standard: "medium", heavy: "high" } });
+  try {
+    assert.equal((await t.call("/api/policy", { thinking: { heavy: "ultra" } })).status, 400);
+    assert.equal((await t.call("/api/policy", { thinking: { fast: "low" } })).status, 400);
+    const ok = await t.call("/api/policy", { thinking: { heavy: "max" } });
+    assert.equal(ok.status, 200);
+    assert.deepEqual(t.state.thinking, { light: "low", standard: "medium", heavy: "max" }, "a partial edit keeps the other tiers");
   } finally {
     t.close();
   }

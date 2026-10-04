@@ -3,12 +3,16 @@
  * extension (src/preference.ts) so the endpoint and the extension agree on which model is newest.
  */
 
-/** Numeric components up to the first date-like one (4+ digits), which is a snapshot, not a version. */
+/**
+ * Numeric components up to the first date-like one (4+ digits), which is a snapshot, not a version. A component
+ * after a dot is a decimal fraction (grok-4.20 is older than grok-4.7); after a dash it is a whole number.
+ */
 export function versionParts(id) {
+  const s = String(id);
   const parts = [];
-  for (const m of String(id).matchAll(/\d+/g)) {
+  for (const m of s.matchAll(/\d+/g)) {
     if (m[0].length >= 4) break;
-    parts.push(Number(m[0]));
+    parts.push(s[(m.index ?? 0) - 1] === "." ? Number(`0.${m[0]}`) : Number(m[0]));
   }
   return parts;
 }

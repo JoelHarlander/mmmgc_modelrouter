@@ -19,7 +19,7 @@ Web UI at `http://127.0.0.1:8788/` (it asks for the token once and keeps it in t
 | kind | what it is | tools | usage gates |
 | --- | --- | --- | --- |
 | `claude-code` | A Claude subscription, served by running the official `claude` CLI headless with that account's `CLAUDE_CONFIG_DIR` | no | yes: the CLI reports its own utilization |
-| `pi-auth` | A provider whose login pi already holds in `~/.pi/agent/auth.json` (OpenRouter, xAI, OpenAI, Groq), read at request time | yes | no |
+| `pi-auth` | A provider whose login pi already holds in `~/.pi/agent/auth.json` (xAI's SuperGrok, OpenRouter, OpenAI, Groq), read at request time; an OAuth login near expiry is refreshed through pi's own code, under pi's lock on the file | yes | no |
 | `openai` | Any OpenAI-compatible base URL, with an optional key | yes | no |
 | `echo` | A stand-in that needs nothing, for trying the plumbing | yes | no |
 
@@ -61,6 +61,14 @@ a tier with no entry uses `preference`.
 One account marked `backup` (usually a pay-per-token OpenRouter login with `modelGlob: "z-ai/glm-*"`) serves only when no
 subscription account can: all cooling, none serving the series, or none able to carry the request's tools. It is
 configured like any other account, so it can be any provider.
+
+### Effort
+
+The classifier's tier sets the reasoning effort, as it does in the pi extension: `thinking` maps light, standard and heavy
+to `low`, `medium` and `high` by default (any of `off low medium high xhigh max`). It goes to the Claude CLI as `--effort`, to xAI
+and OpenAI as `reasoning_effort`, and to OpenRouter as `reasoning.effort`; an upstream whose spelling is unknown gets none
+unless the account sets `effortParam`. A client that sets its own effort keeps it. A model that refuses the parameter is
+asked again without it rather than failing over. `x-router-effort` says what was sent.
 
 ## Classifier
 

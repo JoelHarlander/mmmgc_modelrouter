@@ -8,6 +8,7 @@ export function routeHeaders(decision) {
     "x-router-account": decision?.account ?? "",
     "x-router-model": decision?.model ?? "",
     "x-router-tier": decision?.tier ?? "",
+    "x-router-effort": decision?.effort ?? "",
     "x-router-via": decision?.via ?? "",
     "x-router-route": decision?.route ?? "",
   };

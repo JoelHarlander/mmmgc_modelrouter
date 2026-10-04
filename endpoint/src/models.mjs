@@ -1,4 +1,4 @@
-import { knownBaseUrl, piCredential } from "./auth.mjs";
+import { knownBaseUrl, piToken } from "./auth.mjs";
 import { matcherFor } from "./series.mjs";
 import { globMatch, newestFirst } from "./versions.mjs";
 
@@ -10,15 +10,21 @@ export function forgetListings() {
   listings.clear();
 }
 
-/** Where an OpenAI-compatible account lives and the credential it sends. Throws with a reason. */
-export function upstreamOf(account, authPath) {
+/**
+ * Where an OpenAI-compatible account lives and the credential it sends, refreshing a pi OAuth login that
+ * is about to expire. Throws with a reason.
+ * @param {import("./types.js").Account} account
+ * @param {string} [authPath]
+ * @returns {Promise<{ base: string, token?: string }>}
+ */
+export async function upstreamOf(account, authPath) {
   if (account.kind === "pi-auth") {
     if (account.provider === "openai-codex") {
       throw new Error("openai-codex stays on pi's own provider: its subscription protocol is not chat-completions");
     }
     const base = account.baseUrl || knownBaseUrl(account.provider);
     if (!base) throw new Error(`${account.id}: no baseUrl for provider ${account.provider}`);
-    return { base: base.replace(/\/$/, ""), token: piCredential(authPath, account.provider).token };
+    return { base: base.replace(/\/$/, ""), token: (await piToken(authPath ?? "", account.provider ?? "")).token };
   }
   if (!account.baseUrl) throw new Error(`${account.id} has no baseUrl`);
   return { base: account.baseUrl.replace(/\/$/, ""), token: account.apiKey };
@@ -35,7 +41,7 @@ export async function listModels(account, { fetchImpl = fetch, authPath, now = D
   if (hit && now - hit.at < TTL_MS) return hit.ids;
   let ids = [];
   try {
-    const { base, token } = upstreamOf(account, authPath);
+    const { base, token } = await upstreamOf(account, authPath);
     const res = await fetchImpl(`${base}/models`, {
       headers: { accept: "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
       signal: AbortSignal.timeout(6000),

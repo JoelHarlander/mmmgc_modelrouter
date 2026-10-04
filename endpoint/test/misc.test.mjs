@@ -39,11 +39,32 @@ test("model resolution: pinned beats everything, Claude accounts use the CLI ali
   await assert.rejects(() => resolveModel({ ...or, id: "dead" }, "backup", { fetchImpl: async () => { throw new Error("down"); } }), /no listed model matches/);
 });
 
-test("upstreams: codex is refused by name, pi-auth needs a known provider, and nothing is guessed", () => {
-  assert.throws(() => upstreamOf({ id: "x", kind: "pi-auth", provider: "openai-codex" }, "/none"), /stays on pi's own provider/);
-  assert.throws(() => upstreamOf({ id: "x", kind: "pi-auth", provider: "mystery" }, "/none"), /no baseUrl/);
-  assert.throws(() => upstreamOf({ id: "x", kind: "openai" }), /no baseUrl/);
-  assert.deepEqual(upstreamOf({ id: "x", kind: "openai", baseUrl: "http://h/v1/", apiKey: "k" }), { base: "http://h/v1", token: "k" });
+test("upstreams: codex is refused by name, pi-auth needs a known provider, and nothing is guessed", async () => {
+  await assert.rejects(() => upstreamOf({ id: "x", kind: "pi-auth", provider: "openai-codex" }, "/none"), /stays on pi's own provider/);
+  await assert.rejects(() => upstreamOf({ id: "x", kind: "pi-auth", provider: "mystery" }, "/none"), /no baseUrl/);
+  await assert.rejects(() => upstreamOf({ id: "x", kind: "openai" }), /no baseUrl/);
+  assert.deepEqual(await upstreamOf({ id: "x", kind: "openai", baseUrl: "http://h/v1/", apiKey: "k" }), { base: "http://h/v1", token: "k" });
+});
+
+test("a pi OAuth login near expiry is refreshed through pi before use; a fresh one and an API key are used as is", async () => {
+  const { piToken } = await import("../src/auth.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "piauth-"));
+  const authPath = join(dir, "auth.json");
+  const now = 1_800_000_000_000;
+  writeFileSync(authPath, JSON.stringify({
+    fresh: { type: "oauth", access: "A1", refresh: "R1", expires: now + 3600_000 },
+    stale: { type: "oauth", access: "A2", refresh: "R2", expires: now + 30_000 },
+    key: { type: "api_key", key: "K" },
+  }));
+  const calls = [];
+  const refreshImpl = async (provider) => (calls.push(provider), { access: "A2-new" });
+  assert.deepEqual(await piToken(authPath, "fresh", { now, refreshImpl }), { token: "A1" });
+  assert.deepEqual(await piToken(authPath, "key", { now, refreshImpl }), { token: "K" });
+  assert.deepEqual(await piToken(authPath, "stale", { now, refreshImpl }), { token: "A2-new", refreshed: true });
+  assert.deepEqual(calls, ["stale"], "only the expiring one is refreshed");
+  await assert.rejects(() => piToken(authPath, "stale", { now, refreshImpl: async () => undefined }), /could not be refreshed; open pi/);
+  await assert.rejects(() => piToken(authPath, "nope", { now }), /no nope credential/);
+  await assert.rejects(() => piToken(authPath, "stale", { now, piDir: "/nonexistent" }), /refresh code was not found/);
 });
 
 test("the state file is created 0600 on first run, and an unreadable one is never overwritten", () => {
@@ -126,4 +147,25 @@ test("a series the code has never heard of matches whole tokens, like the pi ext
   assert.ok(matcherFor("glm").test("z-ai/glm-5.3") && !matcherFor("ol").test("gpt-6.1-sol"));
   assert.ok(matcherFor("opus").test("claude-opus-5-5"), "built-ins keep their own patterns");
   assert.ok(matcherFor("c++").test("tool/c++-1") && !matcherFor("c++").test("cxx"), "regex characters in a name are literal");
+});
+
+import { withEffort } from "../src/dispatch.mjs";
+
+test("effort goes out in each upstream's own spelling, and a client's own setting always wins", () => {
+  const body = { model: "m", messages: [] };
+  assert.deepEqual(withEffort({ provider: "xai" }, body, "low").reasoning_effort, "low");
+  assert.deepEqual(withEffort({ provider: "openrouter" }, body, "high").reasoning, { effort: "high" });
+  assert.deepEqual(withEffort({ provider: "openrouter" }, body, "off").reasoning, { enabled: false });
+  assert.equal(withEffort({ provider: "xai" }, body, "max").reasoning_effort, "high", "Claude-only levels map to high elsewhere");
+  assert.equal(withEffort({ kind: "openai", baseUrl: "http://x" }, body, "high"), body, "an unknown upstream gets nothing: an unexpected field can be a 400");
+  assert.equal(withEffort({ kind: "openai", effortParam: "reasoning_effort" }, body, "medium").reasoning_effort, "medium", "unless the account says how");
+  const mine = { ...body, reasoning_effort: "minimal" };
+  assert.equal(withEffort({ provider: "xai" }, mine, "high"), mine, "the client chose; leave it");
+  assert.equal(withEffort({ provider: "xai" }, body, undefined), body);
+});
+
+test("a dotted minor is a decimal in the endpoint too: the latest grok is grok-4.7, not grok-4.20", () => {
+  const xai = ["grok-4.7", "grok-4.6", "grok-4.5", "grok-4.3", "grok-4.20-0309-reasoning", "grok-4.20-0309-non-reasoning"];
+  assert.equal([...xai].sort(newestFirst)[0], "grok-4.7");
+  assert.ok(versionCompare("grok-4.3", "grok-4.20-0309-reasoning") > 0);
 });

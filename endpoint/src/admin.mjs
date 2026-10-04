@@ -1,6 +1,6 @@
 import { layaHealth, typesafeKey } from "./classifier.mjs";
 import { HttpError, json, readJson } from "./http.mjs";
-import { normalize, normalizeGates } from "./store.mjs";
+import { EFFORTS, normalize, normalizeGates } from "./store.mjs";
 import { utilization } from "./usage.mjs";
 
 const KINDS = ["claude-code", "pi-auth", "openai", "echo"];
@@ -25,6 +25,7 @@ async function status(app) {
     preference: state.preference,
     gates: state.gates,
     tiers: state.tiers,
+    thinking: state.thinking,
     accounts: state.accounts.map((a) => publicAccount(a)),
     decisions: state.decisions,
   };
@@ -50,6 +51,7 @@ function upsertAccount(state, body) {
     baseUrl: kind === "pi-auth" ? previous?.baseUrl : body.baseUrl || previous?.baseUrl,
     provider: body.provider || previous?.provider,
     modelGlob: body.modelGlob || previous?.modelGlob,
+    effortParam: ["reasoning_effort", "reasoning", "none"].includes(body.effortParam) ? body.effortParam : previous?.effortParam,
     apiKey: body.apiKey || previous?.apiKey,
     note: body.note ?? previous?.note ?? "",
     served: previous?.served ?? 0,
@@ -67,7 +69,7 @@ function upsertAccount(state, body) {
 }
 
 /** `{ preference?, gates?, tiers? }` -> the validated fields. Throws HttpError on the first bad one. */
-function parsePolicy(body) {
+function parsePolicy(body, current) {
   const next = {};
   if (body.preference !== undefined) {
     const p = body.preference;
@@ -85,6 +87,12 @@ function parsePolicy(body) {
       Object.entries(t).every(([tier, list]) => TIERS.includes(tier) && Array.isArray(list) && list.length > 0 && list.every((s) => typeof s === "string" && s.trim()));
     if (!ok) throw new HttpError(400, "tiers must map light, standard or heavy to a non-empty list of series names");
     next.tiers = Object.fromEntries(Object.entries(t).map(([tier, list]) => [tier, list.map((s) => s.trim())]));
+  }
+  if (body.thinking !== undefined) {
+    const t = body.thinking;
+    const ok = t && typeof t === "object" && !Array.isArray(t) && Object.entries(t).every(([tier, e]) => TIERS.includes(tier) && EFFORTS.includes(/** @type {string} */ (e)));
+    if (!ok) throw new HttpError(400, `thinking must map light, standard or heavy to one of ${EFFORTS.join(", ")}`);
+    next.thinking = { ...current.thinking, ...t };
   }
   return next;
 }
@@ -125,11 +133,11 @@ export async function handleAdmin(app, req, res, url) {
       return json(res, 200, { ok: true });
     }
     case "POST /api/policy": {
-      Object.assign(state, parsePolicy(body));
+      Object.assign(state, parsePolicy(body, state));
       normalize(state);
       persist();
       app.log.info("policy saved", { preference: state.preference.join(","), gates: state.gates.length });
-      return json(res, 200, { preference: state.preference, gates: state.gates, tiers: state.tiers });
+      return json(res, 200, { preference: state.preference, gates: state.gates, tiers: state.tiers, thinking: state.thinking });
     }
     default:
       throw new HttpError(404, "not found");

@@ -1,6 +1,7 @@
 /** Shapes shared across the endpoint. Runtime code is plain `.mjs`; these are checked by `tsc -p endpoint/tsconfig.json`. */
 
 export type Tier = "light" | "standard" | "heavy";
+export type Effort = "off" | "low" | "medium" | "high" | "xhigh" | "max";
 export type AccountKind = "claude-code" | "pi-auth" | "openai" | "echo";
 
 /** A usage gate: past `at` (0..1) of the highest window bounding `series`, an account moves to `then`. */
@@ -33,6 +34,8 @@ export interface Account {
   backup?: boolean;
   /** `false` forbids resolving a latest model: an account with no pin is then an error. */
   latest?: boolean;
+  /** How this upstream takes an effort: `reasoning_effort`, OpenRouter's `reasoning`, or `none`. Defaults by provider. */
+  effortParam?: "reasoning_effort" | "reasoning" | "none";
   /** Overrides the default: a claude-code account cannot return tool calls, the others can. */
   tools?: boolean;
   planUsd?: number;
@@ -58,6 +61,7 @@ export interface Decision {
   how?: string;
   route?: string;
   tier?: Tier;
+  effort?: string;
   via?: string;
   confidence?: number;
   classifierErrors?: string[];
@@ -83,6 +87,8 @@ export interface State {
   preference: string[];
   gates: Gate[];
   tiers: Partial<Record<Tier, string[]>>;
+  /** Reasoning effort per tier. */
+  thinking: Record<Tier, Effort>;
   cooldownFallbackMs: number;
   accounts: Account[];
   rr: Record<string, number>;

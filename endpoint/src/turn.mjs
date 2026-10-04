@@ -30,6 +30,7 @@ export async function runTurn(app, protocol, body, signal) {
     breakers: app.breakers,
   });
   const needsTools = hasTools(body);
+  const effort = state.thinking?.[classified.tier];
   const exclude = new Set();
   const attempts = [];
   // Each account can fail once per series it serves, so that bounds the attempts.
@@ -57,6 +58,7 @@ export async function runTurn(app, protocol, body, signal) {
       series,
       model: resolved.model,
       tier: classified.tier,
+      effort,
       signal,
       fetchImpl: app.fetchImpl,
       authPath: app.authPath,
@@ -75,6 +77,7 @@ export async function runTurn(app, protocol, body, signal) {
         how: resolved.how,
         route: pick.via,
         tier: classified.tier,
+        effort,
         via: classified.via,
         confidence: classified.confidence,
         classifierErrors: classified.errors?.length ? classified.errors : undefined,
@@ -82,7 +85,7 @@ export async function runTurn(app, protocol, body, signal) {
       };
       remember(state, decision);
       app.persist();
-      log.info("turn", { account: account.id, series, model: resolved.model, route: pick.via, tier: classified.tier, via: classified.via, tools: needsTools || undefined, attempts: attempts.length > 1 ? attempts.length : undefined, ms: Date.now() - started });
+      log.info("turn", { account: account.id, series, model: resolved.model, route: pick.via, tier: classified.tier, effort, via: classified.via, tools: needsTools || undefined, attempts: attempts.length > 1 ? attempts.length : undefined, ms: Date.now() - started });
       return { ...result, decision };
     }
 

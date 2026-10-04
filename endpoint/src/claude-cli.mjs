@@ -47,10 +47,11 @@ export function systemText(body, protocol) {
     .join("\n\n");
 }
 
-export function cliArgs({ model, system }) {
+export function cliArgs({ model, system, effort }) {
   return [
     "-p",
     "--model", model,
+    ...(effort && effort !== "off" ? ["--effort", effort] : []),
     "--tools", "",
     "--no-session-persistence",
     "--disable-slash-commands",
@@ -111,16 +112,16 @@ function slotsFor(account) {
  *   { ok: true, events, windows }              `events` yields { text } then { done, usage }
  * `onWindows(windows)` fires whenever the CLI reports utilization, including on a refusal.
  * @param {import("./types.js").Account} account
- * @param {{ model: string, body: any, protocol: import("./types.js").Protocol, signal?: AbortSignal, onWindows?: (w: Record<string, import("./types.js").UsageWindow>) => void, spawnImpl?: any }} opts
+ * @param {{ model: string, body: any, protocol: import("./types.js").Protocol, signal?: AbortSignal, onWindows?: (w: Record<string, import("./types.js").UsageWindow>) => void, effort?: string, spawnImpl?: any }} opts
  * @returns {Promise<import("./types.js").Failure | { ok: true, events: AsyncIterable<import("./types.js").StreamEvent> }>}
  */
-export async function runClaude(account, { model, body, protocol, signal, onWindows, spawnImpl = spawn }) {
+export async function runClaude(account, { model, body, protocol, signal, onWindows, effort, spawnImpl = spawn }) {
   const slots = slotsFor(account);
   await slots.acquire();
   const system = systemText(body, protocol);
   const oversized = Buffer.byteLength(system) > MAX_ARG_SYSTEM_BYTES;
   const cwd = mkdtempSync(join(tmpdir(), "router-claude-"));
-  const child = spawnImpl(account.cli || process.env.CLAUDE_BIN || "claude", cliArgs({ model, system: oversized ? "" : system }), {
+  const child = spawnImpl(account.cli || process.env.CLAUDE_BIN || "claude", cliArgs({ model, system: oversized ? "" : system, effort }), {
     cwd,
     env: { ...process.env, ...(account.configDir ? { CLAUDE_CONFIG_DIR: account.configDir } : {}) },
     stdio: ["pipe", "pipe", "pipe"],

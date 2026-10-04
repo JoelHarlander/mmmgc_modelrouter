@@ -77,6 +77,8 @@
           <label>Series order <input name="preference" /></label>
           <label>Gates, one per line: <span class="mono">opus 50% > sonnet</span><textarea name="gates"></textarea></label>
           <label>Tiers (optional JSON): <span class="mono">{"light":["sonnet"],"heavy":["opus"]}</span><textarea name="tiers"></textarea></label>
+          <label>Effort per tier: light / standard / heavy <span class="mono">(off low medium high xhigh max)</span>
+            <span class="row"><input name="e_light" size="7" /><input name="e_standard" size="7" /><input name="e_heavy" size="7" /></span></label>
           <div class="row"><button class="primary" type="submit">Save policy</button><span id="policy-msg" class="mono"></span></div>
         </form>
       </section>
@@ -127,8 +129,9 @@
         $("policy").preference.value = status.preference.join(", ");
         $("policy").gates.value = status.gates.map((g) => `${g.series} ${Math.round(g.at * 100)}%${g.then ? " > " + g.then : ""}`).join("\n");
         $("policy").tiers.value = Object.keys(status.tiers || {}).length ? JSON.stringify(status.tiers) : "";
+        for (const t of ["light", "standard", "heavy"]) $("policy")["e_" + t].value = status.thinking?.[t] ?? "";
       }
-      $("log").innerHTML = (status.decisions || []).map((d) => `<div class="decision"><span class="mono">${new Date(d.at).toLocaleTimeString()}</span> ${esc(d.account || "none")} · ${esc(d.series || "")}/${esc(d.model || "")} <span class="mono">${esc(d.route || "")}</span> · ${esc(d.tier)} via ${esc(d.via || "?")}${d.error ? " · " + esc(d.error) : ""}</div>`).join("") || "<p>No turns yet.</p>";
+      $("log").innerHTML = (status.decisions || []).map((d) => `<div class="decision"><span class="mono">${new Date(d.at).toLocaleTimeString()}</span> ${esc(d.account || "none")} · ${esc(d.series || "")}/${esc(d.model || "")} <span class="mono">${esc(d.route || "")}</span> · ${esc(d.tier)}${d.effort ? "/" + esc(d.effort) : ""} via ${esc(d.via || "?")}${d.error ? " · " + esc(d.error) : ""}</div>`).join("") || "<p>No turns yet.</p>";
       $("snippet").textContent = [
         "Pi: ~/.pi/agent/models.json",
         JSON.stringify({ providers: { router: { baseUrl: status.baseUrl, api: "openai-completions", apiKey: token, models: [{ id: "auto", name: "Auto", reasoning: false, input: ["text"], contextWindow: 200000, maxTokens: 8192, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } }] } } }, null, 2),
@@ -172,6 +175,7 @@
       try {
         const body = { preference: f.preference.value.split(",").map((s) => s.trim()).filter(Boolean), gates: parseGates(f.gates.value) };
         if (f.tiers.value.trim()) body.tiers = JSON.parse(f.tiers.value); else body.tiers = {};
+        body.thinking = { light: f.e_light.value.trim(), standard: f.e_standard.value.trim(), heavy: f.e_heavy.value.trim() };
         await api("/api/policy", body);
         $("policy-msg").textContent = "saved";
       } catch (e) { $("policy-msg").textContent = e.message; }

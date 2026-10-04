@@ -20,6 +20,8 @@ export function freshState() {
     preference: ["opus", "sonnet"],
     gates: [],
     tiers: {},
+    // Reasoning effort per classifier tier, as in the pi extension's `thinking`.
+    thinking: { light: "low", standard: "medium", heavy: "high" },
     cooldownFallbackMs: 30 * 60 * 1000,
     accounts: [],
     rr: {},
@@ -58,6 +60,7 @@ export function normalize(state) {
   if (state.preference.length === 0) state.preference = ["opus", "sonnet"];
   state.gates = normalizeGates(state.gates);
   state.tiers = state.tiers && typeof state.tiers === "object" && !Array.isArray(state.tiers) ? state.tiers : {};
+  state.thinking = normalizeThinking(state.thinking);
   state.decisions = list(state.decisions).slice(0, 40);
   state.rr = state.rr && typeof state.rr === "object" ? state.rr : {};
   return state;
@@ -73,6 +76,18 @@ export function normalizeGates(gates) {
     const gate = { series: g.series.trim(), at: g.at };
     if (typeof g.then === "string" && g.then.trim()) gate.then = g.then.trim();
     out.push(gate);
+  }
+  return out;
+}
+
+export const EFFORTS = ["off", "low", "medium", "high", "xhigh", "max"];
+const DEFAULT_THINKING = { light: "low", standard: "medium", heavy: "high" };
+
+/** Tier -> effort. A missing or unknown value takes the default, so a bad edit cannot send a bad parameter. */
+export function normalizeThinking(thinking) {
+  const out = { ...DEFAULT_THINKING };
+  if (thinking && typeof thinking === "object") {
+    for (const tier of Object.keys(DEFAULT_THINKING)) if (EFFORTS.includes(thinking[tier])) out[tier] = thinking[tier];
   }
   return out;
 }

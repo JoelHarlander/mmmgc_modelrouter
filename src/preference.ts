@@ -412,12 +412,16 @@ export function versionCompare(a: string, b: string): number {
 	return 0;
 }
 
-/** Numeric components up to the first date-like one (4+ digits: `0709`, `20250514`), which is a snapshot, not a version. */
+/**
+ * Numeric components up to the first date-like one (4+ digits: `0709`, `20250514`), which is a snapshot, not a
+ * version. A component after a dot is a decimal fraction: xAI's grok-4.20 came before grok-4.3 and grok-4.7, as
+ * glm-5.3 follows glm-5.2. Components after a dash stay whole numbers (claude-opus-5-5).
+ */
 function versionParts(id: string): number[] {
 	const parts: number[] = [];
 	for (const m of id.matchAll(/\d+/g)) {
 		if (m[0].length >= 4) break;
-		parts.push(Number(m[0]));
+		parts.push(id[m.index - 1] === "." ? Number(`0.${m[0]}`) : Number(m[0]));
 	}
 	return parts;
 }
